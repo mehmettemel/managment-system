@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎭 Dans Okulu Yönetim Sistemi (DSMS)
 
-## Getting Started
+Modern, ölçeklenebilir ve kullanıcı dostu dans okulu yönetim sistemi.
 
-First, run the development server:
+## 📚 Dokümantasyon
+
+Projenin tüm detayları `docs/` klasörü altında sade ve anlaşılır bir şekilde belgelenmiştir:
+
+1.  **[🚀 Kurulum ve Başlangıç](./docs/01-GETTING-STARTED.md)**
+    *   Önkoşullar (Node.js 20+, Supabase)
+    *   Kurulum adımları
+    *   Build kontrolleri
+
+2.  **[🏗️ Mimari ve Teknoloji](./docs/02-ARCHITECTURE.md)**
+    *   Tech Stack (Next.js 16, Mantine, Supabase)
+    *   State Management stratejisi
+    *   Data Fetching yöntemleri
+
+3.  **[💻 Geliştirme Kılavuzu](./docs/03-DEVELOPMENT.md)**
+    *   Yeni özellik ekleme adımları
+    *   Kod standartları ve Best Practices
+    *   Sık kullanılan komutlar
+
+4.  **[🗄️ Veritabanı](./docs/04-DATABASE.md)**
+    *   Veritabanı şeması ve tablolar
+    *   TypeScript tip güncelleme
+
+5.  **[🚀 Yayına Alma (Deployment)](./docs/05-DEPLOYMENT.md)**
+    *   Vercel deployment
+    *   Environment variables
+
+---
+
+## ⚡ Hızlı Başlangıç
 
 ```bash
+# 1. Projeyi klonlayın
+git clone <repo-url>
+cd managment-system
+
+# 2. Node.js versiyonunu ayarlayın (Önemli!)
+nvm use 20
+
+# 3. Bağımlılıkları yükleyin
+npm install
+
+# 4. Env dosyasını oluşturun
+cp .env.local.example .env.local
+
+# 5. Geliştirme sunucusunu başlatın
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+*Detaylı kurulum için [01-GETTING-STARTED.md](./docs/01-GETTING-STARTED.md) dosyasını okuyun.*
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🏗️ Proje Hakkında
 
-## Learn More
+DSMS, dans okullarının ihtiyaç duyduğu üye takibi, ders programı, eğitmen yönetimi ve finansal takibi tek bir çatı altında toplar.
 
-To learn more about Next.js, take a look at the following resources:
+### Öne Çıkan Özellikler
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+*   **Üye Yönetimi**: Kayıt, dondurma, arşivleme.
+*   **Finans**: Ödeme takibi, 28 günlük döngüler, gecikme uyarıları.
+*   **Dersler**: Esnek ders programı ve eğitmen atama.
+*   **Teknoloji**: Next.js App Router, Server Actions, Supabase Auth & DB.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📝 Versiyon Geçmişi
 
-## Deploy on Vercel
+Versiyon değişikliklerini görmek için [CHANGELOG.md](./docs/CHANGELOG.md) dosyasına bakabilirsiniz.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

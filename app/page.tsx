@@ -1,65 +1,108 @@
-import Image from "next/image";
+import { AppShellLayout } from '@/components/layout/AppShell'
+import { StatsCard } from '@/components/shared/StatsCard'
+import { RevenueChart } from '@/components/dashboard/RevenueChart'
+import { MemberStatsChart } from '@/components/dashboard/MemberStatsChart'
+import { getMembers, getOverdueMembers } from '@/actions/members'
+import { getRevenueByDateRange } from '@/actions/payments'
+import { SimpleGrid, Title, Stack, Text, Alert, Button } from '@mantine/core'
+import {
+  IconUsers,
+  IconCreditCard,
+  IconAlertCircle,
+  IconUserCheck,
+  IconInfoCircle,
+} from '@tabler/icons-react'
+import dayjs from 'dayjs'
 
-export default function Home() {
+export default async function Home() {
+  const today = dayjs()
+  const startOfMonth = today.startOf('month').format('YYYY-MM-DD')
+  const endOfMonth = today.endOf('month').format('YYYY-MM-DD')
+
+  // Parallel data fetching
+  const [allMembers, activeMembers, overdueMembers, revenue] = await Promise.all([
+    getMembers('all'),
+    getMembers('active'),
+    getOverdueMembers(),
+    getRevenueByDateRange(startOfMonth, endOfMonth),
+  ])
+
+  // Extract data safely
+  const totalMembersCount = allMembers.data?.length || 0
+  const activeMembersCount = activeMembers.data?.length || 0
+  const overdueCount = overdueMembers.data?.length || 0
+  const monthlyRevenue = revenue.data?.total || 0
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <AppShellLayout>
+      <Stack gap="lg">
+        <div>
+          <Title order={2}>Dashboard</Title>
+          <Text c="dimmed">Hoş geldiniz, işte bugünkü durum özeti.</Text>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {overdueCount > 0 && (
+          <Alert
+            variant="light"
+            color="red"
+            title="Gecikmiş Ödemeler"
+            icon={<IconAlertCircle />}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+            Ödemesi geciken {overdueCount} üye var. Lütfen kontrol edin.
+          </Alert>
+        )}
+
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+          <StatsCard
+            title="Toplam Üye"
+            value={totalMembersCount}
+            icon={<IconUsers size={24} />}
+            color="blue"
+          />
+          <StatsCard
+            title="Aktif Üye"
+            value={activeMembersCount}
+            icon={<IconUserCheck size={24} />}
+            color="green"
+            trend={{
+              value: Math.round((activeMembersCount / (totalMembersCount || 1)) * 100),
+              label: 'Aktiflik Oranı',
+            }}
+          />
+          <StatsCard
+            title="Aylık Gelir"
+            value={`${monthlyRevenue.toLocaleString('tr-TR')} ₺`}
+            icon={<IconCreditCard size={24} />}
+            color="orange"
+            trend={{ value: 100, label: 'Bu Ay' }}
+          />
+          <StatsCard
+            title="Gecikmiş Ödeme"
+            value={overdueCount}
+            icon={<IconAlertCircle size={24} />}
+            color="red"
+          />
+        </SimpleGrid>
+
+      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+        <RevenueChart />
+        <MemberStatsChart />
+      </SimpleGrid>
+
+        {totalMembersCount === 0 && (
+          <form action={async () => {
+            'use server'
+            const { seedDatabase } = await import('@/actions/seed')
+            await seedDatabase()
+          }}>
+             <Button type="submit" variant="light" color="grape" fullWidth mt="md">
+              Demo Verisi Yükle (Seed Data)
+            </Button>
+          </form>
+        )}
+
+      </Stack>
+    </AppShellLayout>
+  )
 }
+
