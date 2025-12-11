@@ -6,6 +6,13 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 
 ### ✨ Yeni Özellikler
 
+#### Ödeme Sistemi İyileştirmeleri
+
+- ✅ **Ödeme Açıklaması**: Ödemeler için açıklama/not ekleme özelliği.
+- ✅ **Payment Modals**: Yeni `PaymentConfirmModal` ve `PaymentDetailDrawer` (Dark mode uyumlu).
+- ✅ **Aylık Planlama**: Yıllık üyeliklerde aylık ödeme satırları (12 ay).
+- ✅ **Detaylı Görünüm**: Ödeme satırına tıklayarak detay görüntüleme.
+
 #### Dashboard İyileştirmeleri
 
 - ✅ **Mantine Charts** eklendi
@@ -58,6 +65,8 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ Form validation logic iyileştirildi
 - ✅ Trim() ile whitespace temizleme
 - ✅ Number formatting (TR locale)
+- ✅ Aktivasyon hatası için debug logları eklendi.
+- ✅ Typescript tip tanımları güncellendi (`PaymentScheduleItem`).
 
 ---
 

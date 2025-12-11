@@ -22,7 +22,12 @@ import {
 import { useForm } from '@mantine/form';
 import { formatCurrency } from '@/utils/formatters';
 import { MaskedPhoneInput } from '@/components/shared/MaskedPhoneInput';
-import { createMember, updateMember, getMemberById } from '@/actions/members';
+import {
+  createMember,
+  updateMember,
+  getMemberById,
+  updateMemberClassDetails,
+} from '@/actions/members';
 import { showSuccess, showError } from '@/utils/notifications';
 import type { Member, MemberFormData } from '@/types';
 import { IconCalendar, IconClock } from '@tabler/icons-react';
@@ -95,7 +100,7 @@ export function MemberDrawer({
             if (mc.active) {
               existingClassIds.push(cId);
               existingPrices[cId] = Number(mc.price) || 0;
-              existingDurations[cId] = 1; // Default to 1 for edit/view, usually irrelevant for edit unless we allow changing next payment date logic here which is complex. For now just show active classes.
+              existingDurations[cId] = mc.payment_interval || 1;
             }
           });
         }
@@ -172,11 +177,30 @@ export function MemberDrawer({
           last_name: values.last_name.trim(),
           phone: values.phone?.trim() || null,
         });
+
+        // Update class details (price and duration)
+        // We iterate over existing classes and update them if needed
+        if ((member as any).member_classes) {
+          await Promise.all(
+            (member as any).member_classes.map(async (mc: any) => {
+              const cId = String(mc.class_id);
+              const newPrice = values.prices[cId];
+              const newDuration = values.durations[cId];
+
+              if (newPrice !== undefined || newDuration !== undefined) {
+                await updateMemberClassDetails(member.id, mc.class_id, {
+                  price: newPrice !== undefined ? Number(newPrice) : undefined,
+                  payment_interval:
+                    newDuration !== undefined ? Number(newDuration) : undefined,
+                });
+              }
+            })
+          );
+        }
+
         if (result.error) showError(result.error);
         else {
-          showSuccess(
-            'Üye bilgileri güncellendi (Ders değişiklikleri yapılamaz)'
-          );
+          showSuccess('Üye bilgileri ve ders detayları güncellendi');
           onSuccess?.();
           onClose();
         }
@@ -327,29 +351,26 @@ export function MemberDrawer({
                               prefix="₺ "
                               min={0}
                               {...form.getInputProps(`prices.${cId}`)}
-                              disabled={!!member}
                             />
                           </Grid.Col>
                           <Grid.Col span={6}>
-                            {!member && (
-                              <Select
-                                label="Üyelik Süresi"
-                                data={[
-                                  { value: '1', label: '1 Ay' },
-                                  { value: '3', label: '3 Ay' },
-                                  { value: '6', label: '6 Ay' },
-                                  { value: '12', label: '1 Yıl' },
-                                ]}
-                                {...form.getInputProps(`durations.${cId}`)}
-                                onChange={(val) =>
-                                  form.setFieldValue(
-                                    `durations.${cId}`,
-                                    Number(val)
-                                  )
-                                }
-                                value={String(form.values.durations[cId] || 1)}
-                              />
-                            )}
+                            <Select
+                              label="Üyelik Süresi"
+                              data={[
+                                { value: '1', label: '1 Ay' },
+                                { value: '3', label: '3 Ay' },
+                                { value: '6', label: '6 Ay' },
+                                { value: '12', label: '1 Yıl' },
+                              ]}
+                              {...form.getInputProps(`durations.${cId}`)}
+                              onChange={(val) =>
+                                form.setFieldValue(
+                                  `durations.${cId}`,
+                                  Number(val)
+                                )
+                              }
+                              value={String(form.values.durations[cId] || 1)}
+                            />
                           </Grid.Col>
                         </Grid>
                       </Card>

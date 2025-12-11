@@ -11,12 +11,10 @@ import {
   Loader,
   Center,
   ActionIcon,
-  Accordion,
   Badge,
   Container,
   SimpleGrid,
   Tabs,
-  Table,
   Button,
 } from '@mantine/core';
 import { IconArrowLeft, IconPhone, IconCalendar } from '@tabler/icons-react';
@@ -98,7 +96,7 @@ export function MemberDetailView({ memberId }: MemberDetailViewProps) {
     <Container size="lg" p="xs">
       <Stack gap="lg">
         {/* Header */}
-        <SimpleGrid cols={2} spacing="md">
+        <Stack gap="xs">
           <Group align="center" gap="md">
             <ActionIcon
               variant="subtle"
@@ -111,53 +109,77 @@ export function MemberDetailView({ memberId }: MemberDetailViewProps) {
               {member.first_name} {member.last_name}
             </Title>
           </Group>
-          <Stack gap="md">
+          <Group wrap="wrap" gap="sm" ml={48}>
             <StatusBadge status={member.status as any} />
             {member.phone && (
-              <Text size="sm" c="dimmed">
-                <IconPhone size={14} style={{ verticalAlign: 'middle' }} />{' '}
-                {formatPhone(member.phone)}
-              </Text>
+              <Group gap={4}>
+                <IconPhone size={14} style={{ opacity: 0.7 }} />
+                <Text size="sm" c="dimmed">
+                  {formatPhone(member.phone)}
+                </Text>
+              </Group>
             )}
-            <Text size="sm" c="dimmed">
-              <IconCalendar size={14} style={{ verticalAlign: 'middle' }} />{' '}
-              Kayıt: {formatDate(member.join_date)}
-            </Text>
-          </Stack>
-        </SimpleGrid>
+            <Group gap={4}>
+              <IconCalendar size={14} style={{ opacity: 0.7 }} />
+              <Text size="sm" c="dimmed">
+                Kayıt: {formatDate(member.join_date)}
+              </Text>
+            </Group>
+          </Group>
+        </Stack>
 
         {/* Class Payment Schedules */}
-        <Title order={4}>Ödeme Planları</Title>
-
         {activeClasses.length === 0 ? (
           <Text c="dimmed">Kayıtlı aktif ders bulunmuyor.</Text>
         ) : (
-          <Accordion
-            multiple
-            defaultValue={activeClasses.map((c) => String(c.class_id))}
+          <Tabs
+            defaultValue={String(activeClasses[0].class_id)}
+            variant="outline"
           >
-            {activeClasses.map((mc) => (
-              <Accordion.Item key={mc.class_id} value={String(mc.class_id)}>
-                <Accordion.Control>
-                  <Group>
-                    <Text fw={600}>{mc.classes?.name}</Text>
-                    <Badge variant="dot" size="sm">
-                      {mc.classes?.day_of_week}{' '}
-                      {mc.classes?.start_time?.slice(0, 5)}
+            <Tabs.List>
+              {activeClasses.map((mc) => (
+                <Tabs.Tab
+                  key={mc.class_id}
+                  value={String(mc.class_id)}
+                  leftSection={
+                    <Badge variant="dot" size="xs">
+                      {mc.classes?.day_of_week}
                     </Badge>
-                  </Group>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <PaymentScheduleTable
-                    schedule={schedules[mc.class_id] || []}
-                    memberId={memberId}
-                    classId={mc.class_id}
-                    onUpdate={handleRefresh}
-                  />
-                </Accordion.Panel>
-              </Accordion.Item>
+                  }
+                >
+                  <Text fw={500}>{mc.classes?.name}</Text>
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+
+            {activeClasses.map((mc) => (
+              <Tabs.Panel key={mc.class_id} value={String(mc.class_id)} pt="md">
+                <Card withBorder radius="sm">
+                  <Stack gap="md">
+                    <Group justify="space-between">
+                      <Group gap="xs">
+                        <Text fw={600} size="lg">
+                          {mc.classes?.name} Ödeme Planı
+                        </Text>
+                        <Badge variant="light">
+                          {mc.classes?.day_of_week}{' '}
+                          {mc.classes?.start_time?.slice(0, 5)}
+                        </Badge>
+                      </Group>
+                      {/* Add specific class stats or buttons here later if needed */}
+                    </Group>
+
+                    <PaymentScheduleTable
+                      schedule={schedules[mc.class_id] || []}
+                      memberId={memberId}
+                      classId={mc.class_id}
+                      onUpdate={handleRefresh}
+                    />
+                  </Stack>
+                </Card>
+              </Tabs.Panel>
             ))}
-          </Accordion>
+          </Tabs>
         )}
       </Stack>
     </Container>

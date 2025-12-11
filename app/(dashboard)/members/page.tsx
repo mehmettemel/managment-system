@@ -37,7 +37,7 @@ import { showSuccess, showError } from '@/utils/notifications';
 import { formatDate } from '@/utils/date-helpers'; // Removed isPaymentOverdue
 import { formatPhone } from '@/utils/formatters';
 import type { DataTableColumn } from '@/components/shared/DataTable';
-import type { Member } from '@/types';
+import type { Member, MemberWithClasses } from '@/types';
 
 export default function MembersPage() {
   const router = useRouter();
@@ -152,7 +152,7 @@ export default function MembersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
 
-  const columns: DataTableColumn<Member>[] = [
+  const columns: DataTableColumn<MemberWithClasses>[] = [
     {
       key: 'first_name',
       label: 'Ad Soyad',
@@ -175,6 +175,25 @@ export default function MembersPage() {
       label: 'Kayıt Tarihi',
       sortable: true,
       render: (member) => formatDate(member.join_date),
+    },
+    {
+      key: 'membership_duration',
+      label: 'Üyelik Süresi',
+      render: (member) => (
+        <Stack gap={2}>
+          {member.member_classes?.map((mc) => (
+            <Text size="xs" key={mc.id} style={{ whiteSpace: 'nowrap' }}>
+              <span style={{ fontWeight: 600 }}>{mc.classes?.name}:</span>{' '}
+              {mc.payment_interval ? `${mc.payment_interval} Ay` : 'Aylık'}
+            </Text>
+          ))}
+          {(!member.member_classes || member.member_classes.length === 0) && (
+            <Text size="xs" c="dimmed">
+              -
+            </Text>
+          )}
+        </Stack>
+      ),
     },
     {
       key: 'status',

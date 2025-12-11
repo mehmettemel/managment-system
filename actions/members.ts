@@ -15,6 +15,7 @@ import type {
   ApiResponse,
   ApiListResponse,
   MemberClassWithDetails,
+  MemberWithClasses,
 } from '@/types';
 import {
   successResponse,
@@ -34,7 +35,7 @@ import dayjs from 'dayjs';
  */
 export async function getMembers(
   status?: string
-): Promise<ApiListResponse<Member>> {
+): Promise<ApiListResponse<MemberWithClasses>> {
   try {
     const supabase = await createClient();
 
@@ -54,7 +55,10 @@ export async function getMembers(
       return errorListResponse(handleSupabaseError(error));
     }
 
-    return successListResponse(data || [], count || 0);
+    return successListResponse(
+      (data as unknown as MemberWithClasses[]) || [],
+      count || 0
+    );
   } catch (error) {
     logError('getMembers', error);
     return errorListResponse(handleSupabaseError(error));
@@ -82,6 +86,7 @@ export async function getMemberById(
           next_payment_date,
           price,
           active,
+          payment_interval,
           classes (*)
         )
       `
@@ -166,6 +171,7 @@ export async function createMember(
           next_payment_date: nextPaymentDate,
           price: reg.price,
           active: true,
+          payment_interval: reg.duration,
         };
       });
 
@@ -310,5 +316,35 @@ export async function getOverdueMembers(): Promise<ApiListResponse<Member>> {
   } catch (error) {
     logError('getOverdueMembers', error);
     return errorListResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Update member class details (price, payment_interval)
+ */
+export async function updateMemberClassDetails(
+  memberId: number,
+  classId: number,
+  updates: { price?: number; payment_interval?: number }
+): Promise<ApiResponse<boolean>> {
+  try {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from('member_classes')
+      .update(updates)
+      .eq('member_id', memberId)
+      .eq('class_id', classId);
+
+    if (error) {
+      logError('updateMemberClassDetails', error);
+      return errorResponse(handleSupabaseError(error));
+    }
+
+    revalidatePath(`/members/${memberId}`);
+    return successResponse(true);
+  } catch (error) {
+    logError('updateMemberClassDetails', error);
+    return errorResponse(handleSupabaseError(error));
   }
 }

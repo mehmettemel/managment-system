@@ -45,15 +45,6 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
 
   return (
     <>
-      <Alert variant="light" color="blue" icon={<IconInfoCircle />} mb="lg">
-        <Text size="sm">
-          Yeni sistem: Ödemeler üye detay sayfasından ders bazlı yapılmaktadır.{' '}
-          <Link href="/members" style={{ fontWeight: 600 }}>
-            Üyeler sayfasına git →
-          </Link>
-        </Text>
-      </Alert>
-
       {payments.length === 0 ? (
         <EmptyState
           title="Ödeme Kaydı Yok"

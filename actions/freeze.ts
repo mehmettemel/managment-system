@@ -104,6 +104,7 @@ export async function unfreezeMembership(
 ): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
+    console.log(`Unfreezing member: ${memberId}`); // Debug log
 
     // 1. Find the open freeze log (end_date is null) OR the latest one that started?
     // Ideally we look for one where end_date IS NULL.
@@ -160,7 +161,13 @@ export async function unfreezeMembership(
       .eq('id', memberId)
       .single();
 
-    if (memberError || !member) return errorResponse('Üye bulunamadı');
+    if (memberError || !member) {
+      logError(
+        'unfreezeMembership - Member not found via ID',
+        memberError || { message: `ID: ${memberId}` }
+      );
+      return errorResponse('Üye bulunamadı');
+    }
 
     // If member has a due date, extend it.
     let newDueDate = member.next_payment_due_date;

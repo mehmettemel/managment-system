@@ -109,17 +109,30 @@ export async function getPaymentSchedule(
     const endDate = dayjs().add(6, 'month');
 
     const schedule: PaymentScheduleItem[] = [];
+    // interval (duration) logic: if user specified duration (e.g. 1, 3, 6, 12),
+    // we should generate exactly that many months from start date.
+    // If interval is null/1, default to standard view (e.g. 6 months ahead).
+
+    // We treat 'payment_interval' as the Total Duration of the membership.
+    // We want to generate MONTHLY items for that duration.
+
+    const membershipDurationMonths = (memberClass as any).payment_interval || 1;
+
+    // Recalculate endDate based on duration
+    // If it's a fixed duration membership (e.g. > 1 month plan), show exactly that many months
+    // If it's standard monthly (interval=1), show 6 months ahead + history?
+    // User logic implies strict plans: "1 yıllık seçerse her ay 750 tl".
+    const effectiveEndDate = startDate.add(membershipDurationMonths, 'month');
+
     let currentMonth = startDate.startOf('month');
 
-    while (currentMonth.isBefore(endDate)) {
+    // Generate schedule until effective end date
+    while (currentMonth.isBefore(effectiveEndDate)) {
       const periodStart = currentMonth.format('YYYY-MM-DD');
-      const nextMonth = currentMonth.add(1, 'month');
-      const periodEnd = nextMonth.format('YYYY-MM-DD');
+      const nextMonth = currentMonth.add(1, 'month'); // Always 1 month increment
 
-      // Find if paid: existing payment coverage overlaps significantly or matches month
-      // Simple logic: check if any payment covers this month's start date
+      // Find if paid: existing payment coverage
       const paidPayment = payments?.find((p) => {
-        // If payment period_start is roughly same month as currentMonth
         if (!p.period_start) return false;
         return dayjs(p.period_start).isSame(currentMonth, 'month');
       });
@@ -128,7 +141,7 @@ export async function getPaymentSchedule(
       if (paidPayment) {
         status = 'paid';
       } else if (currentMonth.isBefore(dayjs().startOf('month'))) {
-        status = 'overdue'; // Past unpaid month
+        status = 'overdue';
       }
 
       schedule.push({
@@ -139,6 +152,7 @@ export async function getPaymentSchedule(
         paymentId: paidPayment?.id,
         paymentDate: paidPayment ? paidPayment.payment_date : undefined,
         paymentMethod: paidPayment ? paidPayment.payment_method : undefined,
+        description: paidPayment ? paidPayment.description : undefined,
       });
 
       currentMonth = nextMonth;
@@ -165,7 +179,14 @@ export async function processClassPayment(
   formData: ClassPaymentFormData
 ): Promise<ApiResponse<Payment>> {
   try {
-    const { memberId, classId, amount, paymentMethod, periodDate } = formData;
+    const {
+      memberId,
+      classId,
+      amount,
+      paymentMethod,
+      periodDate,
+      description,
+    } = formData;
 
     if (!memberId || !classId || !amount || !periodDate) {
       return errorResponse('Gerekli alanlar eksik');
@@ -174,6 +195,15 @@ export async function processClassPayment(
     const supabase = await createClient();
     const todayStr = dayjs().format('YYYY-MM-DD');
 
+    // Fetch payment interval
+    const { data: memberClass } = await supabase
+      .from('member_classes')
+      .select('payment_interval')
+      .eq('member_id', memberId)
+      .eq('class_id', classId)
+      .single();
+
+    // Always pay for 1 month regardless of total membership duration
     const periodStart = dayjs(periodDate).startOf('month').format('YYYY-MM-DD');
     const periodEnd = dayjs(periodDate).add(1, 'month').format('YYYY-MM-DD');
     const periodLabel = dayjs(periodDate).format('MMMM YYYY');
@@ -187,7 +217,7 @@ export async function processClassPayment(
       payment_date: todayStr,
       period_start: periodStart,
       period_end: periodEnd,
-      description: `${periodLabel} ödemesi`,
+      description: formData.description || `${periodLabel} ödemesi`,
     };
 
     const { data: payment, error: paymentError } = await supabase

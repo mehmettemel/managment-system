@@ -59,7 +59,15 @@ Eğer "Type error" veya "Lint error" alıyorsanız, bunları düzeltmeden produc
 - **Componentler**: `PascalCase` (örn: `MemberCard`, `MainLayout`)
 - **Fonksiyonlar**: `camelCase` (örn: `getMembers`, `calculateTotal`)
 
-### 5. Formatlama ve Özel Inputlar
+### UI & Theming (Mantine UI)
+
+- **Framework**: We use Mantine UI v7.
+- **Dark Mode**: All components **MUST** be compatible with both Light and Dark modes.
+  - Avoid hardcoded colors (e.g., `bg="white"`, `c="black"`).
+  - Use Mantine theme tokens (e.g., `bg="var(--mantine-color-body)"`, `c="dimmed"`).
+  - Test all new UI elements in both modes.
+
+## Code Style & Formatting
 
 Projeye tutarlılık sağlamak için aşağıdaki yardımcıları kullanın:
 

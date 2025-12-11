@@ -13,7 +13,7 @@ import type { Member, MemberWithClasses } from '@/types';
  * Hook to fetch all members with optional real-time updates
  */
 export function useMembers(status?: string, refreshTrigger?: number) {
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<MemberWithClasses[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export function useMembers(status?: string, refreshTrigger?: number) {
 
         let query: any = supabase
           .from('members')
-          .select('*')
+          .select('*, member_classes(*, classes(name))')
           .order('created_at', { ascending: false });
 
         if (status && status !== 'all') {
@@ -36,7 +36,7 @@ export function useMembers(status?: string, refreshTrigger?: number) {
 
         if (error) throw error;
 
-        setMembers(data || []);
+        setMembers((data as unknown as MemberWithClasses[]) || []);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Bir hata oluştu');

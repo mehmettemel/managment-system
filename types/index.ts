@@ -74,6 +74,7 @@ export interface MemberClassWithDetails {
   next_payment_date: string | null;
   price: number | null;
   active: boolean;
+  payment_interval: number | null;
   classes: Class;
 }
 
@@ -108,6 +109,7 @@ export interface PaymentScheduleItem {
   paymentId?: number; // if status is paid
   paymentDate?: string;
   paymentMethod?: string;
+  description?: string;
 }
 
 // Payment form with specific period support
@@ -118,6 +120,7 @@ export interface ClassPaymentFormData {
   monthsToPay?: number; // Legacy
   periodDate?: string; // Specific month to pay (YYYY-MM-DD)
   paymentMethod?: string;
+  description?: string;
 }
 
 export interface FreezeFormData {

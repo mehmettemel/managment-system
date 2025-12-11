@@ -130,6 +130,7 @@ export interface Database {
           next_payment_date: string | null;
           price: number | null;
           active: boolean;
+          payment_interval: number | null;
         };
         Insert: {
           id?: number;
@@ -138,6 +139,7 @@ export interface Database {
           next_payment_date?: string | null;
           price?: number | null;
           active?: boolean;
+          payment_interval?: number | null;
         };
         Update: {
           id?: number;
@@ -146,6 +148,7 @@ export interface Database {
           next_payment_date?: string | null;
           price?: number | null;
           active?: boolean;
+          payment_interval?: number | null;
         };
       };
       payments: {
