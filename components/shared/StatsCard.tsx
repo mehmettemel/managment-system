@@ -30,7 +30,7 @@ export function StatsCard({
 
   return (
     <Paper withBorder p="md" radius="md">
-      <Group justify="space-between">
+      <Group justify="space-between" align="flex-start">
         <Stack gap={4}>
           <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
             {title}
