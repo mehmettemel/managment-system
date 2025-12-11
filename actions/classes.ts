@@ -212,7 +212,8 @@ export async function getClassMembers(
         members (*)
       `
       )
-      .eq('class_id', classId);
+      .eq('class_id', classId)
+      .eq('active', true);
 
     if (error) {
       logError('getClassMembers', error);

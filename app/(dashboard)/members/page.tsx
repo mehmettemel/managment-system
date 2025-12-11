@@ -179,21 +179,25 @@ export default function MembersPage() {
     {
       key: 'membership_duration',
       label: 'Üyelik Süresi',
-      render: (member) => (
-        <Stack gap={2}>
-          {member.member_classes?.map((mc) => (
-            <Text size="xs" key={mc.id} style={{ whiteSpace: 'nowrap' }}>
-              <span style={{ fontWeight: 600 }}>{mc.classes?.name}:</span>{' '}
-              {mc.payment_interval ? `${mc.payment_interval} Ay` : 'Aylık'}
-            </Text>
-          ))}
-          {(!member.member_classes || member.member_classes.length === 0) && (
-            <Text size="xs" c="dimmed">
-              -
-            </Text>
-          )}
-        </Stack>
-      ),
+      render: (member) => {
+        const activeClasses =
+          member.member_classes?.filter((mc) => mc.active) || [];
+        return (
+          <Stack gap={2}>
+            {activeClasses.map((mc) => (
+              <Text size="xs" key={mc.id} style={{ whiteSpace: 'nowrap' }}>
+                <span style={{ fontWeight: 600 }}>{mc.classes?.name}:</span>{' '}
+                {mc.payment_interval ? `${mc.payment_interval} Ay` : 'Aylık'}
+              </Text>
+            ))}
+            {activeClasses.length === 0 && (
+              <Text size="xs" c="dimmed">
+                -
+              </Text>
+            )}
+          </Stack>
+        );
+      },
     },
     {
       key: 'status',

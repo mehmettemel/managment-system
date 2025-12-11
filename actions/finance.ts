@@ -365,3 +365,25 @@ export async function deleteInstructorRate(
     return errorResponse(handleSupabaseError(error));
   }
 }
+
+/**
+ * Get instructor payouts history
+ */
+export async function getInstructorPayouts(): Promise<ApiListResponse<any>> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('instructor_payouts')
+      .select('*, instructors(first_name, last_name)')
+      .order('payment_date', { ascending: false });
+
+    if (error) {
+      logError('getInstructorPayouts', error);
+      return errorListResponse(handleSupabaseError(error));
+    }
+    return successListResponse(data || []);
+  } catch (error) {
+    logError('getInstructorPayouts', error);
+    return errorListResponse(handleSupabaseError(error));
+  }
+}
