@@ -75,6 +75,7 @@ export interface MemberClassWithDetails {
   price: number | null;
   active: boolean;
   payment_interval: number | null;
+  custom_price: number | null;
   classes: Class;
 }
 

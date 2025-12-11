@@ -8,12 +8,16 @@ Detaylı SQL şeması için [`docs/database-schema.sql`](./database-schema.sql) 
 
 Temel tablolar şunlardır:
 
-1.  **`members`**: Üyelerin temel bilgileri (Ad, Soyad, Telefon, Durum, Aylık Ücret).
-2.  **`instructors`**: Eğitmen bilgileri.
-3.  **`classes`**: Ders tanımları (Ad, Gün, Saat, Eğitmen ID).
-4.  **`member_classes`**: Hangi üyenin hangi derse kayıtlı olduğu (Çoka-çok ilişki).
-5.  **`payments`**: Ödeme kayıtları.
-6.  **`frozen_logs`**: Üyelik dondurma geçmişi (Süresiz dondurma destekler, `end_date` nullable).
+1.  **`members`**: Üyelerin temel bilgileri (Ad, Soyad, Telefon, Durum).
+2.  **`instructors`**: Eğitmen bilgileri ve varsayılan komisyon oranları.
+3.  **`classes`**: Ders tanımları (Ad, Fiyat, Gün, Saat, Eğitmen ID, Arşiv Durumu).
+4.  **`member_classes`**: Kayıt tablosu. Üyenin derse kaydını, özel fiyatını (`custom_price`), ödeme aralığını (`payment_interval`) ve son ödeme tarihini (`next_payment_date`) tutar.
+5.  **`payments`**: Ödeme kayıtları. Hangi ders için yapıldığı (`class_id`) ve o anki fiyat (`snapshot_price`) tutulur.
+6.  **`frozen_logs`**: Üyelik dondurma geçmişi.
+7.  **`instructor_ledger`**: Eğitmen hakediş defteri (Komisyon tahakkukları).
+8.  **`instructor_payouts`**: Eğitmenlere yapılan hakediş ödemeleri.
+9.  **`instructor_rates`**: Eğitmen/Dans türü bazlı özel komisyon oranları.
+10. **`dance_types`**: Dans türleri (Salsa, Bachata vb.).
 
 ## 🛡️ Güvenlik (RLS - Row Level Security)
 

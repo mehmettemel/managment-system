@@ -6,8 +6,9 @@ Yeni özellik eklerken veya mevcut kodu düzenlerken izlenmesi gereken adımlar 
 
 Standart bir özellik (örn: "Ders Programı") eklerken şu sırayı takip edin:
 
-1.  **Veritabanı**: Gerekirse `docs/database-schema.sql` dosyasına bakarak yeni tablo oluşturun veya mevcut tabloyu güncelleyin.
-    - _Not:_ Tablo değişikliği yaptıysanız tipleri güncellemeyi unutmayın.
+1.  **Veritabanı**: `supabase/migrations/` klasöründe yeni bir `.sql` dosyası oluşturun (örn: `011_new_feature.sql`).
+    - SQL değişikliklerinizi buraya yazın ve Supabase SQL Editöründe çalıştırın.
+    - _Not:_ Tablo değişikliği yaptıysanız `database.types.ts` dosyasını güncelleyin.
 2.  **Types**: `types/` klasöründe gerekli tip tanımlarını yapın. (Supabase tiplerini generate etmek işi kolaylaştırır).
 3.  **Server Actions**: `actions/` klasöründe CRUD işlemleri için (create, read, update, delete) fonksiyonlarınızı yazın.
     - Fonksiyonların başına `'use server'` eklemeyi unutmayın.

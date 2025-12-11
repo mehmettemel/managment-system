@@ -63,6 +63,7 @@ export interface Database {
           duration_minutes: number;
           price_monthly: number | null;
           active: boolean;
+          archived: boolean;
         };
         Insert: {
           id?: number;
@@ -74,6 +75,7 @@ export interface Database {
           duration_minutes?: number;
           price_monthly?: number | null;
           active?: boolean;
+          archived?: boolean;
         };
         Update: {
           id?: number;
@@ -85,6 +87,7 @@ export interface Database {
           duration_minutes?: number;
           price_monthly?: number | null;
           active?: boolean;
+          archived?: boolean;
         };
       };
       members: {

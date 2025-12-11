@@ -2,6 +2,46 @@
 
 Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 
+## [1.2.0] - 2025-12-11
+
+### 🚀 Major Features: Enrollment System & Finance
+
+#### Enrollment-Based Membership (Kayıt Bazlı Sistem)
+
+- ✅ **Class Specific Enrollment**: Üyeler artık genel bir üyelik yerine spesifik derslere kayıt oluyor (`member_classes` tablosu genişletildi).
+- ✅ **Active/Inactive Tracking**: Her ders kaydı ayrı ayrı aktif/pasif (arşivlenmiş) durumuna sahip.
+- ✅ **Custom Pricing**: Her kayıt için özel fiyat belirleme imkanı (`custom_price`).
+- ✅ **Price Protection**: Eski fiyattan devam etme özelliği (Grandfathering).
+
+#### Class Management & Transfers
+
+- ✅ **Class Archiving**: Dersleri silmeden arşivleme özelliği.
+- ✅ **Bulk Migration**: Bir sınıfı topluca başka bir sınıfa taşıma (Fiyat korumalı).
+- ✅ **Individual Transfer**: Üyeyi bir sınıftan diğerine taşıma sihirbazı.
+- ✅ **Navigation**: Sınıf detayından üye detayına hızlı geçiş.
+
+#### Finance & Instructor Payments
+
+- ✅ **Instructor Ledger**: Eğitmen hakediş takibi (Hakediş defteri).
+- ✅ **Commission Calculation**: Otomatik komisyon hesaplama (Varsayılan veya dans türüne göre özel oran).
+- ✅ **Payout History**: Eğitmen ödeme geçmişi ve detaylı raporlama.
+- ✅ **Tabs View**: Ödenecekler ve Geçmiş sekmeleri.
+
+#### UI Components
+
+- ✅ **EnrollmentCard**: Üye detayında her ders için ayrı kart görünümü.
+- ✅ **Transfer Modals**: `MemberTransferModal` ve `ClassMigrateModal`.
+- ✅ **InstructorPaymentsTable**: Tab yapısı ile geliştirilmiş ödeme tablosu.
+
+### 🔧 Database Changes
+
+- `member_classes`: `next_payment_date`, `active`, `payment_interval`, `custom_price` eklendi.
+- `payments`: `class_id`, `snapshot_price` (tarihsel fiyat) eklendi.
+- `classes`: `archived` kolunu eklendi.
+- Yeni tablolar: `instructor_payouts`, `instructor_ledger`, `instructor_rates`, `dance_types`.
+
+---
+
 ## [1.1.0] - 2025-12-11
 
 ### ✨ Yeni Özellikler
