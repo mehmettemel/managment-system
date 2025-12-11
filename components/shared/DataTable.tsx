@@ -43,6 +43,7 @@ interface DataTableProps<T> {
   loading?: boolean
   emptyText?: string
   idField?: keyof T
+  filters?: React.ReactNode
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -55,6 +56,7 @@ export function DataTable<T extends Record<string, any>>({
   loading = false,
   emptyText = 'Kayıt bulunamadı',
   idField = 'id' as keyof T,
+  filters,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<string | null>(null)
@@ -152,16 +154,19 @@ export function DataTable<T extends Record<string, any>>({
         {/* Search Bar */}
         <Box p="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
           <Group justify="space-between">
-            <TextInput
-              placeholder="Ara..."
-              leftSection={<IconSearch size={16} />}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                setCurrentPage(1)
-              }}
-              style={{ flex: 1, maxWidth: 400 }}
-            />
+            <Group gap="xs">
+                <TextInput
+                placeholder="Ara..."
+                leftSection={<IconSearch size={16} />}
+                value={searchQuery}
+                onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setCurrentPage(1)
+                }}
+                style={{ width: 300 }}
+                />
+                {filters}
+            </Group>
             <Badge variant="light" size="lg">
               {sortedData.length} kayıt
             </Badge>

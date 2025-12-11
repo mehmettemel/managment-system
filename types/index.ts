@@ -81,8 +81,9 @@ export interface PaymentFormData {
 export interface FreezeFormData {
   member_id: number
   start_date: string
-  end_date: string
+  end_date?: string
   reason?: string
+  is_indefinite?: boolean
 }
 
 // API Response types

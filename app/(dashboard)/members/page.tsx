@@ -23,14 +23,17 @@ import {
   IconTrash,
   IconSnowflake,
   IconCreditCard,
+  IconPlayerPlay,
 } from '@tabler/icons-react'
 import { DataTable } from '@/components/shared/DataTable'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MemberDrawer } from '@/components/members/MemberDrawer'
+import { FreezeMemberDrawer } from '@/components/members/FreezeMemberDrawer'
 import { useMembers } from '@/hooks/use-members'
 import { useClasses } from '@/hooks/use-classes'
 import { archiveMember } from '@/actions/members'
+import { unfreezeMembership } from '@/actions/freeze'
 import { showSuccess, showError } from '@/utils/notifications'
 import { formatDate, isPaymentOverdue } from '@/utils/date-helpers'
 import { formatPhone } from '@/utils/formatters'
@@ -40,6 +43,7 @@ import type { Member } from '@/types'
 export default function MembersPage() {
   const [statusFilter, setStatusFilter] = useState('active')
   const [drawerOpened, setDrawerOpened] = useState(false)
+  const [freezeDrawerOpened, setFreezeDrawerOpened] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
@@ -59,6 +63,23 @@ export default function MembersPage() {
         showError(result.error)
       } else {
         showSuccess('Üye arşivlendi')
+        setRefreshTrigger((prev) => prev + 1)
+      }
+    }
+  }
+
+  const handleFreeze = (member: Member) => {
+    setSelectedMember(member)
+    setFreezeDrawerOpened(true)
+  }
+
+  const handleUnfreeze = async (member: Member) => {
+    if (confirm(`${member.first_name} üyeliği aktifleştirilsin mi?`)) {
+      const result = await unfreezeMembership(member.id)
+      if (result.error) {
+        showError(result.error)
+      } else {
+        showSuccess('Üyelik aktifleştirildi')
         setRefreshTrigger((prev) => prev + 1)
       }
     }
@@ -151,12 +172,21 @@ export default function MembersPage() {
             >
               Ödeme Al
             </Menu.Item>
-            <Menu.Item
-              leftSection={<IconSnowflake size={16} />}
-              onClick={() => console.log('Freeze', member)}
-            >
-              Dondur
-            </Menu.Item>
+            {member.status === 'frozen' ? (
+              <Menu.Item
+                leftSection={<IconPlayerPlay size={16} />}
+                onClick={() => handleUnfreeze(member)}
+              >
+                Aktifleştir
+              </Menu.Item>
+            ) : (
+              <Menu.Item
+                leftSection={<IconSnowflake size={16} />}
+                onClick={() => handleFreeze(member)}
+              >
+                Dondur
+              </Menu.Item>
+            )}
             <Menu.Divider />
             <Menu.Item
               leftSection={<IconTrash size={16} />}
@@ -184,17 +214,6 @@ export default function MembersPage() {
         </Button>
       </Group>
 
-      {/* Status Filter */}
-      <SegmentedControl
-        value={statusFilter}
-        onChange={setStatusFilter}
-        data={[
-          { label: 'Aktif', value: 'active' },
-          { label: 'Dondurulmuş', value: 'frozen' },
-          { label: 'Arşiv', value: 'archived' },
-          { label: 'Tümü', value: 'all' },
-        ]}
-      />
 
       {/* Data Table */}
       {error ? (
@@ -218,6 +237,18 @@ export default function MembersPage() {
           emptyText="Üye bulunamadı"
           pageSize={10}
           onRowClick={(member) => handleEdit(member)}
+          filters={
+            <SegmentedControl
+              value={statusFilter}
+              onChange={setStatusFilter}
+              data={[
+                { label: 'Aktif', value: 'active' },
+                { label: 'Dondurulmuş', value: 'frozen' },
+                { label: 'Arşiv', value: 'archived' },
+                { label: 'Tümü', value: 'all' },
+              ]}
+            />
+          }
         />
       )}
 
@@ -227,6 +258,13 @@ export default function MembersPage() {
         onClose={handleDrawerClose}
         member={selectedMember}
         classes={classes}
+        onSuccess={handleSuccess}
+      />
+
+      <FreezeMemberDrawer
+        opened={freezeDrawerOpened}
+        onClose={() => setFreezeDrawerOpened(false)}
+        member={selectedMember}
         onSuccess={handleSuccess}
       />
     </Stack>

@@ -112,13 +112,6 @@ export function ClassesContent({
 
                   <Menu.Dropdown>
                     <Menu.Item
-                      leftSection={<IconUsers size={14} />}
-                      onClick={() => handleViewMembers(item)}
-                    >
-                      Kayıtlı Üyeler
-                    </Menu.Item>
-                    <Menu.Divider />
-                    <Menu.Item
                       leftSection={<IconEdit size={14} />}
                       onClick={() => handleEdit(item)}
                     >
@@ -164,6 +157,17 @@ export function ClassesContent({
                   </Text>
                  )}
               </Group>
+
+              <Button 
+                variant="light" 
+                color="blue" 
+                fullWidth 
+                mt="md" 
+                leftSection={<IconUsers size={16} />} 
+                onClick={() => handleViewMembers(item)}
+              >
+                Kayıtlı Üyeler
+              </Button>
             </Card>
           ))}
         </SimpleGrid>
