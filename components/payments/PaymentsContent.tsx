@@ -1,5 +1,6 @@
 /**
  * Payments Content (Client Component)
+ * Updated for class-based payment system
  */
 
 'use client'
@@ -13,23 +14,22 @@ import {
   Card,
   Text,
   ActionIcon,
+  Alert,
 } from '@mantine/core'
-import { IconPlus, IconTrash } from '@tabler/icons-react'
-import { PaymentDrawer } from './PaymentDrawer'
+import { IconInfoCircle, IconTrash } from '@tabler/icons-react'
 import { Payment } from '@/types'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { useDisclosure } from '@mantine/hooks'
 import { deletePayment } from '@/actions/payments'
 import { showSuccess, showError } from '@/utils/notifications'
 import { formatCurrency } from '@/utils/formatters'
 import dayjs from 'dayjs'
+import Link from 'next/link'
 
 interface PaymentsContentProps {
   initialPayments: Payment[]
 }
 
 export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
-  const [opened, { open, close }] = useDisclosure(false)
   const [payments, setPayments] = useState(initialPayments)
 
   const handleDelete = async (id: number) => {
@@ -38,32 +38,27 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
       if (res.error) showError(res.error)
       else {
         showSuccess('Ödeme silindi')
-        // Optimistic update or refresh needed, simplistic here:
         setPayments(payments.filter(p => p.id !== id))
       }
     }
   }
 
-  // Get member name logic is tricky here as payment only has member_id.
-  // In a real app we should fetch payments with member relation.
-  // For now we just show member ID or use a different Server Action.
-  // Let's rely on basic table for now, or update the Server Action to join members.
-
   return (
     <>
-      <Group justify="flex-end">
-        <Button leftSection={<IconPlus size={20} />} onClick={open}>
-          Ödeme Al
-        </Button>
-      </Group>
+      <Alert variant="light" color="blue" icon={<IconInfoCircle />} mb="lg">
+        <Text size="sm">
+          Yeni sistem: Ödemeler üye detay sayfasından ders bazlı yapılmaktadır.{' '}
+          <Link href="/members" style={{ fontWeight: 600 }}>Üyeler sayfasına git →</Link>
+        </Text>
+      </Alert>
 
       {payments.length === 0 ? (
         <EmptyState
           title="Ödeme Kaydı Yok"
           description="Henüz tahsilat yapılmamış."
           action={
-            <Button variant="light" onClick={open}>
-              İlk Ödemeyi Al
+            <Button variant="light" component={Link} href="/members">
+              Üyelere Git
             </Button>
           }
         />
@@ -74,6 +69,7 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
               <Table.Tr>
                 <Table.Th>Tarih</Table.Th>
                 <Table.Th>Tutar</Table.Th>
+                <Table.Th>Ders</Table.Th>
                 <Table.Th>Yöntem</Table.Th>
                 <Table.Th>Dönem</Table.Th>
                 <Table.Th>Açıklama</Table.Th>
@@ -87,6 +83,7 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
                   <Table.Td fw={700} c="green">
                     {formatCurrency(Number(payment.amount))}
                   </Table.Td>
+                  <Table.Td>{(payment as any).classes?.name || '-'}</Table.Td>
                   <Table.Td>
                     <Badge variant="dot">{payment.payment_method}</Badge>
                   </Table.Td>
@@ -111,12 +108,6 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
           </Table>
         </Card>
       )}
-
-      <PaymentDrawer
-        opened={opened}
-        onClose={close}
-        onSuccess={() => {/* Refresh logic */}}
-      />
     </>
   )
 }

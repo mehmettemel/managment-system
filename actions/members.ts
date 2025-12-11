@@ -1,6 +1,6 @@
 /**
  * Server Actions for Member Management
- * These functions run on the server and can be called from Client Components
+ * Updated for Class-Based Payment System
  */
 
 'use server'
@@ -11,10 +11,10 @@ import type {
   Member,
   MemberInsert,
   MemberUpdate,
-  MemberWithClasses,
   MemberFormData,
   ApiResponse,
   ApiListResponse,
+  MemberClassWithDetails,
 } from '@/types'
 import {
   successResponse,
@@ -26,8 +26,8 @@ import {
   sanitizeInput,
   validateRequiredFields,
 } from '@/utils/response-helpers'
-import { calculateNextPaymentDate, getTodayDate } from '@/utils/date-helpers'
-import { processStudentPayment } from '@/actions/finance'
+import { getTodayDate } from '@/utils/date-helpers'
+import dayjs from 'dayjs'
 
 /**
  * Get all members with optional filtering
@@ -59,25 +59,28 @@ export async function getMembers(
 }
 
 /**
- * Get a single member by ID with their classes
+ * Get a single member by ID with their classes (extended)
  */
 export async function getMemberById(
   id: number
-): Promise<ApiResponse<MemberWithClasses>> {
+): Promise<ApiResponse<Member & { member_classes: MemberClassWithDetails[] }>> {
   try {
     const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('members')
-      .select(
-        `
+      .select(`
         *,
         member_classes (
-          *,
+          id,
+          member_id,
+          class_id,
+          next_payment_date,
+          price,
+          active,
           classes (*)
         )
-      `
-      )
+      `)
       .eq('id', id)
       .single()
 
@@ -86,7 +89,7 @@ export async function getMemberById(
       return errorResponse(handleSupabaseError(error))
     }
 
-    return successResponse(data as MemberWithClasses)
+    return successResponse(data as Member & { member_classes: MemberClassWithDetails[] })
   } catch (error) {
     logError('getMemberById', error)
     return errorResponse(handleSupabaseError(error))
@@ -94,7 +97,10 @@ export async function getMemberById(
 }
 
 /**
- * Create a new member
+ * Create a new member with class-based payment tracking
+ */
+/**
+ * Create a new member with class-based payment tracking
  */
 export async function createMember(
   formData: MemberFormData
@@ -109,25 +115,15 @@ export async function createMember(
     const supabase = await createClient()
     const today = getTodayDate()
 
-    // Prepare member data
+    // Prepare member data (no payment dates on member level anymore)
     const memberData: MemberInsert = sanitizeInput({
       first_name: formData.first_name,
       last_name: formData.last_name,
       phone: formData.phone || null,
       join_date: today,
       status: 'active',
-      monthly_fee: formData.monthly_fee || 0,
+      monthly_fee: 0, // No global monthly fee anymore
     })
-
-    // If initial payment is provided, set payment dates
-    if (formData.initial_payment) {
-      memberData.last_payment_date = today
-      // Calculate next due date based on duration
-      const duration = formData.initial_duration_months || 1
-      const nextDate = new Date(today)
-      nextDate.setMonth(nextDate.getMonth() + duration)
-      memberData.next_payment_due_date = nextDate.toISOString().split('T')[0]
-    }
 
     // Create member
     const { data: member, error: memberError } = await supabase
@@ -141,12 +137,20 @@ export async function createMember(
       return errorResponse(handleSupabaseError(memberError))
     }
 
-    // Associate member with classes
-    if (formData.class_ids.length > 0) {
-      const memberClasses = formData.class_ids.map((classId) => ({
-        member_id: member.id,
-        class_id: classId,
-      }))
+    // Associate member with classes (with next_payment_date and price)
+    if (formData.class_registrations && formData.class_registrations.length > 0) {
+      const memberClasses = formData.class_registrations.map((reg) => {
+        // Calculate initial next_payment_date based on duration
+        const nextPaymentDate = dayjs(today).add(reg.duration, 'month').format('YYYY-MM-DD')
+        
+        return {
+          member_id: member.id,
+          class_id: reg.class_id,
+          next_payment_date: nextPaymentDate,
+          price: reg.price,
+          active: true,
+        }
+      })
 
       const { error: classError } = await supabase
         .from('member_classes')
@@ -155,28 +159,6 @@ export async function createMember(
       if (classError) {
         logError('createMember - classes', classError)
         // Continue anyway, member is created
-      }
-    }
-
-    // Create initial payment if provided
-    if (formData.initial_payment) {
-      const { data: initialPay, error: paymentError } = await supabase.from('payments').insert({
-        member_id: member.id,
-        amount: formData.initial_payment.amount,
-        payment_method: formData.initial_payment.payment_method || 'Nakit',
-        payment_date: today,
-        period_start: today,
-        period_end: calculateNextPaymentDate(today),
-        description: formData.initial_payment.description || 'İlk ödeme',
-      }).select().single()
-
-      if (paymentError) {
-        logError('createMember - payment', paymentError)
-        // Continue anyway, member is created
-      } else if (initialPay && formData.class_ids.length === 1) {
-         // Process Commission
-         const months = formData.initial_duration_months || 1
-         await processStudentPayment(initialPay.id, initialPay.amount, months, formData.class_ids[0])
       }
     }
 
@@ -265,19 +247,38 @@ export async function searchMembers(
 }
 
 /**
- * Get members with overdue payments
+ * Get members with overdue payments (class-based)
+ * A member is overdue if ANY of their classes has next_payment_date < today
  */
 export async function getOverdueMembers(): Promise<ApiListResponse<Member>> {
   try {
     const supabase = await createClient()
     const today = getTodayDate()
 
+    // Get member IDs with overdue class payments
+    const { data: overdueClasses, error: mcError } = await supabase
+      .from('member_classes')
+      .select('member_id')
+      .eq('active', true)
+      .lt('next_payment_date', today)
+
+    if (mcError) {
+      logError('getOverdueMembers - member_classes', mcError)
+      return errorListResponse(handleSupabaseError(mcError))
+    }
+
+    const overdueIds = [...new Set(overdueClasses?.map(mc => mc.member_id) || [])]
+
+    if (overdueIds.length === 0) {
+      return successListResponse([])
+    }
+
     const { data, error } = await supabase
       .from('members')
       .select('*')
       .eq('status', 'active')
-      .lt('next_payment_due_date', today)
-      .order('next_payment_due_date', { ascending: true })
+      .in('id', overdueIds)
+      .order('first_name', { ascending: true })
 
     if (error) {
       logError('getOverdueMembers', error)

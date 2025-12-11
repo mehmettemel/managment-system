@@ -1,6 +1,6 @@
 /**
  * Member Drawer Component
- * For creating and editing members with enhanced membership logic
+ * For creating and editing members with enhanced class-based pricing logic
  */
 
 'use client'
@@ -14,25 +14,18 @@ import {
   Group,
   MultiSelect,
   NumberInput,
-  Switch,
-  Divider,
   Text,
-  Textarea,
   Select,
   Card,
-  Badge,
   Grid,
 } from '@mantine/core'
-import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
-import { formatCurrency, formatPhone } from '@/utils/formatters'
+import { formatCurrency } from '@/utils/formatters'
 import { MaskedPhoneInput } from '@/components/shared/MaskedPhoneInput'
-import { CurrencyInput } from '@/components/shared/CurrencyInput'
 import { createMember, updateMember, getMemberById } from '@/actions/members'
 import { showSuccess, showError } from '@/utils/notifications'
-import type { Member, MemberFormData, ClassWithInstructor } from '@/types'
-import { IconCalendar, IconClock, IconUser, IconCurrencyLira } from '@tabler/icons-react'
-import dayjs from 'dayjs'
+import type { Member, MemberFormData } from '@/types'
+import { IconCalendar, IconClock } from '@tabler/icons-react'
 
 interface MemberDrawerProps {
   opened: boolean
@@ -40,6 +33,17 @@ interface MemberDrawerProps {
   member?: Member | null
   classes: any[] // We need full class objects here
   onSuccess?: () => void
+}
+
+interface FormValues {
+  first_name: string
+  last_name: string
+  phone: string
+  class_ids: string[]
+  // Flat map of class_id -> price
+  prices: Record<string, number> 
+  // Flat map of class_id -> duration
+  durations: Record<string, number> 
 }
 
 export function MemberDrawer({
@@ -50,24 +54,15 @@ export function MemberDrawer({
   onSuccess,
 }: MemberDrawerProps) {
   const [loading, setLoading] = useState(false)
-  const [includePayment, setIncludePayment] = useState(false)
   
-  // New state for enhanced logic
-  const [selectedDuration, setSelectedDuration] = useState<string>('1') // months
-  const [calculatedPrice, setCalculatedPrice] = useState(0)
-
-  const form = useForm<Partial<MemberFormData>>({
+  const form = useForm<FormValues>({
     initialValues: {
       first_name: '',
       last_name: '',
       phone: '',
       class_ids: [],
-      monthly_fee: 0,
-      initial_payment: {
-        amount: 0,
-        payment_method: 'Nakit',
-        description: 'İlk ödeme',
-      },
+      prices: {},
+      durations: {},
     },
     validate: {
       first_name: (value) => (value && value.trim().length >= 2 ? null : 'Ad en az 2 karakter olmalı'),
@@ -76,101 +71,122 @@ export function MemberDrawer({
     },
   })
 
-  // Calculate price when classes change
-  useEffect(() => {
-    const selectedClassIds = form.values.class_ids || []
-    if (selectedClassIds.length > 0) {
-      const total = classes
-        .filter((c) => selectedClassIds.map(String).includes(String(c.id)))
-        .reduce((sum, c) => sum + (Number(c.price_monthly) || 0), 0)
-      
-      setCalculatedPrice(total)
-      
-      // Only auto-set monthly_fee if it hasn't been manually touched (or is 0)
-      if (form.values.monthly_fee === 0) {
-        form.setFieldValue('monthly_fee', total)
-      }
-    } else {
-      setCalculatedPrice(0)
-      if (form.values.monthly_fee === 0) form.setFieldValue('monthly_fee', 0)
-    }
-  }, [form.values.class_ids, classes])
-
-  // Update initial payment amount when fee or duration changes
-  useEffect(() => {
-    if (includePayment && !member) {
-      const monthlyFee = form.values.monthly_fee || 0
-      const duration = Number(selectedDuration) || 1
-      form.setFieldValue('initial_payment.amount', monthlyFee * duration)
-    }
-  }, [form.values.monthly_fee, selectedDuration, includePayment, member])
-
+  // Initialize form when member prop changes (for editing)
   useEffect(() => {
     const fetchDetails = async () => {
       if (member) {
         setLoading(true)
-        // Set basic info immediately
+        
+        // Fetch relations (classes)
+        const { data } = await getMemberById(member.id)
+        
+        const existingClassIds: string[] = []
+        const existingPrices: Record<string, number> = {}
+        const existingDurations: Record<string, number> = {}
+
+        if (data && data.member_classes) {
+             data.member_classes.forEach((mc: any) => {
+                const cId = String(mc.class_id)
+                if (mc.active) {
+                    existingClassIds.push(cId)
+                    existingPrices[cId] = Number(mc.price) || 0
+                    existingDurations[cId] = 1 // Default to 1 for edit/view, usually irrelevant for edit unless we allow changing next payment date logic here which is complex. For now just show active classes.
+                }
+             })
+        }
+
         form.setValues({
             first_name: member.first_name,
             last_name: member.last_name,
             phone: member.phone || '',
-            monthly_fee: member.monthly_fee || 0,
-            class_ids: [],
+            class_ids: existingClassIds,
+            prices: existingPrices,
+            durations: existingDurations,
         })
         
-        // Fetch relations (classes)
-        const { data } = await getMemberById(member.id)
-        if (data) {
-             const classIds = data.member_classes?.map((mc: any) => String(mc.class_id)) || []
-             form.setFieldValue('class_ids', classIds as any)
-             // Also update monthly fee if valid
-             if (data.monthly_fee) form.setFieldValue('monthly_fee', Number(data.monthly_fee))
-        }
-        setIncludePayment(false)
         setLoading(false)
       } else {
         form.reset()
-        setIncludePayment(true)
-        setSelectedDuration('1')
+        form.setValues({
+            first_name: '',
+            last_name: '',
+            phone: '',
+            class_ids: [],
+            prices: {},
+            durations: {},
+        })
       }
     }
     
-    fetchDetails()
-  }, [member])
+    if (opened) {
+        fetchDetails()
+    }
+  }, [opened, member])
 
-  const handleSubmit = async (values: Partial<MemberFormData>) => {
+  // Watch class_ids to initialize defaults for new selections
+  useEffect(() => {
+    const selectedIds = form.values.class_ids
+    const currentPrices = { ...form.values.prices }
+    const currentDurations = { ...form.values.durations }
+    let changed = false
+
+    selectedIds.forEach(id => {
+        if (currentPrices[id] === undefined) {
+             const cls = classes.find(c => String(c.id) === id)
+             currentPrices[id] = cls ? Number(cls.price_monthly) : 0
+             changed = true
+        }
+        if (currentDurations[id] === undefined) {
+            currentDurations[id] = 1 // Default duration 1 month
+            changed = true
+        }
+    })
+
+    if (changed) {
+        form.setFieldValue('prices', currentPrices)
+        form.setFieldValue('durations', currentDurations)
+    }
+  }, [form.values.class_ids, classes])
+
+
+  const handleSubmit = async (values: FormValues) => {
     setLoading(true)
     try {
       if (member) {
-        // Update logic
+        // Update logic - simplistic for now, just main info
+        // Class updates are complex in edit mode with this new structure, 
+        // usually strictly handled via add/remove class specific actions, not full overwrite.
+        // For now, let's allow updating name/phone. Class changes might require a specialized logic or just delete/add in database.
+        // Given complexity, let's only update basic info and show a warning or handling for classes elsewhere?
+        // OR: for now, map the class changes? It's risky to delete member_classes and recreate due to payment history.
+        // Best approach for MVP Update: Update Personal Info ONLY. Class changes should be done via "Manage Classes" or similar if needed.
+        // But user might expect to add a class here.
+        // Let's stick to updating basic info here as per `updateMember` capability.
+        
         const result = await updateMember(member.id, {
-          first_name: values.first_name!.trim(),
-          last_name: values.last_name!.trim(),
+          first_name: values.first_name.trim(),
+          last_name: values.last_name.trim(),
           phone: values.phone?.trim() || null,
-          monthly_fee: values.monthly_fee,
         })
          if (result.error) showError(result.error)
          else {
-             showSuccess('Üye güncellendi')
+             showSuccess('Üye bilgileri güncellendi (Ders değişiklikleri yapılamaz)')
              onSuccess?.()
              onClose()
          }
       } else {
         // Create Logic
+        const classRegistrations = values.class_ids.map(id => ({
+            class_id: Number(id),
+            price: values.prices[id] || 0,
+            duration: values.durations[id] || 1
+        }))
+
         const formData: MemberFormData = {
-          first_name: values.first_name!.trim(),
-          last_name: values.last_name!.trim(),
+          first_name: values.first_name.trim(),
+          last_name: values.last_name.trim(),
           phone: values.phone?.trim(),
-          class_ids: values.class_ids!.map(Number),
-          monthly_fee: values.monthly_fee,
-          initial_duration_months: Number(selectedDuration),
-          initial_payment: includePayment
-            ? {
-                amount: values.initial_payment!.amount,
-                payment_method: values.initial_payment!.payment_method,
-                description: `${selectedDuration} Aylık Üyelik - İlk Ödeme`,
-              }
-            : undefined,
+          class_registrations: classRegistrations
         }
 
         const result = await createMember(formData)
@@ -189,19 +205,20 @@ export function MemberDrawer({
     }
   }
 
-  // Preapre class options for Select
   const classOptions = classes.map(c => ({
       value: String(c.id),
       label: `${c.name} (${c.day_of_week} ${c.start_time?.slice(0,5)})`
   }))
 
+  const selectedClasses = classes.filter(c => form.values.class_ids.includes(String(c.id)))
+
   return (
     <Drawer
       opened={opened}
       onClose={() => { form.reset(); onClose(); }}
-      title={<Text size="lg" fw={600}>{member ? 'Üye Düzenle' : 'Yeni Üye Kaydı (Details)'}</Text>}
+      title={<Text size="lg" fw={600}>{member ? 'Üye Düzenle' : 'Yeni Üye Kaydı'}</Text>}
       position="right"
-      size="lg" // Wider drawer for more info
+      size="lg"
       overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -227,7 +244,7 @@ export function MemberDrawer({
 
             {/* 2. Membership Selection */}
             <Card withBorder radius="md" p="md">
-                <Text fw={600} mb="sm" c="dimmed">Üyelik ve Ders Seçimi</Text>
+                <Text fw={600} mb="sm" c="dimmed">Ders Seçimi ve Ücretlendirme</Text>
                 <Stack>
                      <MultiSelect
                         label="Dersleri Seçin"
@@ -236,98 +253,76 @@ export function MemberDrawer({
                         searchable
                         required
                         {...form.getInputProps('class_ids')}
+                        description={member ? "Düzenleme modunda ders değişikliği yapılamaz" : "Üyenin katılacağı dersler"}
+                        disabled={!!member} // Disable class changes in edit mode for simplicity/safety
                      />
                      
-                     {/* Selected Classes Details */}
-                     {form.values.class_ids && form.values.class_ids.length > 0 && (
-                         <Stack gap="xs">
-                             <Text size="xs" fw={700}>Seçilen Ders Planı:</Text>
-                             {classes
-                                .filter(c => form.values.class_ids?.map(String).includes(String(c.id)))
-                                .map(c => (
-                                 <Group key={c.id} justify="space-between" className="bg-gray-50 p-2 rounded text-sm dark:bg-zinc-800">
-                                     <Group gap="xs">
-                                         <Badge size="sm" variant="dot">{c.name}</Badge>
-                                         <Group gap={4} c="dimmed">
-                                             <IconCalendar size={12}/> <Text size="xs">{c.day_of_week}</Text>
-                                             <IconClock size={12}/> <Text size="xs">{c.start_time?.slice(0,5)}</Text>
+                     {/* Dynamic Price/Duration Fields for Each Selected Class */}
+                     {selectedClasses.length > 0 && (
+                         <Stack gap="md" mt="xs">
+                             <Text size="sm" fw={500}>Ders Detayları:</Text>
+                             {selectedClasses.map(c => {
+                                 const cId = String(c.id)
+                                 return (
+                                     <Card 
+                                       key={c.id} 
+                                       withBorder 
+                                       radius="sm" 
+                                       p="sm" 
+                                       className="bg-gray-50 dark:bg-zinc-900/50"
+                                     >
+                                         <Group justify="space-between" mb="xs">
+                                             <Group gap="xs">
+                                                 <Text fw={600} size="sm">{c.name}</Text>
+                                                 <Group gap={4} c="dimmed">
+                                                    <IconCalendar size={12}/> <Text size="xs">{c.day_of_week}</Text>
+                                                    <IconClock size={12}/> <Text size="xs">{c.start_time?.slice(0,5)}</Text>
+                                                 </Group>
+                                             </Group>
                                          </Group>
-                                     </Group>
-                                     <Text size="xs" fw={600}>{formatCurrency(Number(c.price_monthly))}</Text>
-                                 </Group>
-                             ))}
+                                         
+                                         <Grid>
+                                             <Grid.Col span={6}>
+                                                 <NumberInput
+                                                    label="Anlaşılan Ücret"
+                                                    prefix="₺ "
+                                                    min={0}
+                                                    {...form.getInputProps(`prices.${cId}`)}
+                                                    disabled={!!member}
+                                                 />
+                                             </Grid.Col>
+                                             <Grid.Col span={6}>
+                                                 {!member && (
+                                                     <Select
+                                                        label="Üyelik Süresi"
+                                                        data={[
+                                                            { value: '1', label: '1 Ay' },
+                                                            { value: '3', label: '3 Ay' },
+                                                            { value: '6', label: '6 Ay' },
+                                                            { value: '12', label: '1 Yıl' },
+                                                        ]}
+                                                        {...form.getInputProps(`durations.${cId}`)}
+                                                        onChange={(val) => form.setFieldValue(`durations.${cId}`, Number(val))}
+                                                        value={String(form.values.durations[cId] || 1)}
+                                                     />
+                                                 )}
+                                             </Grid.Col>
+                                         </Grid>
+                                     </Card>
+                                 )
+                             })}
+                             
                              <Group justify="flex-end">
-                                 <Text size="sm" c="dimmed">Liste Fiyatı Toplamı: <span className="font-bold text-gray-700 dark:text-gray-300">{formatCurrency(calculatedPrice)}</span></Text>
+                                 <Text size="sm" c="dimmed">
+                                     Toplam Aylık Ücret: <span className="font-bold text-gray-700 dark:text-gray-300">
+                                         {formatCurrency(Object.values(form.values.prices).reduce((a, b) => a + Number(b), 0))}
+                                     </span>
+                                 </Text>
                              </Group>
                          </Stack>
                      )}
-
-                     <Divider label="Üye Özel Fiyatlandırma" labelPosition="center" />
-                     
-                     <Group grow align="flex-start">
-                         <CurrencyInput
-                            label="Aylık Anlaşılan Ücret"
-                            description="Üye için geçerli olacak sabit aylık ücret"
-                            {...form.getInputProps('monthly_fee')}
-                         />
-                         {!member && (
-                             <Select
-                                 label="Üyelik Süresi"
-                                 description="İlk ödeme hesaplaması için"
-                                 data={[
-                                     { value: '1', label: '1 Ay' },
-                                     { value: '3', label: '3 Ay' },
-                                     { value: '6', label: '6 Ay' },
-                                     { value: '12', label: '1 Yıl' },
-                                 ]}
-                                 value={selectedDuration}
-                                 onChange={(val) => setSelectedDuration(val || '1')}
-                             />
-                         )}
-                     </Group>
                 </Stack>
             </Card>
-
-            {/* 3. Initial Payment */}
-            {!member && (
-            <Card withBorder radius="md" p="md">
-                <Group justify="space-between" mb="xs">
-                    <Text fw={600} c="dimmed">Ödeme Bilgileri</Text>
-                    <Switch
-                        label="Tahsilat Yap"
-                        checked={includePayment}
-                        onChange={(e) => setIncludePayment(e.currentTarget.checked)}
-                    />
-                </Group>
-                
-                {includePayment && (
-                    <Stack>
-                        <Alert variant="light" color="blue" title="Özet">
-                            <Text size="sm">
-                                <b>{selectedDuration} Ay</b> x <b>{formatCurrency(form.values.monthly_fee || 0)}</b> = 
-                                Toplam <b>{formatCurrency(Number(form.values.monthly_fee || 0) * Number(selectedDuration))}</b> tahsil edilecek.
-                            </Text>
-                        </Alert>
-                        
-                        <CurrencyInput
-                            label="Alınan Tutar"
-                            required
-                            {...form.getInputProps('initial_payment.amount')}
-                        />
-                         <Select
-                            label="Ödeme Yöntemi"
-                            data={['Nakit', 'Kredi Kartı', 'Havale', 'Diğer']}
-                            {...form.getInputProps('initial_payment.payment_method')}
-                        />
-                         <Textarea
-                             label="Notlar"
-                             placeholder="Ödeme ile ilgili notlar..."
-                             {...form.getInputProps('initial_payment.description')}
-                         />
-                    </Stack>
-                )}
-            </Card>
-            )}
 
             <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={onClose}>İptal</Button>
@@ -338,4 +333,3 @@ export function MemberDrawer({
     </Drawer>
   )
 }
-import { Alert } from '@mantine/core'

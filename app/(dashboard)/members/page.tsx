@@ -1,11 +1,7 @@
-/**
- * Members Page
- * Member management with DataTable and Drawer
- */
-
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Title,
   Button,
@@ -31,31 +27,39 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MemberDrawer } from '@/components/members/MemberDrawer'
 import { FreezeMemberDrawer } from '@/components/members/FreezeMemberDrawer'
+// Removed MemberDetailModal
 import { modals } from '@mantine/modals'
 import { useMembers } from '@/hooks/use-members'
 import { useClasses } from '@/hooks/use-classes'
 import { archiveMember, unarchiveMember } from '@/actions/members'
 import { unfreezeMembership } from '@/actions/freeze'
 import { showSuccess, showError } from '@/utils/notifications'
-import { formatDate, isPaymentOverdue } from '@/utils/date-helpers'
+import { formatDate } from '@/utils/date-helpers' // Removed isPaymentOverdue
 import { formatPhone } from '@/utils/formatters'
 import type { DataTableColumn } from '@/components/shared/DataTable'
 import type { Member } from '@/types'
 
 export default function MembersPage() {
+  const router = useRouter()
   const [statusFilter, setStatusFilter] = useState('active')
   const [drawerOpened, setDrawerOpened] = useState(false)
   const [freezeDrawerOpened, setFreezeDrawerOpened] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  // Removed detailed modal state
 
   const { members, loading, error } = useMembers(statusFilter, refreshTrigger)
   const { classes } = useClasses()
 
 
-  const handleEdit = (member: Member) => {
+  const handleEdit = (member: Member, e?: React.MouseEvent) => {
+    e?.stopPropagation()
     setSelectedMember(member)
     setDrawerOpened(true)
+  }
+
+  const handleViewDetail = (member: Member) => {
+    router.push(`/members/${member.id}`)
   }
 
   const handleArchive = (member: Member, e?: React.MouseEvent) => {
@@ -164,20 +168,6 @@ export default function MembersPage() {
       render: (member) => formatDate(member.join_date),
     },
     {
-      key: 'next_payment_due_date',
-      label: 'Sonraki Ödeme',
-      sortable: true,
-      render: (member) => {
-        const isOverdue = isPaymentOverdue(member.next_payment_due_date)
-        return (
-          <Group gap="xs">
-            {formatDate(member.next_payment_due_date)}
-            {isOverdue && <StatusBadge status="overdue" size="xs" />}
-          </Group>
-        )
-      },
-    },
-    {
       key: 'status',
       label: 'Durum',
       render: (member) => <StatusBadge status={member.status as any} />,
@@ -196,13 +186,16 @@ export default function MembersPage() {
           <Menu.Dropdown>
             <Menu.Item
               leftSection={<IconEdit size={16} />}
-              onClick={() => handleEdit(member)}
+              onClick={(e) => handleEdit(member, e)}
             >
               Düzenle
             </Menu.Item>
             <Menu.Item
               leftSection={<IconCreditCard size={16} />}
-              onClick={() => console.log('Add payment', member)}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleViewDetail(member)
+              }}
             >
               Ödeme Al
             </Menu.Item>
@@ -281,7 +274,7 @@ export default function MembersPage() {
               : 'Üye bulunamadı.'
           }
           pageSize={10}
-          onRowClick={(member) => handleEdit(member)}
+          onRowClick={(member) => handleViewDetail(member)}
           filters={
             <SegmentedControl
               value={statusFilter}

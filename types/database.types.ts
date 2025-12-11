@@ -96,8 +96,6 @@ export interface Database {
           join_date: string
           status: string
           notes: string | null
-          last_payment_date: string | null
-          next_payment_due_date: string | null
           monthly_fee: number | null
           created_at: string
         }
@@ -109,8 +107,6 @@ export interface Database {
           join_date?: string
           status?: string
           notes?: string | null
-          last_payment_date?: string | null
-          next_payment_due_date?: string | null
           monthly_fee?: number | null
           created_at?: string
         }
@@ -122,30 +118,41 @@ export interface Database {
           join_date?: string
           status?: string
           notes?: string | null
-          last_payment_date?: string | null
-          next_payment_due_date?: string | null
           monthly_fee?: number | null
           created_at?: string
         }
       }
       member_classes: {
         Row: {
+          id: number
           member_id: number
           class_id: number
+          next_payment_date: string | null
+          price: number | null
+          active: boolean
         }
         Insert: {
+          id?: number
           member_id: number
           class_id: number
+          next_payment_date?: string | null
+          price?: number | null
+          active?: boolean
         }
         Update: {
+          id?: number
           member_id?: number
           class_id?: number
+          next_payment_date?: string | null
+          price?: number | null
+          active?: boolean
         }
       }
       payments: {
         Row: {
           id: number
           member_id: number | null
+          class_id: number | null
           amount: number
           payment_date: string
           payment_method: string | null
@@ -156,6 +163,7 @@ export interface Database {
         Insert: {
           id?: number
           member_id?: number | null
+          class_id?: number | null
           amount: number
           payment_date?: string
           payment_method?: string | null
@@ -166,6 +174,7 @@ export interface Database {
         Update: {
           id?: number
           member_id?: number | null
+          class_id?: number | null
           amount?: number
           payment_date?: string
           payment_method?: string | null

@@ -66,28 +66,60 @@ export type MemberWithPayments = Member & {
   payments: Payment[]
 }
 
+// Extended member class with class details
+export interface MemberClassWithDetails {
+  id: number
+  member_id: number
+  class_id: number
+  next_payment_date: string | null
+  price: number | null
+  active: boolean
+  classes: Class
+}
+
+// Payment with class info
+export interface PaymentWithClass extends Payment {
+  classes?: Class | null
+}
+
+
+
+// Member Class Registration Data
+export interface ClassRegistration {
+  class_id: number
+  price: number
+  duration: number // months for initial next payment date
+}
+
 // Form data types (for creating/updating records)
 export interface MemberFormData {
   first_name: string
   last_name: string
   phone?: string
-  class_ids: number[]
-  monthly_fee?: number
-  initial_duration_months?: number
-  initial_payment?: {
-    amount: number
-    payment_method?: string
-    description?: string
-  }
+  class_registrations: ClassRegistration[]
+  // monthly_fee removed - price is now per class
+  // initial_* fields removed - payments handled separately
 }
 
-export interface PaymentFormData {
-  member_id: number
+// Payment Schedule Item
+export interface PaymentScheduleItem {
+  periodMonth: string // YYYY-MM-01 format
+  periodLabel: string // "Ocak 2025"
   amount: number
-  payment_method?: string
-  description?: string
-  period_start?: string
-  period_end?: string
+  status: 'paid' | 'unpaid' | 'overdue'
+  paymentId?: number // if status is paid
+  paymentDate?: string
+  paymentMethod?: string
+}
+
+// Payment form with specific period support
+export interface ClassPaymentFormData {
+  memberId: number
+  classId: number
+  amount: number
+  monthsToPay?: number // Legacy
+  periodDate?: string // Specific month to pay (YYYY-MM-DD)
+  paymentMethod?: string
 }
 
 export interface FreezeFormData {

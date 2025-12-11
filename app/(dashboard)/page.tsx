@@ -241,23 +241,19 @@ async function OverdueTable() {
       searchable: true,
     },
     {
-      key: 'last_payment_date',
-      label: 'Son Ödeme',
+      key: 'join_date',
+      label: 'Kayıt Tarihi',
       sortable: true,
-      render: (member) => formatDate(member.last_payment_date),
+      render: (member) => formatDate(member.join_date),
     },
     {
-      key: 'next_payment_due_date',
-      label: 'Gecikme',
-      sortable: true,
-      render: (member) => {
-        const days = Math.abs(getDaysUntilPayment(member.next_payment_due_date))
-        return (
-          <Badge color="red" variant="light">
-            {days} gün
-          </Badge>
-        )
-      },
+      key: 'status',
+      label: 'Durum',
+      render: (member) => (
+        <Badge color="red" variant="light">
+          Gecikmiş
+        </Badge>
+      ),
     },
   ]
 
