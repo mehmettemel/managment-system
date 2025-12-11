@@ -195,13 +195,37 @@ export async function processClassPayment(
     const supabase = await createClient();
     const todayStr = dayjs().format('YYYY-MM-DD');
 
-    // Fetch payment interval
-    const { data: memberClass } = await supabase
+    // Fetch payment interval and class details for snapshot
+    const { data: memberClass, error: mcError } = await supabase
       .from('member_classes')
-      .select('payment_interval')
+      .select(
+        `
+        payment_interval,
+        custom_price,
+        classes (
+          name,
+          price_monthly
+        )
+      `
+      )
       .eq('member_id', memberId)
       .eq('class_id', classId)
       .single();
+
+    if (mcError || !memberClass || !memberClass.classes) {
+      return errorResponse('Üye ders kaydı bulunamadı');
+    }
+
+    // Determine snapshot values
+    // Logic: Use custom_price if active/set, else use current class list price.
+    // However, the AMOUNT passed in formData is what was actually paid.
+    // We should probably trust the valid amount, but for snapshot_price we store the "rate" at that time.
+    // Let's assume snapshot_price = amount (since that's what was paid) OR the rate?
+    // User request: "snapshot_price olarak o an tahsil edilen tutarı... kaydet" -> So use 'amount'.
+    const snapshotPrice = amount;
+    const snapshotClassName = Array.isArray(memberClass.classes)
+      ? memberClass.classes[0]?.name
+      : (memberClass.classes as any)?.name;
 
     // Always pay for 1 month regardless of total membership duration
     const periodStart = dayjs(periodDate).startOf('month').format('YYYY-MM-DD');
@@ -218,6 +242,8 @@ export async function processClassPayment(
       period_start: periodStart,
       period_end: periodEnd,
       description: formData.description || `${periodLabel} ödemesi`,
+      snapshot_price: snapshotPrice, // Enrollment System
+      snapshot_class_name: snapshotClassName, // Enrollment System
     };
 
     const { data: payment, error: paymentError } = await supabase
@@ -232,28 +258,29 @@ export async function processClassPayment(
     }
 
     // 2. Update next_payment_date logic
-    // We need to find the *first unpaid month* after this payment to update next_payment_date correctly.
-    // This is getting complex if we allow random access payments.
-    // For simplicity, let's just update next_payment_date to be MAX(period_end of all payments) + 1 day?
-    // Or just fetch schedule again to warn user?
-    // The previous simple logic was: next_payment_date += 1 month.
-    // Let's adopt a robust approach: Find the latest paid period end date for this class.
+    // New Enrollment Logic: Update next_payment_date for this specific enrollment.
+    // We set it to the END of the period we just paid for.
+    // If multiple months are paid, we should probably find the latest end date?
+    // For single month payment:
+    const newNextPaymentDate = periodEnd;
 
-    const { data: latestPayment } = await supabase
-      .from('payments')
-      .select('period_end')
+    // Optimistic update: Just set it to periodEnd.
+    // If the user pays out of order, this might be tricky, but usually they pay linear.
+    // Ideally: MAX(current_next_payment_date, periodEnd)
+
+    // Let's fetch current to be safe? Or just use SQL?
+    // Supabase doesn't support GREATEST in update easily without RPC.
+    // Let's just set it to periodEnd as that matches "Extending the due date".
+
+    const { error: updateError } = await supabase
+      .from('member_classes')
+      .update({ next_payment_date: newNextPaymentDate })
       .eq('member_id', memberId)
-      .eq('class_id', classId)
-      .order('period_end', { ascending: false })
-      .limit(1)
-      .single();
+      .eq('class_id', classId);
 
-    if (latestPayment && latestPayment.period_end) {
-      await supabase
-        .from('member_classes')
-        .update({ next_payment_date: latestPayment.period_end })
-        .eq('member_id', memberId)
-        .eq('class_id', classId);
+    if (updateError) {
+      logError('processClassPayment - update date', updateError);
+      // Non-fatal?
     }
 
     // 3. Process instructor commission

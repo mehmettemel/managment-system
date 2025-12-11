@@ -220,10 +220,113 @@ export async function getClassMembers(
     }
 
     // Flatten result to return just members
+    // Flatten result to return just members
     const members = data.map((item: any) => item.members).filter(Boolean);
     return successListResponse(members);
   } catch (error) {
     logError('getClassMembers', error);
     return errorListResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Bulk migrate members from one class to another (Scenario B)
+ * Moves all active members, preserves their old price as custom_price,
+ * copies next_payment_date, and archives the old class.
+ */
+export async function bulkMigrateClass(
+  oldClassId: number,
+  newClassId: number
+): Promise<ApiResponse<{ migratedCount: number }>> {
+  try {
+    const supabase = await createClient();
+
+    // 1. Get old class details (to get price for protection)
+    const { data: oldClass, error: classError } = await supabase
+      .from('classes')
+      .select('price_monthly')
+      .eq('id', oldClassId)
+      .single();
+
+    if (classError || !oldClass) {
+      return errorResponse('Eski sınıf bulunamadı');
+    }
+
+    // 2. Get all active enrollments in old class
+    // We only migrate ACTIVE members.
+    const { data: activeEnrollments, error: enrollError } = await supabase
+      .from('member_classes')
+      .select('*')
+      .eq('class_id', oldClassId)
+      .eq('active', true);
+
+    if (enrollError) {
+      return errorResponse(handleSupabaseError(enrollError));
+    }
+
+    if (!activeEnrollments || activeEnrollments.length === 0) {
+      // Just archive the class if no members
+      await supabase
+        .from('classes')
+        .update({ archived: true, active: false })
+        .eq('id', oldClassId);
+      revalidatePath('/classes');
+      return successResponse({ migratedCount: 0 });
+    }
+
+    // 3. Prepare new enrollments
+    // For each active member, create a new record in the new class
+    // active = true
+    // custom_price = oldClass.price_monthly (Price Protection)
+    // next_payment_date = oldRecord.next_payment_date (Date protection)
+    const newEnrollments = activeEnrollments.map((enrollment) => ({
+      member_id: enrollment.member_id,
+      class_id: newClassId,
+      active: true,
+      custom_price: enrollment.custom_price || oldClass.price_monthly, // Keep existing custom or use old list price
+      next_payment_date: enrollment.next_payment_date,
+      payment_interval: enrollment.payment_interval,
+    }));
+
+    // 4. Transaction-like execution
+    // A. Insert new records
+    // Note: If using multiple inserts, we might need a loop or simple bulk insert if columns match.
+    // Supabase insert takes array.
+    const { error: insertError } = await supabase
+      .from('member_classes')
+      .insert(newEnrollments);
+
+    if (insertError) {
+      logError('bulkMigrateClass - insert', insertError);
+      return errorResponse(handleSupabaseError(insertError));
+    }
+
+    // B. Deactivate old records
+    const { error: deactivateError } = await supabase
+      .from('member_classes')
+      .update({ active: false })
+      .eq('class_id', oldClassId);
+
+    if (deactivateError) {
+      // Warning: Partial failure potential here if insert succeeded but this failed.
+      logError('bulkMigrateClass - deactivate members', deactivateError);
+    }
+
+    // C. Archive old class
+    const { error: archiveError } = await supabase
+      .from('classes')
+      .update({ archived: true, active: false })
+      .eq('id', oldClassId);
+
+    if (archiveError) {
+      logError('bulkMigrateClass - archive class', archiveError);
+    }
+
+    revalidatePath('/classes');
+    revalidatePath('/members');
+    return successResponse({ migratedCount: newEnrollments.length });
+  } catch (error) {
+    logError('bulkMigrateClass', error);
+    return errorResponse(handleSupabaseError(error));
   }
 }

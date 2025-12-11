@@ -6,7 +6,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Drawer, Table, LoadingOverlay, Text, Badge } from '@mantine/core';
+import {
+  Drawer,
+  Table,
+  LoadingOverlay,
+  Text,
+  Badge,
+  Group,
+  ActionIcon,
+  Tooltip,
+} from '@mantine/core';
+import { IconEye } from '@tabler/icons-react';
+import Link from 'next/link';
 import { getClassMembers } from '@/actions/classes';
 import { formatPhone } from '@/utils/formatters';
 import type { Member } from '@/types';
@@ -62,6 +73,7 @@ export function ClassMembersDrawer({
                 <Table.Th>Ad Soyad</Table.Th>
                 <Table.Th>Telefon</Table.Th>
                 <Table.Th>Durum</Table.Th>
+                <Table.Th w={50}></Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -81,6 +93,19 @@ export function ClassMembersDrawer({
                         {m.status}
                       </Badge>
                     )}
+                  </Table.Td>
+                  <Table.Td>
+                    <Tooltip label="Üye Detayına Git">
+                      <ActionIcon
+                        component={Link}
+                        href={`/members/${m.id}`}
+                        variant="subtle"
+                        color="blue"
+                        onClick={onClose}
+                      >
+                        <IconEye size={18} />
+                      </ActionIcon>
+                    </Tooltip>
                   </Table.Td>
                 </Table.Tr>
               ))}

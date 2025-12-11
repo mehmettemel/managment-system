@@ -131,6 +131,7 @@ export interface Database {
           price: number | null;
           active: boolean;
           payment_interval: number | null;
+          custom_price: number | null;
         };
         Insert: {
           id?: number;
@@ -140,6 +141,7 @@ export interface Database {
           price?: number | null;
           active?: boolean;
           payment_interval?: number | null;
+          custom_price?: number | null;
         };
         Update: {
           id?: number;
@@ -149,6 +151,7 @@ export interface Database {
           price?: number | null;
           active?: boolean;
           payment_interval?: number | null;
+          custom_price?: number | null;
         };
       };
       payments: {
@@ -158,10 +161,13 @@ export interface Database {
           class_id: number | null;
           amount: number;
           payment_date: string;
-          payment_method: string | null;
-          period_start: string | null;
-          period_end: string | null;
+          payment_method: string;
+          period_start: string;
+          period_end: string;
           description: string | null;
+          snapshot_price: number | null;
+          snapshot_class_name: string | null;
+          created_at: string | null;
         };
         Insert: {
           id?: number;
@@ -169,10 +175,13 @@ export interface Database {
           class_id?: number | null;
           amount: number;
           payment_date?: string;
-          payment_method?: string | null;
-          period_start?: string | null;
-          period_end?: string | null;
+          payment_method?: string;
+          period_start?: string;
+          period_end?: string;
           description?: string | null;
+          snapshot_price?: number | null;
+          snapshot_class_name?: string | null;
+          created_at?: string | null;
         };
         Update: {
           id?: number;
@@ -180,10 +189,13 @@ export interface Database {
           class_id?: number | null;
           amount?: number;
           payment_date?: string;
-          payment_method?: string | null;
-          period_start?: string | null;
-          period_end?: string | null;
+          payment_method?: string;
+          period_start?: string;
+          period_end?: string;
           description?: string | null;
+          snapshot_price?: number | null;
+          snapshot_class_name?: string | null;
+          created_at?: string | null;
         };
       };
       frozen_logs: {

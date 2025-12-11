@@ -348,3 +348,87 @@ export async function updateMemberClassDetails(
     return errorResponse(handleSupabaseError(error));
   }
 }
+
+/**
+ * Migrate a single member to a new class (Scenario A)
+ * @param priceStrategy 'KEEP_OLD' uses old price as custom_price, 'USE_NEW' uses null (list price)
+ */
+export async function transferMember(
+  memberId: number,
+  oldClassId: number,
+  newClassId: number,
+  priceStrategy: 'KEEP_OLD' | 'USE_NEW'
+): Promise<ApiResponse<boolean>> {
+  try {
+    const supabase = await createClient();
+
+    // 1. Get old active enrollment
+    const { data: oldEnrollment, error: oldError } = await supabase
+      .from('member_classes')
+      .select('*')
+      .eq('member_id', memberId)
+      .eq('class_id', oldClassId)
+      .eq('active', true)
+      .single();
+
+    if (oldError || !oldEnrollment) {
+      return errorResponse('Aktif üyelik kaydı bulunamadı');
+    }
+
+    // 2. Determine Price
+    let newCustomPrice: number | null = null;
+
+    if (priceStrategy === 'KEEP_OLD') {
+      // Use existing custom price OR legacy price OR old class list price
+      if (oldEnrollment.custom_price !== null) {
+        newCustomPrice = oldEnrollment.custom_price;
+      } else if (oldEnrollment.price !== null) {
+        newCustomPrice = oldEnrollment.price;
+      } else {
+        const { data: oldClass } = await supabase
+          .from('classes')
+          .select('price_monthly')
+          .eq('id', oldClassId)
+          .single();
+        newCustomPrice = oldClass?.price_monthly || null;
+      }
+    }
+    // IF USE_NEW, custom_price remains null (will use new class list price)
+
+    // 3. Deactivate old
+    const { error: deactivateError } = await supabase
+      .from('member_classes')
+      .update({ active: false })
+      .eq('id', oldEnrollment.id);
+
+    if (deactivateError) {
+      return errorResponse(
+        'Eski kayıt kapatılamadı: ' + deactivateError.message
+      );
+    }
+
+    // 4. Create new enrollment
+    const { error: insertError } = await supabase
+      .from('member_classes')
+      .insert({
+        member_id: memberId,
+        class_id: newClassId,
+        active: true,
+        next_payment_date: oldEnrollment.next_payment_date, // Copy date
+        custom_price: newCustomPrice,
+        payment_interval: oldEnrollment.payment_interval,
+      });
+
+    if (insertError) {
+      logError('transferMember - insert', insertError);
+      // Rollback attempt? For now, risk of partial state.
+      return errorResponse(handleSupabaseError(insertError));
+    }
+
+    revalidatePath(`/members/${memberId}`);
+    return successResponse(true);
+  } catch (error) {
+    logError('transferMember', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}

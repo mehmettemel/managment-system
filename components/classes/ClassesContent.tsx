@@ -1,7 +1,3 @@
-/**
- * Classes Content (Client Component)
- */
-
 'use client';
 
 import { useState } from 'react';
@@ -26,13 +22,15 @@ import {
   IconCalendar,
   IconUser,
   IconUsers,
+  IconArrowsRight,
 } from '@tabler/icons-react';
 import { ClassDrawer } from './ClassDrawer';
 import { ClassMembersDrawer } from './ClassMembersDrawer';
+import { ClassMigrateModal } from './ClassMigrateModal';
 import { ClassWithInstructor, Instructor, Class } from '@/types';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useDisclosure } from '@mantine/hooks';
-import { deactivateClass } from '@/actions/classes';
+import { deactivateClass, bulkMigrateClass } from '@/actions/classes';
 import { showSuccess, showError } from '@/utils/notifications';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -48,7 +46,11 @@ export function ClassesContent({
   const [opened, { open, close }] = useDisclosure(false);
   const [membersDrawerOpen, { open: openMembers, close: closeMembers }] =
     useDisclosure(false);
+  const [migrateOpen, { open: openMigrate, close: closeMigrate }] =
+    useDisclosure(false); // Migration Modal
+
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleEdit = (item: Class) => {
     setSelectedClass(item);
@@ -65,8 +67,35 @@ export function ClassesContent({
     openMembers();
   };
 
+  const handleMigrateClick = (item: Class) => {
+    setSelectedClass(item);
+    openMigrate();
+  };
+
+  const onMigrateConfirm = async (targetClassId: number) => {
+    if (!selectedClass) return;
+
+    setLoading(true);
+    const result = await bulkMigrateClass(selectedClass.id, targetClassId);
+
+    if (result.error) {
+      showError(result.error);
+    } else {
+      showSuccess(
+        `${result.data?.migratedCount} üye taşındı ve sınıf arşivlendi.`
+      );
+      closeMigrate();
+      setSelectedClass(null);
+    }
+    setLoading(false);
+  };
+
   const handleDelete = async (id: number) => {
-    if (confirm('Bu dersi silmek istediğinize emin misiniz?')) {
+    if (
+      confirm(
+        'Bu dersi silmek istediğinize emin misiniz? (Üyeler silinmez, sadece ders pasife alınır)'
+      )
+    ) {
       const res = await deactivateClass(id);
       if (res.error) showError(res.error);
       else showSuccess('Ders silindi (Arşivlendi)');
@@ -114,11 +143,18 @@ export function ClassesContent({
                       Düzenle
                     </Menu.Item>
                     <Menu.Item
+                      leftSection={<IconArrowsRight size={14} />}
+                      onClick={() => handleMigrateClick(item)}
+                    >
+                      Taşı ve Arşivle
+                    </Menu.Item>
+                    <Menu.Divider />
+                    <Menu.Item
                       leftSection={<IconTrash size={14} />}
                       color="red"
                       onClick={() => handleDelete(item.id)}
                     >
-                      Sil
+                      Sil (Sadece Arşivle)
                     </Menu.Item>
                   </Menu.Dropdown>
                 </Menu>
@@ -186,6 +222,18 @@ export function ClassesContent({
         classId={selectedClass?.id || null}
         className={selectedClass?.name || ''}
       />
+
+      {/* Migrate Modal */}
+      {selectedClass && (
+        <ClassMigrateModal
+          opened={migrateOpen}
+          onClose={closeMigrate}
+          sourceClass={selectedClass as ClassWithInstructor}
+          classes={initialClasses}
+          onConfirm={onMigrateConfirm}
+          loading={loading}
+        />
+      )}
     </>
   );
 }
