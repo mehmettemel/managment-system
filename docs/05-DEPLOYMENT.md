@@ -12,15 +12,15 @@ Bu proje Next.js tabanlı olduğu için **Vercel** üzerinde barındırılması 
 
 Vercel proje ayarlarında **Environment Variables** bölümüne şu değerleri eklemelisiniz:
 
-| Değişken Adı | Değer |
-|--------------|-------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Proje URL'iniz |
+| Değişken Adı                    | Değer                    |
+| ------------------------------- | ------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase Proje URL'iniz  |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Public/Anon Key |
 
 Bu değerleri production (canlı) ortamı için Supabase panelinden alabilirsiniz. Development ve Production için farklı Supabase projeleri kullanmanız önerilir.
 
 ## ⚠️ Dikkat Edilmesi Gerekenler
 
--   **Build Hataları**: Deployment sırasında `npm run build` komutu çalıştırılır. Eğer kodunuzda TypeScript hataları varsa deploy başarısız olur. Yerelde `npm run build` ile test edin.
--   **Veritabanı Erişimi**: Production veritabanınızın (Supabase) çalıştığından ve RLS politikalarının doğru yapılandırıldığından emin olun.
--   **Domain**: Vercel size otomatik bir domain (`.vercel.app`) verir. Dilerseniz kendi özel domaininizi (Custom Domain) ayarlardan ekleyebilirsiniz.
+- **Build Hataları**: Deployment sırasında `npm run build` komutu çalıştırılır. Eğer kodunuzda TypeScript hataları varsa deploy başarısız olur. Yerelde `npm run build` ile test edin.
+- **Veritabanı Erişimi**: Production veritabanınızın (Supabase) çalıştığından ve RLS politikalarının doğru yapılandırıldığından emin olun.
+- **Domain**: Vercel size otomatik bir domain (`.vercel.app`) verir. Dilerseniz kendi özel domaininizi (Custom Domain) ayarlardan ekleyebilirsiniz.

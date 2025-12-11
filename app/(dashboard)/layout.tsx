@@ -3,12 +3,12 @@
  * Wraps pages with AppShell
  */
 
-import { AppShellLayout } from '@/components/layout/AppShell'
+import { AppShellLayout } from '@/components/layout/AppShell';
 
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  return <AppShellLayout>{children}</AppShellLayout>
+  return <AppShellLayout>{children}</AppShellLayout>;
 }

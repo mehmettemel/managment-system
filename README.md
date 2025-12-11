@@ -7,27 +7,27 @@ Modern, ölçeklenebilir ve kullanıcı dostu dans okulu yönetim sistemi.
 Projenin tüm detayları `docs/` klasörü altında sade ve anlaşılır bir şekilde belgelenmiştir:
 
 1.  **[🚀 Kurulum ve Başlangıç](./docs/01-GETTING-STARTED.md)**
-    *   Önkoşullar (Node.js 20+, Supabase)
-    *   Kurulum adımları
-    *   Build kontrolleri
+    - Önkoşullar (Node.js 20+, Supabase)
+    - Kurulum adımları
+    - Build kontrolleri
 
 2.  **[🏗️ Mimari ve Teknoloji](./docs/02-ARCHITECTURE.md)**
-    *   Tech Stack (Next.js 16, Mantine, Supabase)
-    *   State Management stratejisi
-    *   Data Fetching yöntemleri
+    - Tech Stack (Next.js 16, Mantine, Supabase)
+    - State Management stratejisi
+    - Data Fetching yöntemleri
 
 3.  **[💻 Geliştirme Kılavuzu](./docs/03-DEVELOPMENT.md)**
-    *   Yeni özellik ekleme adımları
-    *   Kod standartları ve Best Practices
-    *   Sık kullanılan komutlar
+    - Yeni özellik ekleme adımları
+    - Kod standartları ve Best Practices
+    - Sık kullanılan komutlar
 
 4.  **[🗄️ Veritabanı](./docs/04-DATABASE.md)**
-    *   Veritabanı şeması ve tablolar
-    *   TypeScript tip güncelleme
+    - Veritabanı şeması ve tablolar
+    - TypeScript tip güncelleme
 
 5.  **[🚀 Yayına Alma (Deployment)](./docs/05-DEPLOYMENT.md)**
-    *   Vercel deployment
-    *   Environment variables
+    - Vercel deployment
+    - Environment variables
 
 ---
 
@@ -51,7 +51,7 @@ cp .env.local.example .env.local
 npm run dev
 ```
 
-*Detaylı kurulum için [01-GETTING-STARTED.md](./docs/01-GETTING-STARTED.md) dosyasını okuyun.*
+_Detaylı kurulum için [01-GETTING-STARTED.md](./docs/01-GETTING-STARTED.md) dosyasını okuyun._
 
 ---
 
@@ -61,12 +61,11 @@ DSMS, dans okullarının ihtiyaç duyduğu üye takibi, ders programı, eğitmen
 
 ### Öne Çıkan Özellikler
 
-*   **Üye Yönetimi**: Kayıt, dondurma, arşivleme.
-*   **Finans**: Ödeme takibi, 28 günlük döngüler, gecikme uyarıları.
-*   **Dersler**: Esnek ders programı ve eğitmen atama.
-*   **Teknoloji**: Next.js App Router, Server Actions, Supabase Auth & DB.
+- **Üye Yönetimi**: Kayıt, dondurma, arşivleme.
+- **Finans**: Ödeme takibi, 28 günlük döngüler, gecikme uyarıları.
+- **Dersler**: Esnek ders programı ve eğitmen atama.
+- **Teknoloji**: Next.js App Router, Server Actions, Supabase Auth & DB.
 
 ## 📝 Versiyon Geçmişi
 
 Versiyon değişikliklerini görmek için [CHANGELOG.md](./docs/CHANGELOG.md) dosyasına bakabilirsiniz.
-

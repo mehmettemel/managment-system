@@ -4,14 +4,14 @@ Bu belge, projenin teknik altyapısını, kullanılan teknolojileri ve temel mim
 
 ## 💻 Teknoloji Yığını (Tech Stack)
 
-| Kategori | Teknoloji | Açıklama |
-|----------|-----------|----------|
-| **Framework** | Next.js 16 (App Router) | React tabanlı full-stack framework. |
-| **Dil** | TypeScript | Tip güvenliği için. |
-| **UI Kütüphanesi** | Mantine v7/v8 | Hazır UI bileşenleri, hooklar ve form yönetimi. |
-| **Stil** | Tailwind CSS v4 | Utility-first CSS framework (Mantine ile birlikte kullanılır). |
-| **Veritabanı & Auth** | Supabase | PostgreSQL tabanlı BaaS (Backend as a Service). |
-| **İkonlar** | Tabler Icons | Modern SVG ikon seti. |
+| Kategori              | Teknoloji               | Açıklama                                                       |
+| --------------------- | ----------------------- | -------------------------------------------------------------- |
+| **Framework**         | Next.js 16 (App Router) | React tabanlı full-stack framework.                            |
+| **Dil**               | TypeScript              | Tip güvenliği için.                                            |
+| **UI Kütüphanesi**    | Mantine v7/v8           | Hazır UI bileşenleri, hooklar ve form yönetimi.                |
+| **Stil**              | Tailwind CSS v4         | Utility-first CSS framework (Mantine ile birlikte kullanılır). |
+| **Veritabanı & Auth** | Supabase                | PostgreSQL tabanlı BaaS (Backend as a Service).                |
+| **İkonlar**           | Tabler Icons            | Modern SVG ikon seti.                                          |
 
 ## 📂 Proje Yapısı
 
@@ -42,6 +42,7 @@ Projede karmaşık bir global state management kütüphanesi (Redux, Zustand vb.
 Veri alışverişi için **Server Actions** birincil yöntemdir.
 
 ### 1. Server Components (Önerilen)
+
 Sayfa yüklenirken veriler sunucuda çekilir ve bileşene prop olarak verilir. Bu SEO ve performans için en iyisidir.
 
 ```typescript
@@ -55,6 +56,7 @@ export default async function MembersPage() {
 ```
 
 ### 2. Client Components
+
 Kullanıcı etkileşimi sonucu veri çekilmesi gerekiyorsa (örn: butona basınca detay getirme), Server Action'lar client bileşenlerinden direkt çağrılabilir veya Supabase Client (`lib/supabase/client.ts`) kullanılabilir.
 
 ## 🔐 Güvenlik & Doğrulama

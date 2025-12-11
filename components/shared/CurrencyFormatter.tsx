@@ -3,17 +3,17 @@
  * Uses react-number-format to display formatted currency
  */
 
-'use client'
+'use client';
 
-import { NumericFormat } from 'react-number-format'
-import { Text, TextProps } from '@mantine/core'
+import { NumericFormat } from 'react-number-format';
+import { Text, TextProps } from '@mantine/core';
 
 interface CurrencyFormatterProps extends TextProps {
-  value: number | string | null | undefined
+  value: number | string | null | undefined;
 }
 
 export function CurrencyFormatter({ value, ...props }: CurrencyFormatterProps) {
-  if (value === null || value === undefined) return <Text {...props}>-</Text>
+  if (value === null || value === undefined) return <Text {...props}>-</Text>;
 
   return (
     <NumericFormat
@@ -25,5 +25,5 @@ export function CurrencyFormatter({ value, ...props }: CurrencyFormatterProps) {
       decimalScale={0} // No decimals as per request (1.200 ₺)
       renderText={(formattedValue) => <Text {...props}>{formattedValue}</Text>}
     />
-  )
+  );
 }

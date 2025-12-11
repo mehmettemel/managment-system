@@ -2,9 +2,9 @@
  * Classes Content (Client Component)
  */
 
-'use client'
+'use client';
 
-import { useState } from 'react'
+import { useState } from 'react';
 import {
   Button,
   Group,
@@ -16,7 +16,7 @@ import {
   Menu,
   ThemeIcon,
   Divider,
-} from '@mantine/core'
+} from '@mantine/core';
 import {
   IconPlus,
   IconDotsVertical,
@@ -26,51 +26,52 @@ import {
   IconCalendar,
   IconUser,
   IconUsers,
-} from '@tabler/icons-react'
-import { ClassDrawer } from './ClassDrawer'
-import { ClassMembersDrawer } from './ClassMembersDrawer'
-import { ClassWithInstructor, Instructor, Class } from '@/types'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { useDisclosure } from '@mantine/hooks'
-import { deactivateClass } from '@/actions/classes'
-import { showSuccess, showError } from '@/utils/notifications'
-import { formatCurrency } from '@/utils/formatters'
+} from '@tabler/icons-react';
+import { ClassDrawer } from './ClassDrawer';
+import { ClassMembersDrawer } from './ClassMembersDrawer';
+import { ClassWithInstructor, Instructor, Class } from '@/types';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { useDisclosure } from '@mantine/hooks';
+import { deactivateClass } from '@/actions/classes';
+import { showSuccess, showError } from '@/utils/notifications';
+import { formatCurrency } from '@/utils/formatters';
 
 interface ClassesContentProps {
-  initialClasses: ClassWithInstructor[]
-  instructors: Instructor[]
+  initialClasses: ClassWithInstructor[];
+  instructors: Instructor[];
 }
 
 export function ClassesContent({
   initialClasses,
   instructors,
 }: ClassesContentProps) {
-  const [opened, { open, close }] = useDisclosure(false)
-  const [membersDrawerOpen, { open: openMembers, close: closeMembers }] = useDisclosure(false)
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null)
+  const [opened, { open, close }] = useDisclosure(false);
+  const [membersDrawerOpen, { open: openMembers, close: closeMembers }] =
+    useDisclosure(false);
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
 
   const handleEdit = (item: Class) => {
-    setSelectedClass(item)
-    open()
-  }
+    setSelectedClass(item);
+    open();
+  };
 
   const handleAdd = () => {
-    setSelectedClass(null)
-    open()
-  }
+    setSelectedClass(null);
+    open();
+  };
 
   const handleViewMembers = (item: Class) => {
-    setSelectedClass(item)
-    openMembers()
-  }
+    setSelectedClass(item);
+    openMembers();
+  };
 
   const handleDelete = async (id: number) => {
     if (confirm('Bu dersi silmek istediğinize emin misiniz?')) {
-      const res = await deactivateClass(id)
-      if (res.error) showError(res.error)
-      else showSuccess('Ders silindi (Arşivlendi)')
+      const res = await deactivateClass(id);
+      if (res.error) showError(res.error);
+      else showSuccess('Ders silindi (Arşivlendi)');
     }
-  }
+  };
 
   return (
     <>
@@ -95,12 +96,7 @@ export function ClassesContent({
           {initialClasses.map((item) => (
             <Card key={item.id} withBorder padding="lg" radius="md">
               <Group justify="space-between" mb="sm">
-                <ThemeIcon
-                  size="xl"
-                  radius="md"
-                  variant="light"
-                  color="blue"
-                >
+                <ThemeIcon size="xl" radius="md" variant="light" color="blue">
                   <IconCalendar size={24} />
                 </ThemeIcon>
                 <Menu withinPortal position="bottom-end" shadow="sm">
@@ -131,12 +127,16 @@ export function ClassesContent({
               <Text fw={700} size="lg">
                 {item.name}
               </Text>
-              
+
               <Group gap="xs" mt="xs">
                 <Badge variant="dot" color="blue">
                   {item.day_of_week}
                 </Badge>
-                <Badge variant="outline" color="gray" leftSection={<IconClock size={12} />}>
+                <Badge
+                  variant="outline"
+                  color="gray"
+                  leftSection={<IconClock size={12} />}
+                >
                   {item.start_time?.toString().slice(0, 5)}
                 </Badge>
               </Group>
@@ -150,20 +150,20 @@ export function ClassesContent({
                       : 'Eğitmen Yok'}
                   </Text>
                 </Group>
-               
-                 {item.price_monthly && (
+
+                {item.price_monthly && (
                   <Text fw={700} c="orange">
-                   {formatCurrency(Number(item.price_monthly))}
+                    {formatCurrency(Number(item.price_monthly))}
                   </Text>
-                 )}
+                )}
               </Group>
 
-              <Button 
-                variant="light" 
-                color="blue" 
-                fullWidth 
-                mt="md" 
-                leftSection={<IconUsers size={16} />} 
+              <Button
+                variant="light"
+                color="blue"
+                fullWidth
+                mt="md"
+                leftSection={<IconUsers size={16} />}
                 onClick={() => handleViewMembers(item)}
               >
                 Kayıtlı Üyeler
@@ -179,13 +179,13 @@ export function ClassesContent({
         classItem={selectedClass}
         instructors={instructors}
       />
-      
-      <ClassMembersDrawer 
+
+      <ClassMembersDrawer
         opened={membersDrawerOpen}
         onClose={closeMembers}
         classId={selectedClass?.id || null}
         className={selectedClass?.name || ''}
       />
     </>
-  )
+  );
 }

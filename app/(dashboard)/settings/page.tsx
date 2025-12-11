@@ -2,9 +2,9 @@
  * Settings Page (Placeholder)
  */
 
-import { Title, Text, Stack } from '@mantine/core'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { IconSettings } from '@tabler/icons-react'
+import { Title, Text, Stack } from '@mantine/core';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { IconSettings } from '@tabler/icons-react';
 
 export default function SettingsPage() {
   return (
@@ -20,5 +20,5 @@ export default function SettingsPage() {
         icon={<IconSettings size={64} />}
       />
     </Stack>
-  )
+  );
 }

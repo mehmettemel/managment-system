@@ -3,11 +3,11 @@
  * Visualises monthly revenue trend
  */
 
-'use client'
+'use client';
 
-import { AreaChart } from '@mantine/charts'
-import { Card, Title, Text } from '@mantine/core'
-import { formatCurrency } from '@/utils/formatters'
+import { AreaChart } from '@mantine/charts';
+import { Card, Title, Text } from '@mantine/core';
+import { formatCurrency } from '@/utils/formatters';
 
 // Mock Data
 const data = [
@@ -17,14 +17,18 @@ const data = [
   { date: 'Eki', Revenue: 25000, Expenses: 8500 },
   { date: 'Kas', Revenue: 21000, Expenses: 6000 },
   { date: 'Ara', Revenue: 28000, Expenses: 9000 },
-]
+];
 
 export function RevenueChart() {
   return (
     <Card withBorder radius="md" p="xl">
-      <Title order={3} mb="sm">Gelir Analizi</Title>
-      <Text c="dimmed" size="sm" mb="lg">Son 6 aylık gelir-gider tablosu</Text>
-      
+      <Title order={3} mb="sm">
+        Gelir Analizi
+      </Title>
+      <Text c="dimmed" size="sm" mb="lg">
+        Son 6 aylık gelir-gider tablosu
+      </Text>
+
       <AreaChart
         h={300}
         data={data}
@@ -39,5 +43,5 @@ export function RevenueChart() {
         valueFormatter={(value) => formatCurrency(value)}
       />
     </Card>
-  )
+  );
 }

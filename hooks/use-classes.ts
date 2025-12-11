@@ -2,25 +2,25 @@
  * Custom Hooks for Class Operations
  */
 
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import type { ClassWithInstructor } from '@/types'
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import type { ClassWithInstructor } from '@/types';
 
 /**
  * Hook to fetch all active classes with instructor info
  */
 export function useClasses() {
-  const [classes, setClasses] = useState<ClassWithInstructor[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [classes, setClasses] = useState<ClassWithInstructor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        setLoading(true)
-        const supabase = createClient()
+        setLoading(true);
+        const supabase = createClient();
 
         const { data, error }: any = await supabase
           .from('classes')
@@ -32,44 +32,44 @@ export function useClasses() {
           )
           .eq('active', true)
           .order('day_of_week')
-          .order('start_time')
+          .order('start_time');
 
-        if (error) throw error
+        if (error) throw error;
 
-        setClasses(data as ClassWithInstructor[] || [])
-        setError(null)
+        setClasses((data as ClassWithInstructor[]) || []);
+        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu')
+        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchClasses()
-  }, [])
+    fetchClasses();
+  }, []);
 
-  return { classes, loading, error }
+  return { classes, loading, error };
 }
 
 /**
  * Hook to fetch classes for a specific instructor
  */
 export function useInstructorClasses(instructorId: number | null) {
-  const [classes, setClasses] = useState<ClassWithInstructor[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [classes, setClasses] = useState<ClassWithInstructor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!instructorId) {
-      setClasses([])
-      setLoading(false)
-      return
+      setClasses([]);
+      setLoading(false);
+      return;
     }
 
     const fetchClasses = async () => {
       try {
-        setLoading(true)
-        const supabase = createClient()
+        setLoading(true);
+        const supabase = createClient();
 
         const { data, error }: any = await supabase
           .from('classes')
@@ -80,21 +80,21 @@ export function useInstructorClasses(instructorId: number | null) {
           `
           )
           .eq('instructor_id', instructorId)
-          .eq('active', true)
+          .eq('active', true);
 
-        if (error) throw error
+        if (error) throw error;
 
-        setClasses(data as ClassWithInstructor[] || [])
-        setError(null)
+        setClasses((data as ClassWithInstructor[]) || []);
+        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu')
+        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchClasses()
-  }, [instructorId])
+    fetchClasses();
+  }, [instructorId]);
 
-  return { classes, loading, error }
+  return { classes, loading, error };
 }

@@ -3,19 +3,19 @@
  * For displaying statistics on dashboard
  */
 
-import { Paper, Group, Text, ThemeIcon, Stack } from '@mantine/core'
-import { IconTrendingUp, IconTrendingDown } from '@tabler/icons-react'
+import { Paper, Group, Text, ThemeIcon, Stack } from '@mantine/core';
+import { IconTrendingUp, IconTrendingDown } from '@tabler/icons-react';
 
 interface StatsCardProps {
-  title: string
-  value: string | number
-  icon: React.ReactNode
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
   trend?: {
-    value: number
-    label: string
-  }
-  color?: string
-  loading?: boolean
+    value: number;
+    label: string;
+  };
+  color?: string;
+  loading?: boolean;
 }
 
 export function StatsCard({
@@ -26,7 +26,7 @@ export function StatsCard({
   color = 'orange',
   loading = false,
 }: StatsCardProps) {
-  const isPositiveTrend = trend && trend.value > 0
+  const isPositiveTrend = trend && trend.value > 0;
 
   return (
     <Paper withBorder p="md" radius="md">
@@ -66,5 +66,5 @@ export function StatsCard({
         </ThemeIcon>
       </Group>
     </Paper>
-  )
+  );
 }

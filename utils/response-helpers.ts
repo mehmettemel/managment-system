@@ -3,7 +3,7 @@
  * Standardized response formatting for API calls and server actions
  */
 
-import type { ApiResponse, ApiListResponse } from '@/types'
+import type { ApiResponse, ApiListResponse } from '@/types';
 
 /**
  * Create a success response
@@ -12,7 +12,7 @@ export function successResponse<T>(data: T): ApiResponse<T> {
   return {
     data,
     error: null,
-  }
+  };
 }
 
 /**
@@ -22,7 +22,7 @@ export function errorResponse<T = null>(error: string): ApiResponse<T> {
   return {
     data: null,
     error,
-  }
+  };
 }
 
 /**
@@ -36,7 +36,7 @@ export function successListResponse<T>(
     data,
     error: null,
     count,
-  }
+  };
 }
 
 /**
@@ -47,7 +47,7 @@ export function errorListResponse<T>(error: string): ApiListResponse<T> {
     data: null,
     error,
     count: 0,
-  }
+  };
 }
 
 /**
@@ -57,22 +57,22 @@ export function handleSupabaseError(error: unknown): string {
   if (error instanceof Error) {
     // Check for common Supabase error patterns
     if (error.message.includes('duplicate key')) {
-      return 'Bu kayıt zaten mevcut.'
+      return 'Bu kayıt zaten mevcut.';
     }
     if (error.message.includes('foreign key')) {
-      return 'İlişkili kayıtlar nedeniyle işlem yapılamadı.'
+      return 'İlişkili kayıtlar nedeniyle işlem yapılamadı.';
     }
     if (error.message.includes('not found')) {
-      return 'Kayıt bulunamadı.'
+      return 'Kayıt bulunamadı.';
     }
     if (error.message.includes('permission')) {
-      return 'Bu işlem için yetkiniz bulunmuyor.'
+      return 'Bu işlem için yetkiniz bulunmuyor.';
     }
 
-    return error.message
+    return error.message;
   }
 
-  return 'Beklenmeyen bir hata oluştu.'
+  return 'Beklenmeyen bir hata oluştu.';
 }
 
 /**
@@ -80,7 +80,7 @@ export function handleSupabaseError(error: unknown): string {
  */
 export function logError(context: string, error: unknown): void {
   if (process.env.NODE_ENV === 'development') {
-    console.error(`[${context}] Error:`, error)
+    console.error(`[${context}] Error:`, error);
   }
 }
 
@@ -93,25 +93,25 @@ export function validateRequiredFields<T extends Record<string, unknown>>(
 ): { valid: boolean; missingFields: string[] } {
   const missingFields = requiredFields.filter(
     (field) => !data[field] || data[field] === ''
-  )
+  );
 
   return {
     valid: missingFields.length === 0,
     missingFields: missingFields as string[],
-  }
+  };
 }
 
 /**
  * Sanitize input by trimming whitespace
  */
 export function sanitizeInput<T extends Record<string, unknown>>(data: T): T {
-  const sanitized: Record<string, unknown> = { ...data }
+  const sanitized: Record<string, unknown> = { ...data };
 
   Object.keys(sanitized).forEach((key) => {
     if (typeof sanitized[key] === 'string') {
-      sanitized[key] = (sanitized[key] as string).trim()
+      sanitized[key] = (sanitized[key] as string).trim();
     }
-  })
+  });
 
-  return sanitized as T
+  return sanitized as T;
 }

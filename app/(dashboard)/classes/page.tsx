@@ -2,16 +2,16 @@
  * Classes Page
  */
 
-import { Title, Text, Stack } from '@mantine/core'
-import { getClasses } from '@/actions/classes'
-import { getInstructors } from '@/actions/instructors'
-import { ClassesContent } from '@/components/classes/ClassesContent'
+import { Title, Text, Stack } from '@mantine/core';
+import { getClasses } from '@/actions/classes';
+import { getInstructors } from '@/actions/instructors';
+import { ClassesContent } from '@/components/classes/ClassesContent';
 
 export default async function ClassesPage() {
   const [classesRes, instructorsRes] = await Promise.all([
     getClasses(),
     getInstructors(),
-  ])
+  ]);
 
   return (
     <Stack gap="xl">
@@ -25,5 +25,5 @@ export default async function ClassesPage() {
         instructors={instructorsRes.data || []}
       />
     </Stack>
-  )
+  );
 }

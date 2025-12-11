@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
+import { useState } from 'react';
 import {
   Table,
   Badge,
@@ -9,25 +9,25 @@ import {
   Group,
   Text,
   LoadingOverlay,
-} from '@mantine/core'
+} from '@mantine/core';
 import {
   IconCheck,
   IconX,
   IconCurrencyLira,
   IconCreditCard,
-} from '@tabler/icons-react'
-import { PaymentScheduleItem } from '@/types'
-import { formatCurrency } from '@/utils/formatters'
-import { formatDate } from '@/utils/date-helpers'
-import { processClassPayment, deletePayment } from '@/actions/payments'
-import { showSuccess, showError } from '@/utils/notifications'
-import { modals } from '@mantine/modals'
+} from '@tabler/icons-react';
+import { PaymentScheduleItem } from '@/types';
+import { formatCurrency } from '@/utils/formatters';
+import { formatDate } from '@/utils/date-helpers';
+import { processClassPayment, deletePayment } from '@/actions/payments';
+import { showSuccess, showError } from '@/utils/notifications';
+import { modals } from '@mantine/modals';
 
 interface PaymentScheduleTableProps {
-  schedule: PaymentScheduleItem[]
-  memberId: number
-  classId: number
-  onUpdate: () => void
+  schedule: PaymentScheduleItem[];
+  memberId: number;
+  classId: number;
+  onUpdate: () => void;
 }
 
 export function PaymentScheduleTable({
@@ -36,7 +36,7 @@ export function PaymentScheduleTable({
   classId,
   onUpdate,
 }: PaymentScheduleTableProps) {
-  const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const handlePay = async (item: PaymentScheduleItem) => {
     modals.openConfirmModal({
@@ -49,50 +49,51 @@ export function PaymentScheduleTable({
       ),
       labels: { confirm: 'Ödeme Al (Nakit)', cancel: 'İptal' },
       onConfirm: async () => {
-        setLoadingId(item.periodMonth)
+        setLoadingId(item.periodMonth);
         const res = await processClassPayment({
           memberId,
           classId,
           amount: item.amount,
           periodDate: item.periodMonth,
           paymentMethod: 'Nakit', // Default to cash for quick action, or expand to modal
-        })
-        
-        if (res.error) showError(res.error)
+        });
+
+        if (res.error) showError(res.error);
         else {
-            showSuccess('Ödeme alındı')
-            onUpdate()
+          showSuccess('Ödeme alındı');
+          onUpdate();
         }
-        setLoadingId(null)
+        setLoadingId(null);
       },
-    })
-  }
+    });
+  };
 
   const handleCancelPay = async (item: PaymentScheduleItem) => {
-    if (!item.paymentId) return
+    if (!item.paymentId) return;
 
     modals.openConfirmModal({
       title: 'Ödeme İptali',
       children: (
         <Text size="sm">
-          <strong>{item.periodLabel}</strong> ödemesi iptal edilsin mi? (Geri alınamaz)
+          <strong>{item.periodLabel}</strong> ödemesi iptal edilsin mi? (Geri
+          alınamaz)
         </Text>
       ),
       labels: { confirm: 'Evet, İptal Et', cancel: 'Vazgeç' },
       confirmProps: { color: 'red' },
       onConfirm: async () => {
-        setLoadingId(item.periodMonth)
-        const res = await deletePayment(item.paymentId!)
-        
-        if (res.error) showError(res.error)
+        setLoadingId(item.periodMonth);
+        const res = await deletePayment(item.paymentId!);
+
+        if (res.error) showError(res.error);
         else {
-            showSuccess('Ödeme iptal edildi')
-            onUpdate()
+          showSuccess('Ödeme iptal edildi');
+          onUpdate();
         }
-        setLoadingId(null)
+        setLoadingId(null);
       },
-    })
-  }
+    });
+  };
 
   return (
     <div style={{ position: 'relative' }}>
@@ -115,11 +116,19 @@ export function PaymentScheduleTable({
               </Table.Td>
               <Table.Td>
                 {item.status === 'paid' ? (
-                  <Badge color="green" variant="light" leftSection={<IconCheck size={12} />}>
+                  <Badge
+                    color="green"
+                    variant="light"
+                    leftSection={<IconCheck size={12} />}
+                  >
                     Ödendi
                   </Badge>
                 ) : item.status === 'overdue' ? (
-                  <Badge color="red" variant="light" leftSection={<IconX size={12} />}>
+                  <Badge
+                    color="red"
+                    variant="light"
+                    leftSection={<IconX size={12} />}
+                  >
                     Gecikmiş
                   </Badge>
                 ) : (
@@ -132,36 +141,34 @@ export function PaymentScheduleTable({
               <Table.Td>
                 {item.paymentDate ? formatDate(item.paymentDate) : '-'}
               </Table.Td>
-              <Table.Td>
-                 {item.paymentMethod || '-'}
-              </Table.Td>
+              <Table.Td>{item.paymentMethod || '-'}</Table.Td>
               <Table.Td style={{ textAlign: 'right' }}>
-                 {item.status === 'paid' ? (
-                     <Button 
-                        color="red" 
-                        variant="subtle" 
-                        size="xs"
-                        loading={loadingId === item.periodMonth}
-                        onClick={() => handleCancelPay(item)}
-                     >
-                         İptal
-                     </Button>
-                 ) : (
-                     <Button 
-                        variant="light" 
-                        size="xs"
-                        leftSection={<IconCreditCard size={14} />}
-                        loading={loadingId === item.periodMonth}
-                        onClick={() => handlePay(item)}
-                     >
-                         Ödeme Al
-                     </Button>
-                 )}
+                {item.status === 'paid' ? (
+                  <Button
+                    color="red"
+                    variant="subtle"
+                    size="xs"
+                    loading={loadingId === item.periodMonth}
+                    onClick={() => handleCancelPay(item)}
+                  >
+                    İptal
+                  </Button>
+                ) : (
+                  <Button
+                    variant="light"
+                    size="xs"
+                    leftSection={<IconCreditCard size={14} />}
+                    loading={loadingId === item.periodMonth}
+                    onClick={() => handlePay(item)}
+                  >
+                    Ödeme Al
+                  </Button>
+                )}
               </Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>
       </Table>
     </div>
-  )
+  );
 }

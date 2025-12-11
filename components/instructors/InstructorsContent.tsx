@@ -2,9 +2,9 @@
  * Instructors Content (Client Component)
  */
 
-'use client'
+'use client';
 
-import { useState } from 'react'
+import { useState } from 'react';
 import {
   Button,
   Group,
@@ -15,40 +15,48 @@ import {
   ActionIcon,
   SimpleGrid,
   Menu,
-} from '@mantine/core'
-import { IconPlus, IconDotsVertical, IconEdit, IconTrash } from '@tabler/icons-react'
-import { InstructorDrawer } from './InstructorDrawer'
-import { Instructor } from '@/types'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { useDisclosure } from '@mantine/hooks'
-import { deactivateInstructor } from '@/actions/instructors'
-import { showSuccess, showError } from '@/utils/notifications'
+} from '@mantine/core';
+import {
+  IconPlus,
+  IconDotsVertical,
+  IconEdit,
+  IconTrash,
+} from '@tabler/icons-react';
+import { InstructorDrawer } from './InstructorDrawer';
+import { Instructor } from '@/types';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { useDisclosure } from '@mantine/hooks';
+import { deactivateInstructor } from '@/actions/instructors';
+import { showSuccess, showError } from '@/utils/notifications';
 
 interface InstructorsContentProps {
-  initialInstructors: Instructor[]
+  initialInstructors: Instructor[];
 }
 
-export function InstructorsContent({ initialInstructors }: InstructorsContentProps) {
-  const [opened, { open, close }] = useDisclosure(false)
-  const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null)
+export function InstructorsContent({
+  initialInstructors,
+}: InstructorsContentProps) {
+  const [opened, { open, close }] = useDisclosure(false);
+  const [selectedInstructor, setSelectedInstructor] =
+    useState<Instructor | null>(null);
 
   const handleEdit = (instructor: Instructor) => {
-    setSelectedInstructor(instructor)
-    open()
-  }
+    setSelectedInstructor(instructor);
+    open();
+  };
 
   const handleAdd = () => {
-    setSelectedInstructor(null)
-    open()
-  }
+    setSelectedInstructor(null);
+    open();
+  };
 
   const handleDelete = async (id: number) => {
     if (confirm('Bu eğitmeni silmek istediğinize emin misiniz?')) {
-      const res = await deactivateInstructor(id)
-      if (res.error) showError(res.error)
-      else showSuccess('Eğitmen silindi (Arşivlendi)')
+      const res = await deactivateInstructor(id);
+      if (res.error) showError(res.error);
+      else showSuccess('Eğitmen silindi (Arşivlendi)');
     }
-  }
+  };
 
   return (
     <>
@@ -130,5 +138,5 @@ export function InstructorsContent({ initialInstructors }: InstructorsContentPro
         instructor={selectedInstructor}
       />
     </>
-  )
+  );
 }

@@ -3,11 +3,11 @@
  * Wrapper around Mantine NumberInput with preset formatting
  */
 
-'use client'
+'use client';
 
-import { NumberInput, NumberInputProps } from '@mantine/core'
-import { forwardRef } from 'react'
-import { IconCurrencyLira } from '@tabler/icons-react'
+import { NumberInput, NumberInputProps } from '@mantine/core';
+import { forwardRef } from 'react';
+import { IconCurrencyLira } from '@tabler/icons-react';
 
 export const CurrencyInput = forwardRef<HTMLInputElement, NumberInputProps>(
   (props, ref) => {
@@ -22,8 +22,8 @@ export const CurrencyInput = forwardRef<HTMLInputElement, NumberInputProps>(
         allowNegative={false}
         {...props}
       />
-    )
+    );
   }
-)
+);
 
-CurrencyInput.displayName = 'CurrencyInput'
+CurrencyInput.displayName = 'CurrencyInput';

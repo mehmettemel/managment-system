@@ -3,9 +3,9 @@
  * For creating and editing classes
  */
 
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 import {
   Drawer,
   Button,
@@ -15,20 +15,20 @@ import {
   Text,
   Select,
   NumberInput,
-} from '@mantine/core'
-import { TimeInput } from '@mantine/dates'
-import { useForm } from '@mantine/form'
-import { createClass, updateClass } from '@/actions/classes'
-import { showSuccess, showError } from '@/utils/notifications'
-import type { Class, ClassInsert, Instructor } from '@/types'
-import { IconClock } from '@tabler/icons-react'
+} from '@mantine/core';
+import { TimeInput } from '@mantine/dates';
+import { useForm } from '@mantine/form';
+import { createClass, updateClass } from '@/actions/classes';
+import { showSuccess, showError } from '@/utils/notifications';
+import type { Class, ClassInsert, Instructor } from '@/types';
+import { IconClock } from '@tabler/icons-react';
 
 interface ClassDrawerProps {
-  opened: boolean
-  onClose: () => void
-  classItem?: Class | null
-  instructors: Instructor[]
-  onSuccess?: () => void
+  opened: boolean;
+  onClose: () => void;
+  classItem?: Class | null;
+  instructors: Instructor[];
+  onSuccess?: () => void;
 }
 
 export function ClassDrawer({
@@ -38,7 +38,7 @@ export function ClassDrawer({
   instructors,
   onSuccess,
 }: ClassDrawerProps) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<ClassInsert>({
     initialValues: {
@@ -54,7 +54,7 @@ export function ClassDrawer({
       instructor_id: (value) => (!value ? 'Eğitmen seçimi zorunludur' : null),
       start_time: (value) => (!value ? 'Başlangıç saati zorunludur' : null),
     },
-  })
+  });
 
   useEffect(() => {
     if (classItem) {
@@ -65,14 +65,14 @@ export function ClassDrawer({
         start_time: classItem.start_time,
         duration_minutes: classItem.duration_minutes,
         price_monthly: classItem.price_monthly,
-      })
+      });
     } else {
-      form.reset()
+      form.reset();
     }
-  }, [classItem])
+  }, [classItem]);
 
   const handleSubmit = async (values: ClassInsert) => {
-    setLoading(true)
+    setLoading(true);
     try {
       // Ensure specific types for numbers
       const payload = {
@@ -80,39 +80,39 @@ export function ClassDrawer({
         instructor_id: Number(values.instructor_id),
         duration_minutes: Number(values.duration_minutes),
         price_monthly: Number(values.price_monthly),
-      }
+      };
 
       if (classItem) {
-        const result = await updateClass(classItem.id, payload)
+        const result = await updateClass(classItem.id, payload);
         if (result.error) {
-          showError(result.error)
+          showError(result.error);
         } else {
-          showSuccess('Ders güncellendi')
-          onSuccess?.()
-          onClose()
+          showSuccess('Ders güncellendi');
+          onSuccess?.();
+          onClose();
         }
       } else {
-        const result = await createClass(payload)
+        const result = await createClass(payload);
         if (result.error) {
-          showError(result.error)
+          showError(result.error);
         } else {
-          showSuccess('Ders eklendi')
-          form.reset()
-          onSuccess?.()
-          onClose()
+          showSuccess('Ders eklendi');
+          form.reset();
+          onSuccess?.();
+          onClose();
         }
       }
     } catch (error) {
-      showError('Bir hata oluştu')
+      showError('Bir hata oluştu');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const instructorOptions = instructors.map((inst) => ({
     value: String(inst.id),
     label: `${inst.first_name} ${inst.last_name}`,
-  }))
+  }));
 
   const days = [
     'Pazartesi',
@@ -122,14 +122,14 @@ export function ClassDrawer({
     'Cuma',
     'Cumartesi',
     'Pazar',
-  ]
+  ];
 
   return (
     <Drawer
       opened={opened}
       onClose={() => {
-        form.reset()
-        onClose()
+        form.reset();
+        onClose();
       }}
       title={
         <Text size="lg" fw={600}>
@@ -155,8 +155,14 @@ export function ClassDrawer({
             searchable
             required
             {...form.getInputProps('instructor_id')}
-            value={form.values.instructor_id ? String(form.values.instructor_id) : null}
-            onChange={(val) => form.setFieldValue('instructor_id', val ? Number(val) : null)}
+            value={
+              form.values.instructor_id
+                ? String(form.values.instructor_id)
+                : null
+            }
+            onChange={(val) =>
+              form.setFieldValue('instructor_id', val ? Number(val) : null)
+            }
           />
 
           <Select
@@ -192,11 +198,15 @@ export function ClassDrawer({
           />
 
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={onClose}>İptal</Button>
-            <Button type="submit" loading={loading}>Kaydet</Button>
+            <Button variant="default" onClick={onClose}>
+              İptal
+            </Button>
+            <Button type="submit" loading={loading}>
+              Kaydet
+            </Button>
           </Group>
         </Stack>
       </form>
     </Drawer>
-  )
+  );
 }

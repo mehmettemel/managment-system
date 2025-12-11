@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 import {
   Modal,
   Text,
@@ -15,7 +15,7 @@ import {
   Loader,
   Center,
   Divider,
-} from '@mantine/core'
+} from '@mantine/core';
 import {
   IconCreditCard,
   IconCalendar,
@@ -23,20 +23,20 @@ import {
   IconCurrencyLira,
   IconUser,
   IconHistory,
-} from '@tabler/icons-react'
-import { getMemberById } from '@/actions/members'
-import { getMemberPayments } from '@/actions/payments'
-import { formatDate, isPaymentOverdue } from '@/utils/date-helpers'
-import { formatCurrency, formatPhone } from '@/utils/formatters'
-import { StatusBadge } from '@/components/shared/StatusBadge'
-import { ClassPaymentModal } from '@/components/members/ClassPaymentModal'
-import type { Member, MemberClassWithDetails, PaymentWithClass } from '@/types'
+} from '@tabler/icons-react';
+import { getMemberById } from '@/actions/members';
+import { getMemberPayments } from '@/actions/payments';
+import { formatDate, isPaymentOverdue } from '@/utils/date-helpers';
+import { formatCurrency, formatPhone } from '@/utils/formatters';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { ClassPaymentModal } from '@/components/members/ClassPaymentModal';
+import type { Member, MemberClassWithDetails, PaymentWithClass } from '@/types';
 
 interface MemberDetailModalProps {
-  opened: boolean
-  onClose: () => void
-  memberId: number | null
-  onRefresh?: () => void
+  opened: boolean;
+  onClose: () => void;
+  memberId: number | null;
+  onRefresh?: () => void;
 }
 
 export function MemberDetailModal({
@@ -45,44 +45,46 @@ export function MemberDetailModal({
   memberId,
   onRefresh,
 }: MemberDetailModalProps) {
-  const [loading, setLoading] = useState(true)
-  const [member, setMember] = useState<(Member & { member_classes: MemberClassWithDetails[] }) | null>(null)
-  const [payments, setPayments] = useState<PaymentWithClass[]>([])
-  const [paymentModalOpened, setPaymentModalOpened] = useState(false)
-  const [selectedClassId, setSelectedClassId] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true);
+  const [member, setMember] = useState<
+    (Member & { member_classes: MemberClassWithDetails[] }) | null
+  >(null);
+  const [payments, setPayments] = useState<PaymentWithClass[]>([]);
+  const [paymentModalOpened, setPaymentModalOpened] = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
 
   const fetchData = async () => {
-    if (!memberId) return
-    setLoading(true)
+    if (!memberId) return;
+    setLoading(true);
     const [memberRes, paymentsRes] = await Promise.all([
       getMemberById(memberId),
       getMemberPayments(memberId),
-    ])
-    
-    if (memberRes.data) setMember(memberRes.data)
-    if (paymentsRes.data) setPayments(paymentsRes.data as PaymentWithClass[])
-    setLoading(false)
-  }
+    ]);
+
+    if (memberRes.data) setMember(memberRes.data);
+    if (paymentsRes.data) setPayments(paymentsRes.data as PaymentWithClass[]);
+    setLoading(false);
+  };
 
   useEffect(() => {
     if (opened && memberId) {
-      fetchData()
+      fetchData();
     }
-  }, [opened, memberId])
+  }, [opened, memberId]);
 
   const handleOpenPaymentModal = (classId?: number) => {
-    setSelectedClassId(classId || null)
-    setPaymentModalOpened(true)
-  }
+    setSelectedClassId(classId || null);
+    setPaymentModalOpened(true);
+  };
 
   const handlePaymentSuccess = () => {
-    fetchData()
-    setPaymentModalOpened(false)
-    setSelectedClassId(null)
-    onRefresh?.()
-  }
+    fetchData();
+    setPaymentModalOpened(false);
+    setSelectedClassId(null);
+    onRefresh?.();
+  };
 
-  const activeClasses = member?.member_classes?.filter(mc => mc.active) || []
+  const activeClasses = member?.member_classes?.filter((mc) => mc.active) || [];
 
   return (
     <>
@@ -93,7 +95,9 @@ export function MemberDetailModal({
           member ? (
             <Group gap="sm">
               <IconUser size={20} />
-              <Text fw={600}>{member.first_name} {member.last_name}</Text>
+              <Text fw={600}>
+                {member.first_name} {member.last_name}
+              </Text>
               <StatusBadge status={member.status as any} size="sm" />
             </Group>
           ) : (
@@ -128,10 +132,12 @@ export function MemberDetailModal({
             {/* Active Classes */}
             <div>
               <Group justify="space-between" mb="xs">
-                <Text fw={600} size="sm">Aktif Dersler</Text>
-                <Button 
-                  variant="light" 
-                  size="xs" 
+                <Text fw={600} size="sm">
+                  Aktif Dersler
+                </Text>
+                <Button
+                  variant="light"
+                  size="xs"
                   leftSection={<IconCreditCard size={14} />}
                   onClick={() => handleOpenPaymentModal()}
                 >
@@ -140,41 +146,54 @@ export function MemberDetailModal({
               </Group>
 
               {activeClasses.length === 0 ? (
-                <Text c="dimmed" size="sm">Kayıtlı ders yok</Text>
+                <Text c="dimmed" size="sm">
+                  Kayıtlı ders yok
+                </Text>
               ) : (
                 <SimpleGrid cols={{ base: 1, sm: 2 }}>
                   {activeClasses.map((mc) => {
-                    const isOverdue = isPaymentOverdue(mc.next_payment_date)
+                    const isOverdue = isPaymentOverdue(mc.next_payment_date);
                     return (
                       <Card key={mc.id} withBorder radius="md" p="sm">
                         <Group justify="space-between" mb="xs">
-                          <Text fw={500} size="sm">{mc.classes?.name || 'Ders'}</Text>
-                          {isOverdue && <Badge color="red" size="xs">Gecikmiş</Badge>}
+                          <Text fw={500} size="sm">
+                            {mc.classes?.name || 'Ders'}
+                          </Text>
+                          {isOverdue && (
+                            <Badge color="red" size="xs">
+                              Gecikmiş
+                            </Badge>
+                          )}
                         </Group>
-                        
+
                         <Group gap="lg" mb="xs">
                           <Group gap={4}>
                             <IconCurrencyLira size={14} color="gray" />
-                            <Text size="xs" c="dimmed">{formatCurrency(mc.price || 0)}</Text>
+                            <Text size="xs" c="dimmed">
+                              {formatCurrency(mc.price || 0)}
+                            </Text>
                           </Group>
                           <Group gap={4}>
-                            <IconCalendar size={14} color={isOverdue ? 'red' : 'gray'} />
+                            <IconCalendar
+                              size={14}
+                              color={isOverdue ? 'red' : 'gray'}
+                            />
                             <Text size="xs" c={isOverdue ? 'red' : 'dimmed'}>
                               {formatDate(mc.next_payment_date)}
                             </Text>
                           </Group>
                         </Group>
 
-                        <Button 
-                          variant="light" 
-                          size="xs" 
+                        <Button
+                          variant="light"
+                          size="xs"
                           fullWidth
                           onClick={() => handleOpenPaymentModal(mc.class_id)}
                         >
                           Ödeme Yap
                         </Button>
                       </Card>
-                    )
+                    );
                   })}
                 </SimpleGrid>
               )}
@@ -186,11 +205,15 @@ export function MemberDetailModal({
             <div>
               <Group gap="xs" mb="xs">
                 <IconHistory size={16} />
-                <Text fw={600} size="sm">Ödeme Geçmişi</Text>
+                <Text fw={600} size="sm">
+                  Ödeme Geçmişi
+                </Text>
               </Group>
-              
+
               {payments.length === 0 ? (
-                <Text c="dimmed" size="sm" ta="center" py="md">Henüz ödeme yok</Text>
+                <Text c="dimmed" size="sm" ta="center" py="md">
+                  Henüz ödeme yok
+                </Text>
               ) : (
                 <Table highlightOnHover withTableBorder striped>
                   <Table.Thead>
@@ -205,8 +228,12 @@ export function MemberDetailModal({
                     {payments.slice(0, 5).map((payment) => (
                       <Table.Tr key={payment.id}>
                         <Table.Td>{formatDate(payment.payment_date)}</Table.Td>
-                        <Table.Td fw={600} c="green">{formatCurrency(payment.amount)}</Table.Td>
-                        <Table.Td>{(payment as any).classes?.name || '-'}</Table.Td>
+                        <Table.Td fw={600} c="green">
+                          {formatCurrency(payment.amount)}
+                        </Table.Td>
+                        <Table.Td>
+                          {(payment as any).classes?.name || '-'}
+                        </Table.Td>
                         <Table.Td>
                           {payment.period_start && payment.period_end
                             ? `${formatDate(payment.period_start)} - ${formatDate(payment.period_end)}`
@@ -225,7 +252,9 @@ export function MemberDetailModal({
             </div>
           </Stack>
         ) : (
-          <Text c="dimmed" ta="center">Üye bulunamadı</Text>
+          <Text c="dimmed" ta="center">
+            Üye bulunamadı
+          </Text>
         )}
       </Modal>
 
@@ -241,5 +270,5 @@ export function MemberDetailModal({
         />
       )}
     </>
-  )
+  );
 }

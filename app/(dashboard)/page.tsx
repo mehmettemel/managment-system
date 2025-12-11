@@ -3,7 +3,7 @@
  * Main landing page with statistics, charts and overdue members
  */
 
-import { Suspense } from 'react'
+import { Suspense } from 'react';
 import {
   Title,
   Grid,
@@ -13,7 +13,7 @@ import {
   Paper,
   Group,
   Badge,
-} from '@mantine/core'
+} from '@mantine/core';
 import {
   IconUsers,
   IconCash,
@@ -21,26 +21,26 @@ import {
   IconUserPlus,
   IconTrendingUp,
   IconCalendarEvent,
-} from '@tabler/icons-react'
-import { BarChart, LineChart, DonutChart } from '@mantine/charts'
-import { StatsCard } from '@/components/shared/StatsCard'
-import { DataTable } from '@/components/shared/DataTable'
-import { StatusBadge } from '@/components/shared/StatusBadge'
-import { getMembers, getOverdueMembers } from '@/actions/members'
-import { getRevenueByDateRange } from '@/actions/payments'
-import { formatDate, getDaysUntilPayment } from '@/utils/date-helpers'
-import type { DataTableColumn } from '@/components/shared/DataTable'
-import type { Member } from '@/types'
+} from '@tabler/icons-react';
+import { BarChart, LineChart, DonutChart } from '@mantine/charts';
+import { StatsCard } from '@/components/shared/StatsCard';
+import { DataTable } from '@/components/shared/DataTable';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { getMembers, getOverdueMembers } from '@/actions/members';
+import { getRevenueByDateRange } from '@/actions/payments';
+import { formatDate, getDaysUntilPayment } from '@/utils/date-helpers';
+import type { DataTableColumn } from '@/components/shared/DataTable';
+import type { Member } from '@/types';
 
 // Stats Component (Server Component)
 async function DashboardStats() {
-  const now = new Date()
+  const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
     .toISOString()
-    .split('T')[0]
+    .split('T')[0];
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
     .toISOString()
-    .split('T')[0]
+    .split('T')[0];
 
   const [
     activeMembersResult,
@@ -52,12 +52,12 @@ async function DashboardStats() {
     getMembers('frozen'),
     getRevenueByDateRange(firstDay, lastDay),
     getOverdueMembers(),
-  ])
+  ]);
 
-  const activeMemberCount = activeMembersResult.data?.length || 0
-  const frozenMemberCount = frozenMembersResult.data?.length || 0
-  const monthlyRevenue = revenueResult.data?.total || 0
-  const overdueCount = overdueResult.data?.length || 0
+  const activeMemberCount = activeMembersResult.data?.length || 0;
+  const frozenMemberCount = frozenMembersResult.data?.length || 0;
+  const monthlyRevenue = revenueResult.data?.total || 0;
+  const overdueCount = overdueResult.data?.length || 0;
 
   return (
     <Grid>
@@ -96,21 +96,21 @@ async function DashboardStats() {
         />
       </Grid.Col>
     </Grid>
-  )
+  );
 }
 
 // Revenue Chart Component
 async function RevenueChart() {
   // Mock data - gerçek projeye entegre edilecek
-  const now = new Date()
-  const monthlyData = []
+  const now = new Date();
+  const monthlyData = [];
 
   for (let i = 5; i >= 0; i--) {
-    const month = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
     monthlyData.push({
       month: month.toLocaleDateString('tr-TR', { month: 'short' }),
       gelir: Math.floor(Math.random() * 50000) + 30000,
-    })
+    });
   }
 
   return (
@@ -146,7 +146,7 @@ async function RevenueChart() {
         />
       </Stack>
     </Paper>
-  )
+  );
 }
 
 // Member Status Distribution Chart
@@ -155,13 +155,17 @@ async function MemberStatusChart() {
     getMembers('active'),
     getMembers('frozen'),
     getMembers('archived'),
-  ])
+  ]);
 
   const data = [
     { name: 'Aktif', value: activeResult.data?.length || 0, color: 'orange.6' },
-    { name: 'Dondurulmuş', value: frozenResult.data?.length || 0, color: 'blue.6' },
+    {
+      name: 'Dondurulmuş',
+      value: frozenResult.data?.length || 0,
+      color: 'blue.6',
+    },
     { name: 'Arşiv', value: archivedResult.data?.length || 0, color: 'gray.6' },
-  ]
+  ];
 
   return (
     <Paper withBorder p="md" radius="md">
@@ -174,21 +178,16 @@ async function MemberStatusChart() {
             Toplam üye sayısı: {data.reduce((acc, curr) => acc + curr.value, 0)}
           </Text>
         </div>
-        <DonutChart
-          data={data}
-          thickness={30}
-          size={200}
-          chartLabel="Üyeler"
-        />
+        <DonutChart data={data} thickness={30} size={200} chartLabel="Üyeler" />
       </Stack>
     </Paper>
-  )
+  );
 }
 
 // Recent Members Activity
 async function RecentActivity() {
-  const result = await getMembers()
-  const recentMembers = result.data?.slice(0, 5) || []
+  const result = await getMembers();
+  const recentMembers = result.data?.slice(0, 5) || [];
 
   return (
     <Paper withBorder p="md" radius="md">
@@ -219,13 +218,13 @@ async function RecentActivity() {
         </Stack>
       </Stack>
     </Paper>
-  )
+  );
 }
 
 // Overdue Members Table
 async function OverdueTable() {
-  const result = await getOverdueMembers()
-  const overdueMembers = result.data || []
+  const result = await getOverdueMembers();
+  const overdueMembers = result.data || [];
 
   const columns: DataTableColumn<Member>[] = [
     {
@@ -255,13 +254,17 @@ async function OverdueTable() {
         </Badge>
       ),
     },
-  ]
+  ];
 
   if (overdueMembers.length === 0) {
     return (
       <Paper p="xl" withBorder radius="md">
         <Stack align="center" gap="sm">
-          <IconUsers size={48} stroke={1.5} color="var(--mantine-color-gray-5)" />
+          <IconUsers
+            size={48}
+            stroke={1.5}
+            color="var(--mantine-color-gray-5)"
+          />
           <div>
             <Text ta="center" fw={600}>
               Harika! Gecikmiş ödeme yok 🎉
@@ -272,7 +275,7 @@ async function OverdueTable() {
           </div>
         </Stack>
       </Paper>
-    )
+    );
   }
 
   return (
@@ -297,7 +300,7 @@ async function OverdueTable() {
         pageSize={5}
       />
     </Stack>
-  )
+  );
 }
 
 // Loading Skeletons
@@ -310,15 +313,15 @@ function StatsLoading() {
         </Grid.Col>
       ))}
     </Grid>
-  )
+  );
 }
 
 function ChartLoading() {
-  return <Skeleton height={350} radius="md" />
+  return <Skeleton height={350} radius="md" />;
 }
 
 function TableLoading() {
-  return <Skeleton height={400} radius="md" />
+  return <Skeleton height={400} radius="md" />;
 }
 
 // Main Dashboard Page
@@ -364,5 +367,5 @@ export default function DashboardPage() {
         </Grid.Col>
       </Grid>
     </Stack>
-  )
+  );
 }

@@ -3,10 +3,10 @@
  * Payment Schedule & Detail Page Refactor
  */
 
-'use server'
+'use server';
 
-import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache';
+import { createClient } from '@/lib/supabase/server';
 import type {
   Payment,
   PaymentInsert,
@@ -14,7 +14,7 @@ import type {
   ApiResponse,
   ApiListResponse,
   PaymentScheduleItem,
-} from '@/types'
+} from '@/types';
 import {
   successResponse,
   errorResponse,
@@ -22,13 +22,13 @@ import {
   errorListResponse,
   handleSupabaseError,
   logError,
-} from '@/utils/response-helpers'
-import { getTodayDate } from '@/utils/date-helpers'
-import { processStudentPayment } from '@/actions/finance'
-import dayjs from 'dayjs'
-import 'dayjs/locale/tr'
+} from '@/utils/response-helpers';
+import { getTodayDate } from '@/utils/date-helpers';
+import { processStudentPayment } from '@/actions/finance';
+import dayjs from 'dayjs';
+import 'dayjs/locale/tr';
 
-dayjs.locale('tr')
+dayjs.locale('tr');
 
 /**
  * Get all payments for a member (with class info)
@@ -37,29 +37,31 @@ export async function getMemberPayments(
   memberId: number
 ): Promise<ApiListResponse<Payment>> {
   try {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('payments')
-      .select(`
+      .select(
+        `
         *,
         classes (
           id,
           name
         )
-      `)
+      `
+      )
       .eq('member_id', memberId)
-      .order('payment_date', { ascending: false })
+      .order('payment_date', { ascending: false });
 
     if (error) {
-      logError('getMemberPayments', error)
-      return errorListResponse(handleSupabaseError(error))
+      logError('getMemberPayments', error);
+      return errorListResponse(handleSupabaseError(error));
     }
 
-    return successListResponse(data || [])
+    return successListResponse(data || []);
   } catch (error) {
-    logError('getMemberPayments', error)
-    return errorListResponse(handleSupabaseError(error))
+    logError('getMemberPayments', error);
+    return errorListResponse(handleSupabaseError(error));
   }
 }
 
@@ -71,7 +73,7 @@ export async function getPaymentSchedule(
   classId: number
 ): Promise<ApiListResponse<PaymentScheduleItem>> {
   try {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
     // 1. Get Member Class details (for price and created_at/join_date)
     const { data: memberClass, error: mcError } = await supabase
@@ -79,82 +81,82 @@ export async function getPaymentSchedule(
       .select('*, members(join_date)')
       .eq('member_id', memberId)
       .eq('class_id', classId)
-      .single()
+      .single();
 
     if (mcError || !memberClass) {
-      return errorListResponse('Üye ders kaydı bulunamadı')
+      return errorListResponse('Üye ders kaydı bulunamadı');
     }
-  
+
     // 2. Get existing payments for this class
     const { data: payments, error: pError } = await supabase
       .from('payments')
       .select('*')
       .eq('member_id', memberId)
-      .eq('class_id', classId)
+      .eq('class_id', classId);
 
     if (pError) {
-      return errorListResponse(handleSupabaseError(pError))
+      return errorListResponse(handleSupabaseError(pError));
     }
 
     // 3. Generate Schedule
     // Start from member join date or class creation date (fallback to join date is safer)
     // memberClass.created_at is reliable if created after schema change, but fallback to member join date
-    const startDate = dayjs((memberClass as any).members?.join_date || memberClass.created_at)
-    
+    const startDate = dayjs(
+      (memberClass as any).members?.join_date || memberClass.created_at
+    );
+
     // Generate up to 6 months in future from today
-    const endDate = dayjs().add(6, 'month')
-    
-    const schedule: PaymentScheduleItem[] = []
-    let currentMonth = startDate.startOf('month')
+    const endDate = dayjs().add(6, 'month');
+
+    const schedule: PaymentScheduleItem[] = [];
+    let currentMonth = startDate.startOf('month');
 
     while (currentMonth.isBefore(endDate)) {
-        const periodStart = currentMonth.format('YYYY-MM-DD')
-        const nextMonth = currentMonth.add(1, 'month')
-        const periodEnd = nextMonth.format('YYYY-MM-DD')
-        
-        // Find if paid: existing payment coverage overlaps significantly or matches month
-        // Simple logic: check if any payment covers this month's start date
-        const paidPayment = payments?.find(p => {
-             // If payment period_start is roughly same month as currentMonth
-             if (!p.period_start) return false
-             return dayjs(p.period_start).isSame(currentMonth, 'month')
-        })
+      const periodStart = currentMonth.format('YYYY-MM-DD');
+      const nextMonth = currentMonth.add(1, 'month');
+      const periodEnd = nextMonth.format('YYYY-MM-DD');
 
-        let status: PaymentScheduleItem['status'] = 'unpaid'
-        if (paidPayment) {
-            status = 'paid'
-        } else if (currentMonth.isBefore(dayjs().startOf('month'))) {
-            status = 'overdue' // Past unpaid month
-        }
+      // Find if paid: existing payment coverage overlaps significantly or matches month
+      // Simple logic: check if any payment covers this month's start date
+      const paidPayment = payments?.find((p) => {
+        // If payment period_start is roughly same month as currentMonth
+        if (!p.period_start) return false;
+        return dayjs(p.period_start).isSame(currentMonth, 'month');
+      });
 
-        schedule.push({
-            periodMonth: periodStart,
-            periodLabel: currentMonth.format('MMMM YYYY'),
-            amount: Number(memberClass.price) || 0,
-            status,
-            paymentId: paidPayment?.id,
-            paymentDate: paidPayment ? paidPayment.payment_date : undefined,
-            paymentMethod: paidPayment ? paidPayment.payment_method : undefined
-        })
+      let status: PaymentScheduleItem['status'] = 'unpaid';
+      if (paidPayment) {
+        status = 'paid';
+      } else if (currentMonth.isBefore(dayjs().startOf('month'))) {
+        status = 'overdue'; // Past unpaid month
+      }
 
-        currentMonth = nextMonth
+      schedule.push({
+        periodMonth: periodStart,
+        periodLabel: currentMonth.format('MMMM YYYY'),
+        amount: Number(memberClass.price) || 0,
+        status,
+        paymentId: paidPayment?.id,
+        paymentDate: paidPayment ? paidPayment.payment_date : undefined,
+        paymentMethod: paidPayment ? paidPayment.payment_method : undefined,
+      });
+
+      currentMonth = nextMonth;
     }
 
     // Reverse to show latest first? User asked for "alt alta listele", usually descending for history, ascending for future?
     // Let's sort Descending for table (Future -> Past), or filter tabs?
     // "Geçmiş ve gelecek tüm ödemeleri o datatableda listelensin"
-    // Usually chronological is better for reading "what happened then what happens". 
+    // Usually chronological is better for reading "what happened then what happens".
     // Let's return Ascending (Oldest first) so user sees history flow. Or Descending.
     // Let's stick to Descending (Newest first) as it's standard for ledgers.
-    
-    return successListResponse(schedule.reverse())
 
+    return successListResponse(schedule.reverse());
   } catch (error) {
-    logError('getPaymentSchedule', error)
-    return errorListResponse(handleSupabaseError(error))
+    logError('getPaymentSchedule', error);
+    return errorListResponse(handleSupabaseError(error));
   }
 }
-
 
 /**
  * Process a class-based payment (Single Month Target)
@@ -163,18 +165,18 @@ export async function processClassPayment(
   formData: ClassPaymentFormData
 ): Promise<ApiResponse<Payment>> {
   try {
-    const { memberId, classId, amount, paymentMethod, periodDate } = formData
-    
+    const { memberId, classId, amount, paymentMethod, periodDate } = formData;
+
     if (!memberId || !classId || !amount || !periodDate) {
-      return errorResponse('Gerekli alanlar eksik')
+      return errorResponse('Gerekli alanlar eksik');
     }
 
-    const supabase = await createClient()
-    const todayStr = dayjs().format('YYYY-MM-DD')
+    const supabase = await createClient();
+    const todayStr = dayjs().format('YYYY-MM-DD');
 
-    const periodStart = dayjs(periodDate).startOf('month').format('YYYY-MM-DD')
-    const periodEnd = dayjs(periodDate).add(1, 'month').format('YYYY-MM-DD')
-    const periodLabel = dayjs(periodDate).format('MMMM YYYY')
+    const periodStart = dayjs(periodDate).startOf('month').format('YYYY-MM-DD');
+    const periodEnd = dayjs(periodDate).add(1, 'month').format('YYYY-MM-DD');
+    const periodLabel = dayjs(periodDate).format('MMMM YYYY');
 
     // 1. Create payment record
     const paymentData: PaymentInsert = {
@@ -186,17 +188,17 @@ export async function processClassPayment(
       period_start: periodStart,
       period_end: periodEnd,
       description: `${periodLabel} ödemesi`,
-    }
+    };
 
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .insert(paymentData)
       .select()
-      .single()
+      .single();
 
     if (paymentError) {
-      logError('processClassPayment - insert payment', paymentError)
-      return errorResponse(handleSupabaseError(paymentError))
+      logError('processClassPayment - insert payment', paymentError);
+      return errorResponse(handleSupabaseError(paymentError));
     }
 
     // 2. Update next_payment_date logic
@@ -206,35 +208,34 @@ export async function processClassPayment(
     // Or just fetch schedule again to warn user?
     // The previous simple logic was: next_payment_date += 1 month.
     // Let's adopt a robust approach: Find the latest paid period end date for this class.
-    
+
     const { data: latestPayment } = await supabase
-        .from('payments')
-        .select('period_end')
-        .eq('member_id', memberId)
-        .eq('class_id', classId)
-        .order('period_end', { ascending: false })
-        .limit(1)
-        .single()
+      .from('payments')
+      .select('period_end')
+      .eq('member_id', memberId)
+      .eq('class_id', classId)
+      .order('period_end', { ascending: false })
+      .limit(1)
+      .single();
 
     if (latestPayment && latestPayment.period_end) {
-        await supabase
-            .from('member_classes')
-            .update({ next_payment_date: latestPayment.period_end })
-            .eq('member_id', memberId)
-            .eq('class_id', classId)
+      await supabase
+        .from('member_classes')
+        .update({ next_payment_date: latestPayment.period_end })
+        .eq('member_id', memberId)
+        .eq('class_id', classId);
     }
 
     // 3. Process instructor commission
-    await processStudentPayment(payment.id, payment.amount, 1, classId)
+    await processStudentPayment(payment.id, payment.amount, 1, classId);
 
-    revalidatePath(`/members/${memberId}`)
-    return successResponse(payment)
+    revalidatePath(`/members/${memberId}`);
+    return successResponse(payment);
   } catch (error) {
-    logError('processClassPayment', error)
-    return errorResponse(handleSupabaseError(error))
+    logError('processClassPayment', error);
+    return errorResponse(handleSupabaseError(error));
   }
 }
-
 
 /**
  * Calculate what the new payment date would be (Legacy - kept for compatibility if needed)
@@ -246,10 +247,10 @@ export async function calculateNewPaymentDate(
 ): Promise<ApiResponse<{ newDate: string; referenceDate: string }>> {
   // Legacy stub or remove if fully replaced.
   // Keeping simple for build safety.
-    return successResponse({
-      newDate: dayjs().add(monthsToPay, 'month').format('YYYY-MM-DD'),
-      referenceDate: dayjs().format('YYYY-MM-DD'),
-    })
+  return successResponse({
+    newDate: dayjs().add(monthsToPay, 'month').format('YYYY-MM-DD'),
+    referenceDate: dayjs().format('YYYY-MM-DD'),
+  });
 }
 
 /**
@@ -259,26 +260,28 @@ export async function getRecentPayments(
   limit = 10
 ): Promise<ApiListResponse<Payment>> {
   try {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('payments')
-      .select(`
+      .select(
+        `
         *,
         classes (id, name)
-      `)
+      `
+      )
       .order('payment_date', { ascending: false })
-      .limit(limit)
+      .limit(limit);
 
     if (error) {
-      logError('getRecentPayments', error)
-      return errorListResponse(handleSupabaseError(error))
+      logError('getRecentPayments', error);
+      return errorListResponse(handleSupabaseError(error));
     }
 
-    return successListResponse(data || [])
+    return successListResponse(data || []);
   } catch (error) {
-    logError('getRecentPayments', error)
-    return errorListResponse(handleSupabaseError(error))
+    logError('getRecentPayments', error);
+    return errorListResponse(handleSupabaseError(error));
   }
 }
 
@@ -290,26 +293,27 @@ export async function getRevenueByDateRange(
   endDate: string
 ): Promise<ApiResponse<{ total: number; count: number }>> {
   try {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('payments')
       .select('amount')
       .gte('payment_date', startDate)
-      .lte('payment_date', endDate)
+      .lte('payment_date', endDate);
 
     if (error) {
-      logError('getRevenueByDateRange', error)
-      return errorResponse(handleSupabaseError(error))
+      logError('getRevenueByDateRange', error);
+      return errorResponse(handleSupabaseError(error));
     }
 
-    const total = data?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0
-    const count = data?.length || 0
+    const total =
+      data?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
+    const count = data?.length || 0;
 
-    return successResponse({ total, count })
+    return successResponse({ total, count });
   } catch (error) {
-    logError('getRevenueByDateRange', error)
-    return errorResponse(handleSupabaseError(error))
+    logError('getRevenueByDateRange', error);
+    return errorResponse(handleSupabaseError(error));
   }
 }
 
@@ -318,21 +322,21 @@ export async function getRevenueByDateRange(
  */
 export async function deletePayment(id: number): Promise<ApiResponse<boolean>> {
   try {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
-    const { error } = await supabase.from('payments').delete().eq('id', id)
+    const { error } = await supabase.from('payments').delete().eq('id', id);
 
     if (error) {
-      logError('deletePayment', error)
-      return errorResponse(handleSupabaseError(error))
+      logError('deletePayment', error);
+      return errorResponse(handleSupabaseError(error));
     }
 
     // Must revalidate related paths to update schedule status
-    revalidatePath('/members')
+    revalidatePath('/members');
     // Ideally we know the memberId to revalidate specific page, but broadly:
-    return successResponse(true)
+    return successResponse(true);
   } catch (error) {
-    logError('deletePayment', error)
-    return errorResponse(handleSupabaseError(error))
+    logError('deletePayment', error);
+    return errorResponse(handleSupabaseError(error));
   }
 }

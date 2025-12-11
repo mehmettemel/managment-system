@@ -15,298 +15,298 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export interface Database {
   public: {
     Tables: {
       instructors: {
         Row: {
-          id: number
-          first_name: string
-          last_name: string
-          specialty: string | null
-          phone: string | null
-          active: boolean
-          created_at: string
-          default_commission_rate: number | null
-        }
+          id: number;
+          first_name: string;
+          last_name: string;
+          specialty: string | null;
+          phone: string | null;
+          active: boolean;
+          created_at: string;
+          default_commission_rate: number | null;
+        };
         Insert: {
-          id?: number
-          first_name: string
-          last_name: string
-          specialty?: string | null
-          phone?: string | null
-          active?: boolean
-          created_at?: string
-          default_commission_rate?: number | null
-        }
+          id?: number;
+          first_name: string;
+          last_name: string;
+          specialty?: string | null;
+          phone?: string | null;
+          active?: boolean;
+          created_at?: string;
+          default_commission_rate?: number | null;
+        };
         Update: {
-          id?: number
-          first_name?: string
-          last_name?: string
-          specialty?: string | null
-          phone?: string | null
-          active?: boolean
-          created_at?: string
-          default_commission_rate?: number | null
-        }
-      }
+          id?: number;
+          first_name?: string;
+          last_name?: string;
+          specialty?: string | null;
+          phone?: string | null;
+          active?: boolean;
+          created_at?: string;
+          default_commission_rate?: number | null;
+        };
+      };
       classes: {
         Row: {
-          id: number
-          name: string
-          instructor_id: number | null
-          dance_type_id: number | null
-          day_of_week: string | null
-          start_time: string | null
-          duration_minutes: number
-          price_monthly: number | null
-          active: boolean
-        }
+          id: number;
+          name: string;
+          instructor_id: number | null;
+          dance_type_id: number | null;
+          day_of_week: string | null;
+          start_time: string | null;
+          duration_minutes: number;
+          price_monthly: number | null;
+          active: boolean;
+        };
         Insert: {
-          id?: number
-          name: string
-          instructor_id?: number | null
-          dance_type_id?: number | null
-          day_of_week?: string | null
-          start_time?: string | null
-          duration_minutes?: number
-          price_monthly?: number | null
-          active?: boolean
-        }
+          id?: number;
+          name: string;
+          instructor_id?: number | null;
+          dance_type_id?: number | null;
+          day_of_week?: string | null;
+          start_time?: string | null;
+          duration_minutes?: number;
+          price_monthly?: number | null;
+          active?: boolean;
+        };
         Update: {
-          id?: number
-          name?: string
-          instructor_id?: number | null
-          dance_type_id?: number | null
-          day_of_week?: string | null
-          start_time?: string | null
-          duration_minutes?: number
-          price_monthly?: number | null
-          active?: boolean
-        }
-      }
+          id?: number;
+          name?: string;
+          instructor_id?: number | null;
+          dance_type_id?: number | null;
+          day_of_week?: string | null;
+          start_time?: string | null;
+          duration_minutes?: number;
+          price_monthly?: number | null;
+          active?: boolean;
+        };
+      };
       members: {
         Row: {
-          id: number
-          first_name: string
-          last_name: string
-          phone: string | null
-          join_date: string
-          status: string
-          notes: string | null
-          monthly_fee: number | null
-          created_at: string
-        }
+          id: number;
+          first_name: string;
+          last_name: string;
+          phone: string | null;
+          join_date: string;
+          status: string;
+          notes: string | null;
+          monthly_fee: number | null;
+          created_at: string;
+        };
         Insert: {
-          id?: number
-          first_name: string
-          last_name: string
-          phone?: string | null
-          join_date?: string
-          status?: string
-          notes?: string | null
-          monthly_fee?: number | null
-          created_at?: string
-        }
+          id?: number;
+          first_name: string;
+          last_name: string;
+          phone?: string | null;
+          join_date?: string;
+          status?: string;
+          notes?: string | null;
+          monthly_fee?: number | null;
+          created_at?: string;
+        };
         Update: {
-          id?: number
-          first_name?: string
-          last_name?: string
-          phone?: string | null
-          join_date?: string
-          status?: string
-          notes?: string | null
-          monthly_fee?: number | null
-          created_at?: string
-        }
-      }
+          id?: number;
+          first_name?: string;
+          last_name?: string;
+          phone?: string | null;
+          join_date?: string;
+          status?: string;
+          notes?: string | null;
+          monthly_fee?: number | null;
+          created_at?: string;
+        };
+      };
       member_classes: {
         Row: {
-          id: number
-          member_id: number
-          class_id: number
-          next_payment_date: string | null
-          price: number | null
-          active: boolean
-        }
+          id: number;
+          member_id: number;
+          class_id: number;
+          next_payment_date: string | null;
+          price: number | null;
+          active: boolean;
+        };
         Insert: {
-          id?: number
-          member_id: number
-          class_id: number
-          next_payment_date?: string | null
-          price?: number | null
-          active?: boolean
-        }
+          id?: number;
+          member_id: number;
+          class_id: number;
+          next_payment_date?: string | null;
+          price?: number | null;
+          active?: boolean;
+        };
         Update: {
-          id?: number
-          member_id?: number
-          class_id?: number
-          next_payment_date?: string | null
-          price?: number | null
-          active?: boolean
-        }
-      }
+          id?: number;
+          member_id?: number;
+          class_id?: number;
+          next_payment_date?: string | null;
+          price?: number | null;
+          active?: boolean;
+        };
+      };
       payments: {
         Row: {
-          id: number
-          member_id: number | null
-          class_id: number | null
-          amount: number
-          payment_date: string
-          payment_method: string | null
-          period_start: string | null
-          period_end: string | null
-          description: string | null
-        }
+          id: number;
+          member_id: number | null;
+          class_id: number | null;
+          amount: number;
+          payment_date: string;
+          payment_method: string | null;
+          period_start: string | null;
+          period_end: string | null;
+          description: string | null;
+        };
         Insert: {
-          id?: number
-          member_id?: number | null
-          class_id?: number | null
-          amount: number
-          payment_date?: string
-          payment_method?: string | null
-          period_start?: string | null
-          period_end?: string | null
-          description?: string | null
-        }
+          id?: number;
+          member_id?: number | null;
+          class_id?: number | null;
+          amount: number;
+          payment_date?: string;
+          payment_method?: string | null;
+          period_start?: string | null;
+          period_end?: string | null;
+          description?: string | null;
+        };
         Update: {
-          id?: number
-          member_id?: number | null
-          class_id?: number | null
-          amount?: number
-          payment_date?: string
-          payment_method?: string | null
-          period_start?: string | null
-          period_end?: string | null
-          description?: string | null
-        }
-      }
+          id?: number;
+          member_id?: number | null;
+          class_id?: number | null;
+          amount?: number;
+          payment_date?: string;
+          payment_method?: string | null;
+          period_start?: string | null;
+          period_end?: string | null;
+          description?: string | null;
+        };
+      };
       frozen_logs: {
         Row: {
-          id: number
-          member_id: number | null
-          start_date: string | null
-          end_date: string | null
-          reason: string | null
-          days_count: number | null
-        }
+          id: number;
+          member_id: number | null;
+          start_date: string | null;
+          end_date: string | null;
+          reason: string | null;
+          days_count: number | null;
+        };
         Insert: {
-          id?: number
-          member_id?: number | null
-          start_date?: string | null
-          end_date?: string | null
-          reason?: string | null
-          days_count?: number | null
-        }
+          id?: number;
+          member_id?: number | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          reason?: string | null;
+          days_count?: number | null;
+        };
         Update: {
-          id?: number
-          member_id?: number | null
-          start_date?: string | null
-          end_date?: string | null
-          reason?: string | null
-          days_count?: number | null
-        }
-      }
+          id?: number;
+          member_id?: number | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          reason?: string | null;
+          days_count?: number | null;
+        };
+      };
       dance_types: {
         Row: {
-          id: number
-          name: string
-          slug: string | null
-        }
+          id: number;
+          name: string;
+          slug: string | null;
+        };
         Insert: {
-          id?: number
-          name: string
-          slug?: string | null
-        }
+          id?: number;
+          name: string;
+          slug?: string | null;
+        };
         Update: {
-          id?: number
-          name?: string
-          slug?: string | null
-        }
-      }
+          id?: number;
+          name?: string;
+          slug?: string | null;
+        };
+      };
       instructor_rates: {
         Row: {
-          id: number
-          instructor_id: number
-          dance_type_id: number
-          rate: number
-        }
+          id: number;
+          instructor_id: number;
+          dance_type_id: number;
+          rate: number;
+        };
         Insert: {
-          id?: number
-          instructor_id: number
-          dance_type_id: number
-          rate: number
-        }
+          id?: number;
+          instructor_id: number;
+          dance_type_id: number;
+          rate: number;
+        };
         Update: {
-          id?: number
-          instructor_id?: number
-          dance_type_id?: number
-          rate?: number
-        }
-      }
+          id?: number;
+          instructor_id?: number;
+          dance_type_id?: number;
+          rate?: number;
+        };
+      };
       instructor_ledger: {
         Row: {
-          id: number
-          instructor_id: number | null
-          student_payment_id: number | null
-          amount: number
-          due_date: string
-          status: string | null
-          created_at: string | null
-        }
+          id: number;
+          instructor_id: number | null;
+          student_payment_id: number | null;
+          amount: number;
+          due_date: string;
+          status: string | null;
+          created_at: string | null;
+        };
         Insert: {
-          id?: number
-          instructor_id?: number | null
-          student_payment_id?: number | null
-          amount: number
-          due_date: string
-          status?: string | null
-          created_at?: string | null
-        }
+          id?: number;
+          instructor_id?: number | null;
+          student_payment_id?: number | null;
+          amount: number;
+          due_date: string;
+          status?: string | null;
+          created_at?: string | null;
+        };
         Update: {
-          id?: number
-          instructor_id?: number | null
-          student_payment_id?: number | null
-          amount?: number
-          due_date?: string
-          status?: string | null
-          created_at?: string | null
-        }
-      }
+          id?: number;
+          instructor_id?: number | null;
+          student_payment_id?: number | null;
+          amount?: number;
+          due_date?: string;
+          status?: string | null;
+          created_at?: string | null;
+        };
+      };
       instructor_payouts: {
         Row: {
-          id: number
-          instructor_id: number | null
-          amount: number
-          payment_date: string | null
-          note: string | null
-        }
+          id: number;
+          instructor_id: number | null;
+          amount: number;
+          payment_date: string | null;
+          note: string | null;
+        };
         Insert: {
-          id?: number
-          instructor_id?: number | null
-          amount: number
-          payment_date?: string | null
-          note?: string | null
-        }
+          id?: number;
+          instructor_id?: number | null;
+          amount: number;
+          payment_date?: string | null;
+          note?: string | null;
+        };
         Update: {
-          id?: number
-          instructor_id?: number | null
-          amount?: number
-          payment_date?: string | null
-          note?: string | null
-        }
-      }
-    }
+          id?: number;
+          instructor_id?: number | null;
+          amount?: number;
+          payment_date?: string | null;
+          note?: string | null;
+        };
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Enums: {
-      [_ in never]: never
-    }
-  }
+      [_ in never]: never;
+    };
+  };
 }

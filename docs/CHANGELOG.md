@@ -7,6 +7,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 ### ✨ Yeni Özellikler
 
 #### Dashboard İyileştirmeleri
+
 - ✅ **Mantine Charts** eklendi
 - ✅ Aylık gelir trendi grafiği (Line Chart)
 - ✅ Üye durumu dağılımı (Donut Chart)
@@ -16,6 +17,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ Suspense loading states
 
 #### Üye Formu İyileştirmeleri
+
 - ✅ **Gelişmiş form validasyonu** eklendi
   - Real-time validation (yazarken kontrol)
   - Türkçe karakter desteği
@@ -33,6 +35,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
   - Loading states
 
 ### 🎨 UI/UX İyileştirmeleri
+
 - ✅ Drawer overlay blur efekti
 - ✅ Form section başlıkları
 - ✅ Daha iyi placeholder metinleri
@@ -41,6 +44,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ Disabled button states
 
 ### 📚 Dokümantasyon
+
 - ✅ `docs/FEATURES.md` eklendi (Detaylı özellik kılavuzu)
 - ✅ `docs/CHANGELOG.md` eklendi
 - ✅ `docs/UI-COMPONENTS.md` güncellendi
@@ -48,6 +52,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ Dashboard özellikleri dokümante edildi
 
 ### 🔧 Teknik İyileştirmeler
+
 - ✅ TypeScript type safety (any kullanımı ile)
 - ✅ ESLint warnings düzeltildi
 - ✅ Form validation logic iyileştirildi
@@ -61,6 +66,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 ### 🎉 İlk Versiyon
 
 #### Temel Altyapı
+
 - ✅ Next.js 16 (App Router) kurulumu
 - ✅ Mantine v8 entegrasyonu
 - ✅ Supabase backend kurulumu
@@ -68,11 +74,13 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ Tailwind CSS v4
 
 #### Database
+
 - ✅ PostgreSQL şeması oluşturuldu
 - ✅ 6 tablo (members, classes, instructors, payments, member_classes, frozen_logs)
 - ✅ Type definitions (`types/database.types.ts`)
 
 #### Components
+
 - ✅ **DataTable** - Tam özellikli tablo component'i
   - Arama
   - Sıralama
@@ -86,6 +94,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ **MemberDrawer** - Üye ekleme/düzenleme drawer'ı
 
 #### Pages
+
 - ✅ Dashboard (Ana sayfa)
 - ✅ Üyeler sayfası (tam fonksiyonel)
 - ✅ Ödemeler (placeholder)
@@ -95,6 +104,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ Ayarlar (placeholder)
 
 #### Server Actions
+
 - ✅ `actions/members.ts` - Üye CRUD işlemleri
 - ✅ `actions/payments.ts` - Ödeme işlemleri
 - ✅ `actions/classes.ts` - Ders işlemleri
@@ -102,6 +112,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ `actions/freeze.ts` - Dondurma işlemleri
 
 #### Custom Hooks
+
 - ✅ `useMembers()` - Üye listesi
 - ✅ `useMember(id)` - Tek üye
 - ✅ `useOverdueMembers()` - Gecikmiş ödemeler
@@ -109,11 +120,13 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ `useMemberPayments()` - Ödeme geçmişi
 
 #### Utilities
+
 - ✅ `utils/date-helpers.ts` - 28 günlük ödeme döngüsü
 - ✅ `utils/notifications.ts` - Toast notifications
 - ✅ `utils/response-helpers.ts` - API response utilities
 
 #### Dokümantasyon
+
 - ✅ `README.md` - Ana dokümantasyon
 - ✅ `docs/project-overview.md` - Proje özeti
 - ✅ `docs/developer-guide.md` - Geliştirici kılavuzu
@@ -124,6 +137,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - ✅ `docs/SETUP-NOTES.md` - Kurulum notları
 
 #### Theme & Design
+
 - ✅ Turuncu (Orange) primary color
 - ✅ Geist Sans font
 - ✅ Responsive tasarım
@@ -134,6 +148,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 ## Gelecek Versiyonlar
 
 ### [1.2.0] - Planlanan
+
 - [ ] Ödeme alma drawer'ı
 - [ ] Üyelik dondurma drawer'ı
 - [ ] Ders yönetimi sayfası
@@ -141,6 +156,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - [ ] Member detail page
 
 ### [1.3.0] - Planlanan
+
 - [ ] Raporlar ve analitikler
 - [ ] Excel export
 - [ ] PDF rapor oluşturma
@@ -148,6 +164,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 - [ ] Authentication (Supabase Auth)
 
 ### [2.0.0] - Uzun Vadeli
+
 - [ ] Yoklama sistemi
 - [ ] WhatsApp bildirimleri
 - [ ] Öğrenci mobil uygulaması
@@ -159,6 +176,7 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 ## Semantic Versioning
 
 Proje [Semantic Versioning](https://semver.org/) kullanır:
+
 - **MAJOR** (X.0.0): Breaking changes
 - **MINOR** (0.X.0): Yeni özellikler (geriye uyumlu)
 - **PATCH** (0.0.X): Bug fixes

@@ -3,7 +3,7 @@
  * Helper functions for showing toast notifications using Mantine
  */
 
-import { notifications } from '@mantine/notifications'
+import { notifications } from '@mantine/notifications';
 
 /**
  * Show a success notification
@@ -14,7 +14,7 @@ export function showSuccess(message: string, title = 'Başarılı') {
     message,
     color: 'green',
     autoClose: 3000,
-  })
+  });
 }
 
 /**
@@ -26,7 +26,7 @@ export function showError(message: string, title = 'Hata') {
     message,
     color: 'red',
     autoClose: 5000,
-  })
+  });
 }
 
 /**
@@ -38,7 +38,7 @@ export function showInfo(message: string, title = 'Bilgi') {
     message,
     color: 'blue',
     autoClose: 4000,
-  })
+  });
 }
 
 /**
@@ -50,7 +50,7 @@ export function showWarning(message: string, title = 'Uyarı') {
     message,
     color: 'yellow',
     autoClose: 4000,
-  })
+  });
 }
 
 /**
@@ -64,7 +64,7 @@ export function showLoading(message: string, id: string, title = 'İşleniyor') 
     loading: true,
     autoClose: false,
     withCloseButton: false,
-  })
+  });
 }
 
 /**
@@ -82,7 +82,7 @@ export function updateToSuccess(
     color: 'green',
     loading: false,
     autoClose: 3000,
-  })
+  });
 }
 
 /**
@@ -96,5 +96,5 @@ export function updateToError(id: string, message: string, title = 'Hata') {
     color: 'red',
     loading: false,
     autoClose: 5000,
-  })
+  });
 }

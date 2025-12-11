@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Title,
   Button,
@@ -11,7 +11,7 @@ import {
   ActionIcon,
   Menu,
   Text,
-} from '@mantine/core'
+} from '@mantine/core';
 import {
   IconPlus,
   IconDots,
@@ -21,127 +21,136 @@ import {
   IconCreditCard,
   IconPlayerPlay,
   IconRotateClockwise,
-} from '@tabler/icons-react'
-import { DataTable } from '@/components/shared/DataTable'
-import { StatusBadge } from '@/components/shared/StatusBadge'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { MemberDrawer } from '@/components/members/MemberDrawer'
-import { FreezeMemberDrawer } from '@/components/members/FreezeMemberDrawer'
+} from '@tabler/icons-react';
+import { DataTable } from '@/components/shared/DataTable';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { MemberDrawer } from '@/components/members/MemberDrawer';
+import { FreezeMemberDrawer } from '@/components/members/FreezeMemberDrawer';
 // Removed MemberDetailModal
-import { modals } from '@mantine/modals'
-import { useMembers } from '@/hooks/use-members'
-import { useClasses } from '@/hooks/use-classes'
-import { archiveMember, unarchiveMember } from '@/actions/members'
-import { unfreezeMembership } from '@/actions/freeze'
-import { showSuccess, showError } from '@/utils/notifications'
-import { formatDate } from '@/utils/date-helpers' // Removed isPaymentOverdue
-import { formatPhone } from '@/utils/formatters'
-import type { DataTableColumn } from '@/components/shared/DataTable'
-import type { Member } from '@/types'
+import { modals } from '@mantine/modals';
+import { useMembers } from '@/hooks/use-members';
+import { useClasses } from '@/hooks/use-classes';
+import { archiveMember, unarchiveMember } from '@/actions/members';
+import { unfreezeMembership } from '@/actions/freeze';
+import { showSuccess, showError } from '@/utils/notifications';
+import { formatDate } from '@/utils/date-helpers'; // Removed isPaymentOverdue
+import { formatPhone } from '@/utils/formatters';
+import type { DataTableColumn } from '@/components/shared/DataTable';
+import type { Member } from '@/types';
 
 export default function MembersPage() {
-  const router = useRouter()
-  const [statusFilter, setStatusFilter] = useState('active')
-  const [drawerOpened, setDrawerOpened] = useState(false)
-  const [freezeDrawerOpened, setFreezeDrawerOpened] = useState(false)
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [drawerOpened, setDrawerOpened] = useState(false);
+  const [freezeDrawerOpened, setFreezeDrawerOpened] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   // Removed detailed modal state
 
-  const { members, loading, error } = useMembers(statusFilter, refreshTrigger)
-  const { classes } = useClasses()
-
+  const { members, loading, error } = useMembers(statusFilter, refreshTrigger);
+  const { classes } = useClasses();
 
   const handleEdit = (member: Member, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    setSelectedMember(member)
-    setDrawerOpened(true)
-  }
+    e?.stopPropagation();
+    setSelectedMember(member);
+    setDrawerOpened(true);
+  };
 
   const handleViewDetail = (member: Member) => {
-    router.push(`/members/${member.id}`)
-  }
+    router.push(`/members/${member.id}`);
+  };
 
   const handleArchive = (member: Member, e?: React.MouseEvent) => {
-    e?.stopPropagation()
+    e?.stopPropagation();
     modals.openConfirmModal({
       title: 'Üyeyi Arşivle',
-      children: <Text size="sm">{member.first_name} {member.last_name} arşivlensin mi?</Text>,
+      children: (
+        <Text size="sm">
+          {member.first_name} {member.last_name} arşivlensin mi?
+        </Text>
+      ),
       labels: { confirm: 'Arşivle', cancel: 'İptal' },
       confirmProps: { color: 'red' },
       onConfirm: async () => {
-        const result = await archiveMember(member.id)
+        const result = await archiveMember(member.id);
         if (result.error) {
-          showError(result.error)
+          showError(result.error);
         } else {
-          showSuccess('Üye arşivlendi')
-          setRefreshTrigger((prev) => prev + 1)
+          showSuccess('Üye arşivlendi');
+          setRefreshTrigger((prev) => prev + 1);
         }
       },
-    })
-  }
+    });
+  };
 
   const handleUnarchive = (member: Member, e?: React.MouseEvent) => {
-    e?.stopPropagation()
+    e?.stopPropagation();
     modals.openConfirmModal({
       title: 'Üyeyi Geri Al',
-      children: <Text size="sm">{member.first_name} {member.last_name} arşivden geri alınsın mı?</Text>,
+      children: (
+        <Text size="sm">
+          {member.first_name} {member.last_name} arşivden geri alınsın mı?
+        </Text>
+      ),
       labels: { confirm: 'Geri Al', cancel: 'İptal' },
       onConfirm: async () => {
-        const result = await unarchiveMember(member.id)
+        const result = await unarchiveMember(member.id);
         if (result.error) {
-          showError(result.error)
+          showError(result.error);
         } else {
-          showSuccess('Üye geri alındı')
-          setRefreshTrigger((prev) => prev + 1)
+          showSuccess('Üye geri alındı');
+          setRefreshTrigger((prev) => prev + 1);
         }
       },
-    })
-  }
+    });
+  };
 
   const handleFreeze = (member: Member, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    setSelectedMember(member)
-    setFreezeDrawerOpened(true)
-  }
+    e?.stopPropagation();
+    setSelectedMember(member);
+    setFreezeDrawerOpened(true);
+  };
 
   const handleUnfreeze = (member: Member, e?: React.MouseEvent) => {
-    e?.stopPropagation()
+    e?.stopPropagation();
     modals.openConfirmModal({
       title: 'Üyeliği Aktifleştir',
-      children: <Text size="sm">{member.first_name} üyeliği aktifleştirilsin mi?</Text>,
+      children: (
+        <Text size="sm">{member.first_name} üyeliği aktifleştirilsin mi?</Text>
+      ),
       labels: { confirm: 'Aktifleştir', cancel: 'İptal' },
       onConfirm: async () => {
-        const result = await unfreezeMembership(member.id)
+        const result = await unfreezeMembership(member.id);
         if (result.error) {
-          showError(result.error)
+          showError(result.error);
         } else {
-          showSuccess('Üyelik aktifleştirildi')
-          setRefreshTrigger((prev) => prev + 1)
+          showSuccess('Üyelik aktifleştirildi');
+          setRefreshTrigger((prev) => prev + 1);
         }
       },
-    })
-  }
+    });
+  };
 
   const handleAddNew = () => {
-    setSelectedMember(null)
-    setDrawerOpened(true)
-  }
+    setSelectedMember(null);
+    setDrawerOpened(true);
+  };
 
   const handleDrawerClose = () => {
-    setDrawerOpened(false)
-    setSelectedMember(null)
-  }
+    setDrawerOpened(false);
+    setSelectedMember(null);
+  };
 
   const handleSuccess = () => {
-    setRefreshTrigger((prev) => prev + 1)
-  }
+    setRefreshTrigger((prev) => prev + 1);
+  };
 
   // Force refresh when trigger changes
   useEffect(() => {
     // This will trigger useMembers to refetch
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger])
+  }, [refreshTrigger]);
 
   const columns: DataTableColumn<Member>[] = [
     {
@@ -193,8 +202,8 @@ export default function MembersPage() {
             <Menu.Item
               leftSection={<IconCreditCard size={16} />}
               onClick={(e) => {
-                e.stopPropagation()
-                handleViewDetail(member)
+                e.stopPropagation();
+                handleViewDetail(member);
               }}
             >
               Ödeme Al
@@ -236,7 +245,7 @@ export default function MembersPage() {
         </Menu>
       ),
     },
-  ]
+  ];
 
   return (
     <Stack gap="xl">
@@ -250,7 +259,6 @@ export default function MembersPage() {
           Yeni Üye
         </Button>
       </Group>
-
 
       {/* Data Table */}
       {error ? (
@@ -268,10 +276,10 @@ export default function MembersPage() {
             statusFilter === 'archived'
               ? 'Arşivlenmiş üye bulunmamaktadır.'
               : statusFilter === 'frozen'
-              ? 'Dondurulmuş statüde üye bulunmamaktadır.'
-              : statusFilter === 'active'
-              ? 'Aktif üye bulunmamaktadır.'
-              : 'Üye bulunamadı.'
+                ? 'Dondurulmuş statüde üye bulunmamaktadır.'
+                : statusFilter === 'active'
+                  ? 'Aktif üye bulunmamaktadır.'
+                  : 'Üye bulunamadı.'
           }
           pageSize={10}
           onRowClick={(member) => handleViewDetail(member)}
@@ -306,5 +314,5 @@ export default function MembersPage() {
         onSuccess={handleSuccess}
       />
     </Stack>
-  )
+  );
 }

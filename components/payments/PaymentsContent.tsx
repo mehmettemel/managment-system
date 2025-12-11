@@ -3,9 +3,9 @@
  * Updated for class-based payment system
  */
 
-'use client'
+'use client';
 
-import { useState } from 'react'
+import { useState } from 'react';
 import {
   Button,
   Group,
@@ -15,40 +15,42 @@ import {
   Text,
   ActionIcon,
   Alert,
-} from '@mantine/core'
-import { IconInfoCircle, IconTrash } from '@tabler/icons-react'
-import { Payment } from '@/types'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { deletePayment } from '@/actions/payments'
-import { showSuccess, showError } from '@/utils/notifications'
-import { formatCurrency } from '@/utils/formatters'
-import dayjs from 'dayjs'
-import Link from 'next/link'
+} from '@mantine/core';
+import { IconInfoCircle, IconTrash } from '@tabler/icons-react';
+import { Payment } from '@/types';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { deletePayment } from '@/actions/payments';
+import { showSuccess, showError } from '@/utils/notifications';
+import { formatCurrency } from '@/utils/formatters';
+import dayjs from 'dayjs';
+import Link from 'next/link';
 
 interface PaymentsContentProps {
-  initialPayments: Payment[]
+  initialPayments: Payment[];
 }
 
 export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
-  const [payments, setPayments] = useState(initialPayments)
+  const [payments, setPayments] = useState(initialPayments);
 
   const handleDelete = async (id: number) => {
     if (confirm('Bu ödeme kaydını silmek istediğinize emin misiniz?')) {
-      const res = await deletePayment(id)
-      if (res.error) showError(res.error)
+      const res = await deletePayment(id);
+      if (res.error) showError(res.error);
       else {
-        showSuccess('Ödeme silindi')
-        setPayments(payments.filter(p => p.id !== id))
+        showSuccess('Ödeme silindi');
+        setPayments(payments.filter((p) => p.id !== id));
       }
     }
-  }
+  };
 
   return (
     <>
       <Alert variant="light" color="blue" icon={<IconInfoCircle />} mb="lg">
         <Text size="sm">
           Yeni sistem: Ödemeler üye detay sayfasından ders bazlı yapılmaktadır.{' '}
-          <Link href="/members" style={{ fontWeight: 600 }}>Üyeler sayfasına git →</Link>
+          <Link href="/members" style={{ fontWeight: 600 }}>
+            Üyeler sayfasına git →
+          </Link>
         </Text>
       </Alert>
 
@@ -79,7 +81,9 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
             <Table.Tbody>
               {payments.map((payment) => (
                 <Table.Tr key={payment.id}>
-                  <Table.Td>{dayjs(payment.payment_date).format('DD.MM.YYYY')}</Table.Td>
+                  <Table.Td>
+                    {dayjs(payment.payment_date).format('DD.MM.YYYY')}
+                  </Table.Td>
                   <Table.Td fw={700} c="green">
                     {formatCurrency(Number(payment.amount))}
                   </Table.Td>
@@ -88,7 +92,8 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
                     <Badge variant="dot">{payment.payment_method}</Badge>
                   </Table.Td>
                   <Table.Td>
-                    {payment.period_start && dayjs(payment.period_start).format('MMM YYYY')}
+                    {payment.period_start &&
+                      dayjs(payment.period_start).format('MMM YYYY')}
                   </Table.Td>
                   <Table.Td className="text-sm text-gray-500">
                     {payment.description}
@@ -109,5 +114,5 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
         </Card>
       )}
     </>
-  )
+  );
 }

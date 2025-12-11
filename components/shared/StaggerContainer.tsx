@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { motion } from 'framer-motion'
-import { ReactNode } from 'react'
+import { motion } from 'framer-motion';
+import { ReactNode } from 'react';
 
 interface StaggerContainerProps {
-  children: ReactNode
-  className?: string
+  children: ReactNode;
+  className?: string;
 }
 
 export const containerVariants = {
@@ -16,14 +16,17 @@ export const containerVariants = {
       staggerChildren: 0.1,
     },
   },
-}
+};
 
 export const itemVariants = {
   hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0 },
-}
+};
 
-export default function StaggerContainer({ children, className }: StaggerContainerProps) {
+export default function StaggerContainer({
+  children,
+  className,
+}: StaggerContainerProps) {
   return (
     <motion.div
       variants={containerVariants}
@@ -33,5 +36,5 @@ export default function StaggerContainer({ children, className }: StaggerContain
     >
       {children}
     </motion.div>
-  )
+  );
 }

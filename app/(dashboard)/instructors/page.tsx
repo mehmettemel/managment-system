@@ -2,12 +2,12 @@
  * Instructors Page
  */
 
-import { Title, Text, Stack } from '@mantine/core'
-import { getInstructors } from '@/actions/instructors'
-import { InstructorsContent } from '@/components/instructors/InstructorsContent'
+import { Title, Text, Stack } from '@mantine/core';
+import { getInstructors } from '@/actions/instructors';
+import { InstructorsContent } from '@/components/instructors/InstructorsContent';
 
 export default async function InstructorsPage() {
-  const { data: instructors } = await getInstructors()
+  const { data: instructors } = await getInstructors();
 
   return (
     <Stack gap="xl">
@@ -18,5 +18,5 @@ export default async function InstructorsPage() {
 
       <InstructorsContent initialInstructors={instructors || []} />
     </Stack>
-  )
+  );
 }

@@ -12,9 +12,11 @@ Projeyi çalıştırmak için bilgisayarınızda şunların yüklü olması gere
 - **Supabase Hesabı** (Veritabanı için)
 
 > **Önemli:** Proje Node.js 20 sürümünü kullanır. `nvm` (Node Version Manager) kullanıyorsanız:
+>
 > ```bash
 > nvm use 20
 > ```
+>
 > komutunu çalıştırarak doğru sürüme geçin.
 
 ## 🛠️ Kurulum Adımları

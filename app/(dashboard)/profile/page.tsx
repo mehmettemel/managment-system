@@ -2,9 +2,9 @@
  * Profile Page (Placeholder)
  */
 
-import { Title, Text, Stack } from '@mantine/core'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { IconUserCircle } from '@tabler/icons-react'
+import { Title, Text, Stack } from '@mantine/core';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { IconUserCircle } from '@tabler/icons-react';
 
 export default function ProfilePage() {
   return (
@@ -20,5 +20,5 @@ export default function ProfilePage() {
         icon={<IconUserCircle size={64} />}
       />
     </Stack>
-  )
+  );
 }
