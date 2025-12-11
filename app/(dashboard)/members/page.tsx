@@ -24,15 +24,17 @@ import {
   IconSnowflake,
   IconCreditCard,
   IconPlayerPlay,
+  IconRotateClockwise,
 } from '@tabler/icons-react'
 import { DataTable } from '@/components/shared/DataTable'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MemberDrawer } from '@/components/members/MemberDrawer'
 import { FreezeMemberDrawer } from '@/components/members/FreezeMemberDrawer'
+import { modals } from '@mantine/modals'
 import { useMembers } from '@/hooks/use-members'
 import { useClasses } from '@/hooks/use-classes'
-import { archiveMember } from '@/actions/members'
+import { archiveMember, unarchiveMember } from '@/actions/members'
 import { unfreezeMembership } from '@/actions/freeze'
 import { showSuccess, showError } from '@/utils/notifications'
 import { formatDate, isPaymentOverdue } from '@/utils/date-helpers'
@@ -47,7 +49,7 @@ export default function MembersPage() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  const { members, loading, error } = useMembers(statusFilter)
+  const { members, loading, error } = useMembers(statusFilter, refreshTrigger)
   const { classes } = useClasses()
 
 
@@ -56,33 +58,65 @@ export default function MembersPage() {
     setDrawerOpened(true)
   }
 
-  const handleArchive = async (member: Member) => {
-    if (confirm(`${member.first_name} ${member.last_name} arşivlensin mi?`)) {
-      const result = await archiveMember(member.id)
-      if (result.error) {
-        showError(result.error)
-      } else {
-        showSuccess('Üye arşivlendi')
-        setRefreshTrigger((prev) => prev + 1)
-      }
-    }
+  const handleArchive = (member: Member, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    modals.openConfirmModal({
+      title: 'Üyeyi Arşivle',
+      children: <Text size="sm">{member.first_name} {member.last_name} arşivlensin mi?</Text>,
+      labels: { confirm: 'Arşivle', cancel: 'İptal' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        const result = await archiveMember(member.id)
+        if (result.error) {
+          showError(result.error)
+        } else {
+          showSuccess('Üye arşivlendi')
+          setRefreshTrigger((prev) => prev + 1)
+        }
+      },
+    })
   }
 
-  const handleFreeze = (member: Member) => {
+  const handleUnarchive = (member: Member, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    modals.openConfirmModal({
+      title: 'Üyeyi Geri Al',
+      children: <Text size="sm">{member.first_name} {member.last_name} arşivden geri alınsın mı?</Text>,
+      labels: { confirm: 'Geri Al', cancel: 'İptal' },
+      onConfirm: async () => {
+        const result = await unarchiveMember(member.id)
+        if (result.error) {
+          showError(result.error)
+        } else {
+          showSuccess('Üye geri alındı')
+          setRefreshTrigger((prev) => prev + 1)
+        }
+      },
+    })
+  }
+
+  const handleFreeze = (member: Member, e?: React.MouseEvent) => {
+    e?.stopPropagation()
     setSelectedMember(member)
     setFreezeDrawerOpened(true)
   }
 
-  const handleUnfreeze = async (member: Member) => {
-    if (confirm(`${member.first_name} üyeliği aktifleştirilsin mi?`)) {
-      const result = await unfreezeMembership(member.id)
-      if (result.error) {
-        showError(result.error)
-      } else {
-        showSuccess('Üyelik aktifleştirildi')
-        setRefreshTrigger((prev) => prev + 1)
-      }
-    }
+  const handleUnfreeze = (member: Member, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    modals.openConfirmModal({
+      title: 'Üyeliği Aktifleştir',
+      children: <Text size="sm">{member.first_name} üyeliği aktifleştirilsin mi?</Text>,
+      labels: { confirm: 'Aktifleştir', cancel: 'İptal' },
+      onConfirm: async () => {
+        const result = await unfreezeMembership(member.id)
+        if (result.error) {
+          showError(result.error)
+        } else {
+          showSuccess('Üyelik aktifleştirildi')
+          setRefreshTrigger((prev) => prev + 1)
+        }
+      },
+    })
   }
 
   const handleAddNew = () => {
@@ -175,26 +209,36 @@ export default function MembersPage() {
             {member.status === 'frozen' ? (
               <Menu.Item
                 leftSection={<IconPlayerPlay size={16} />}
-                onClick={() => handleUnfreeze(member)}
+                onClick={(e) => handleUnfreeze(member, e)}
               >
                 Aktifleştir
               </Menu.Item>
             ) : (
               <Menu.Item
                 leftSection={<IconSnowflake size={16} />}
-                onClick={() => handleFreeze(member)}
+                onClick={(e) => handleFreeze(member, e)}
               >
                 Dondur
               </Menu.Item>
             )}
             <Menu.Divider />
-            <Menu.Item
-              leftSection={<IconTrash size={16} />}
-              color="red"
-              onClick={() => handleArchive(member)}
-            >
-              Arşivle
-            </Menu.Item>
+            {member.status === 'archived' ? (
+              <Menu.Item
+                leftSection={<IconRotateClockwise size={16} />}
+                color="blue"
+                onClick={(e) => handleUnarchive(member, e)}
+              >
+                Geri Al
+              </Menu.Item>
+            ) : (
+              <Menu.Item
+                leftSection={<IconTrash size={16} />}
+                color="red"
+                onClick={(e) => handleArchive(member, e)}
+              >
+                Arşivle
+              </Menu.Item>
+            )}
           </Menu.Dropdown>
         </Menu>
       ),
@@ -222,19 +266,20 @@ export default function MembersPage() {
           description={error}
           icon={<IconTrash size={64} />}
         />
-      ) : members.length === 0 && !loading ? (
-        <EmptyState
-          title="Henüz üye yok"
-          description="İlk üyenizi ekleyerek başlayın"
-          actionLabel="Yeni Üye Ekle"
-          onAction={handleAddNew}
-        />
       ) : (
         <DataTable
           data={members}
           columns={columns}
           loading={loading}
-          emptyText="Üye bulunamadı"
+          emptyText={
+            statusFilter === 'archived'
+              ? 'Arşivlenmiş üye bulunmamaktadır.'
+              : statusFilter === 'frozen'
+              ? 'Dondurulmuş statüde üye bulunmamaktadır.'
+              : statusFilter === 'active'
+              ? 'Aktif üye bulunmamaktadır.'
+              : 'Üye bulunamadı.'
+          }
           pageSize={10}
           onRowClick={(member) => handleEdit(member)}
           filters={

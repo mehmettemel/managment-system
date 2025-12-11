@@ -22,7 +22,7 @@ import {
   Box,
   ScrollArea,
 } from '@mantine/core'
-import { IconSearch, IconSortAscending, IconSortDescending } from '@tabler/icons-react'
+import { IconSearch, IconSortAscending, IconSortDescending, IconSelector } from '@tabler/icons-react'
 
 export interface DataTableColumn<T> {
   key: keyof T | string
@@ -124,9 +124,9 @@ export function DataTable<T extends Record<string, any>>({
   const toggleRow = (id: any) => {
     const newSelected = new Set(selectedRows)
     if (newSelected.has(id)) {
-      newSelected.delete(id)
+        newSelected.delete(id)
     } else {
-      newSelected.add(id)
+    newSelected.add(id)
     }
     setSelectedRows(newSelected)
 
@@ -205,12 +205,20 @@ export function DataTable<T extends Record<string, any>>({
                       <Text fw={600} size="sm">
                         {column.label}
                       </Text>
-                      {column.sortable && sortBy === column.key && (
-                        <ActionIcon variant="transparent" size="xs">
-                          {sortOrder === 'asc' ? (
-                            <IconSortAscending size={14} />
+                      {column.sortable && (
+                        <ActionIcon
+                          variant="transparent"
+                          size="xs"
+                          color={sortBy === column.key ? undefined : 'gray'}
+                        >
+                          {sortBy === column.key ? (
+                            sortOrder === 'asc' ? (
+                              <IconSortAscending size={14} />
+                            ) : (
+                              <IconSortDescending size={14} />
+                            )
                           ) : (
-                            <IconSortDescending size={14} />
+                            <IconSelector size={14} style={{ opacity: 0.5 }} />
                           )}
                         </ActionIcon>
                       )}
@@ -280,7 +288,7 @@ export function DataTable<T extends Record<string, any>>({
                 value={currentPage}
                 onChange={setCurrentPage}
                 size="sm"
-              />
+                />
             </Group>
           </Box>
         )}

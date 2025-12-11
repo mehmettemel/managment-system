@@ -12,7 +12,7 @@ import type { Member, MemberWithClasses } from '@/types'
 /**
  * Hook to fetch all members with optional real-time updates
  */
-export function useMembers(status?: string) {
+export function useMembers(status?: string, refreshTrigger?: number) {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +43,7 @@ export function useMembers(status?: string) {
     }
 
     fetchMembers()
-  }, [status])
+  }, [status, refreshTrigger])
 
   return { members, loading, error }
 }

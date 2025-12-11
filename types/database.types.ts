@@ -29,6 +29,7 @@ export interface Database {
           phone: string | null
           active: boolean
           created_at: string
+          default_commission_rate: number | null
         }
         Insert: {
           id?: number
@@ -38,6 +39,7 @@ export interface Database {
           phone?: string | null
           active?: boolean
           created_at?: string
+          default_commission_rate?: number | null
         }
         Update: {
           id?: number
@@ -47,6 +49,7 @@ export interface Database {
           phone?: string | null
           active?: boolean
           created_at?: string
+          default_commission_rate?: number | null
         }
       }
       classes: {
@@ -54,6 +57,7 @@ export interface Database {
           id: number
           name: string
           instructor_id: number | null
+          dance_type_id: number | null
           day_of_week: string | null
           start_time: string | null
           duration_minutes: number
@@ -64,6 +68,7 @@ export interface Database {
           id?: number
           name: string
           instructor_id?: number | null
+          dance_type_id?: number | null
           day_of_week?: string | null
           start_time?: string | null
           duration_minutes?: number
@@ -74,6 +79,7 @@ export interface Database {
           id?: number
           name?: string
           instructor_id?: number | null
+          dance_type_id?: number | null
           day_of_week?: string | null
           start_time?: string | null
           duration_minutes?: number
@@ -175,6 +181,7 @@ export interface Database {
           start_date: string | null
           end_date: string | null
           reason: string | null
+          days_count: number | null
         }
         Insert: {
           id?: number
@@ -182,6 +189,7 @@ export interface Database {
           start_date?: string | null
           end_date?: string | null
           reason?: string | null
+          days_count?: number | null
         }
         Update: {
           id?: number
@@ -189,6 +197,96 @@ export interface Database {
           start_date?: string | null
           end_date?: string | null
           reason?: string | null
+          days_count?: number | null
+        }
+      }
+      dance_types: {
+        Row: {
+          id: number
+          name: string
+          slug: string | null
+        }
+        Insert: {
+          id?: number
+          name: string
+          slug?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string
+          slug?: string | null
+        }
+      }
+      instructor_rates: {
+        Row: {
+          id: number
+          instructor_id: number
+          dance_type_id: number
+          rate: number
+        }
+        Insert: {
+          id?: number
+          instructor_id: number
+          dance_type_id: number
+          rate: number
+        }
+        Update: {
+          id?: number
+          instructor_id?: number
+          dance_type_id?: number
+          rate?: number
+        }
+      }
+      instructor_ledger: {
+        Row: {
+          id: number
+          instructor_id: number | null
+          student_payment_id: number | null
+          amount: number
+          due_date: string
+          status: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          instructor_id?: number | null
+          student_payment_id?: number | null
+          amount: number
+          due_date: string
+          status?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          instructor_id?: number | null
+          student_payment_id?: number | null
+          amount?: number
+          due_date?: string
+          status?: string | null
+          created_at?: string | null
+        }
+      }
+      instructor_payouts: {
+        Row: {
+          id: number
+          instructor_id: number | null
+          amount: number
+          payment_date: string | null
+          note: string | null
+        }
+        Insert: {
+          id?: number
+          instructor_id?: number | null
+          amount: number
+          payment_date?: string | null
+          note?: string | null
+        }
+        Update: {
+          id?: number
+          instructor_id?: number | null
+          amount?: number
+          payment_date?: string | null
+          note?: string | null
         }
       }
     }

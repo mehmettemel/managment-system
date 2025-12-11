@@ -7,6 +7,7 @@ import "@mantine/notifications/styles.css";
 import "@mantine/charts/styles.css";
 import { ColorSchemeScript, MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
+import { ModalsProvider } from "@mantine/modals";
 import { theme } from "./theme";
 
 const geistSans = Geist({
@@ -39,7 +40,9 @@ export default function RootLayout({
       >
         <MantineProvider theme={theme}>
           <Notifications position="top-right" />
-          {children}
+          <ModalsProvider>
+            {children}
+          </ModalsProvider>
         </MantineProvider>
       </body>
     </html>

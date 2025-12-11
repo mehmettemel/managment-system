@@ -27,6 +27,7 @@ import {
   validateRequiredFields,
 } from '@/utils/response-helpers'
 import { calculateNextPaymentDate, getTodayDate } from '@/utils/date-helpers'
+import { processStudentPayment } from '@/actions/finance'
 
 /**
  * Get all members with optional filtering
@@ -159,7 +160,7 @@ export async function createMember(
 
     // Create initial payment if provided
     if (formData.initial_payment) {
-      const { error: paymentError } = await supabase.from('payments').insert({
+      const { data: initialPay, error: paymentError } = await supabase.from('payments').insert({
         member_id: member.id,
         amount: formData.initial_payment.amount,
         payment_method: formData.initial_payment.payment_method || 'Nakit',
@@ -167,11 +168,15 @@ export async function createMember(
         period_start: today,
         period_end: calculateNextPaymentDate(today),
         description: formData.initial_payment.description || 'İlk ödeme',
-      })
+      }).select().single()
 
       if (paymentError) {
         logError('createMember - payment', paymentError)
         // Continue anyway, member is created
+      } else if (initialPay && formData.class_ids.length === 1) {
+         // Process Commission
+         const months = formData.initial_duration_months || 1
+         await processStudentPayment(initialPay.id, initialPay.amount, months, formData.class_ids[0])
       }
     }
 
@@ -221,6 +226,13 @@ export async function updateMember(
  */
 export async function archiveMember(id: number): Promise<ApiResponse<Member>> {
   return updateMember(id, { status: 'archived' })
+}
+
+/**
+ * Unarchive a member (restore)
+ */
+export async function unarchiveMember(id: number): Promise<ApiResponse<Member>> {
+  return updateMember(id, { status: 'active' })
 }
 
 /**

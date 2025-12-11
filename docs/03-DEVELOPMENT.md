@@ -63,6 +63,7 @@ Projeye tutarlılık sağlamak için aşağıdaki yardımcıları kullanın:
 - **Inputlar**: Standart `TextInput` veya `NumberInput` yerine;
     - `components/shared/MaskedPhoneInput`: Telefon girişi için.
     - `components/shared/CurrencyInput`: Para girişi için.
+    - `components/shared/DataTable`: Gelişmiş tablo (Filtreleme ve Arama destekli).
 
 ## 🛠️ Sık Kullanılan Komutlar
 

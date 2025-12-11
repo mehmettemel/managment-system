@@ -36,6 +36,7 @@ interface NavItem {
   icon: React.ReactNode
   href: string
   badge?: string | number
+  children?: NavItem[]
 }
 
 const mainNavItems: NavItem[] = [
@@ -43,12 +44,28 @@ const mainNavItems: NavItem[] = [
   { label: 'Üyeler', icon: <IconUsers size={20} />, href: '/members' },
   { label: 'Ödemeler', icon: <IconCreditCard size={20} />, href: '/payments' },
   { label: 'Dersler', icon: <IconSchool size={20} />, href: '/classes' },
-  { label: 'Eğitmenler', icon: <IconChalkboard size={20} />, href: '/instructors' },
+  { 
+    label: 'Eğitmenler', 
+    icon: <IconChalkboard size={20} />, 
+    href: '#instructors', // Dummy href for parent
+    children: [
+        { label: 'Liste', href: '/instructors', icon: <IconChalkboard size={16} /> },
+        { label: 'Ödemeler', href: '/payments/instructors', icon: <IconCreditCard size={16} /> }
+    ]
+  },
 ]
 
 const bottomNavItems: NavItem[] = [
   { label: 'Profil', icon: <IconUserCircle size={20} />, href: '/profile' },
-  { label: 'Ayarlar', icon: <IconSettings size={20} />, href: '/settings' },
+  { 
+      label: 'Ayarlar', 
+      icon: <IconSettings size={20} />, 
+      href: '#settings',
+      children: [
+          { label: 'Genel', href: '/settings', icon: <IconSettings size={16} /> },
+          { label: 'Dans Türleri', href: '/settings/dance-types', icon: <IconSchool size={16} /> }
+      ]
+  },
 ]
 
 export function AppShellLayout({ children }: { children: React.ReactNode }) {
@@ -59,6 +76,53 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
   const handleNavClick = (href: string) => {
     router.push(href)
     close()
+  }
+
+  const renderNavItem = (item: NavItem) => {
+    const hasChildren = item.children && item.children.length > 0
+    const isActive = item.href === '/' 
+      ? pathname === '/' 
+      : (pathname.startsWith(item.href) && 
+         item.href !== '#' && 
+         !item.href.startsWith('#') &&
+         // Special case: /payments should not match /payments/instructors
+         !(item.href === '/payments' && pathname.startsWith('/payments/instructors'))
+      )
+    // Check if any child is active to open parent
+    const isChildActive = hasChildren && item.children?.some(c => pathname === c.href || pathname.startsWith(c.href))
+
+    return (
+      <NavLink
+        key={item.label}
+        label={item.label}
+        leftSection={item.icon}
+        active={isActive || isChildActive}
+        defaultOpened={!!isChildActive}
+        onClick={() => {
+            if (!hasChildren) handleNavClick(item.href)
+        }}
+        variant="subtle"
+        rightSection={
+            item.badge ? (
+            <Text size="xs" c="dimmed">
+                {item.badge}
+            </Text>
+            ) : undefined
+        }
+      >
+        {hasChildren && item.children?.map(child => (
+             <NavLink
+                key={child.href}
+                label={child.label}
+                leftSection={child.icon}
+                active={child.href === pathname}
+                onClick={() => handleNavClick(child.href)}
+                variant="subtle"
+                style={{ paddingLeft: 20 }} // Simple indentation
+             />
+        ))}
+      </NavLink>
+    )
   }
 
   return (
@@ -106,38 +170,13 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
       <MantineAppShell.Navbar p="md">
         <MantineAppShell.Section grow>
           <Stack gap="xs">
-            {mainNavItems.map((item) => (
-              <NavLink
-                key={item.href}
-                label={item.label}
-                leftSection={item.icon}
-                active={pathname === item.href}
-                onClick={() => handleNavClick(item.href)}
-                variant="subtle"
-                rightSection={
-                  item.badge ? (
-                    <Text size="xs" c="dimmed">
-                      {item.badge}
-                    </Text>
-                  ) : undefined
-                }
-              />
-            ))}
+            {mainNavItems.map(renderNavItem)}
           </Stack>
         </MantineAppShell.Section>
 
         <MantineAppShell.Section>
           <Stack gap="xs">
-            {bottomNavItems.map((item) => (
-              <NavLink
-                key={item.href}
-                label={item.label}
-                leftSection={item.icon}
-                active={pathname === item.href}
-                onClick={() => handleNavClick(item.href)}
-                variant="subtle"
-              />
-            ))}
+            {bottomNavItems.map(renderNavItem)}
             <NavLink
               label="Çıkış Yap"
               leftSection={<IconLogout size={20} />}

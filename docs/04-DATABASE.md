@@ -13,7 +13,7 @@ Temel tablolar şunlardır:
 3.  **`classes`**: Ders tanımları (Ad, Gün, Saat, Eğitmen ID).
 4.  **`member_classes`**: Hangi üyenin hangi derse kayıtlı olduğu (Çoka-çok ilişki).
 5.  **`payments`**: Ödeme kayıtları.
-6.  **`frozen_logs`**: Üyelik dondurma geçmişi.
+6.  **`frozen_logs`**: Üyelik dondurma geçmişi (Süresiz dondurma destekler, `end_date` nullable).
 
 ## 🛡️ Güvenlik (RLS - Row Level Security)
 

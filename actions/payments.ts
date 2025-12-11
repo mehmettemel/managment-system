@@ -27,6 +27,7 @@ import {
   calculatePeriodEndDate,
   getTodayDate,
 } from '@/utils/date-helpers'
+import { processStudentPayment } from '@/actions/finance'
 
 /**
  * Get all payments for a member
@@ -113,6 +114,21 @@ export async function createPayment(
       logError('createPayment - update member', memberError)
       // Payment is created, but member update failed
       // We'll continue anyway
+    }
+
+    // Process Instructor Commission
+    const { data: memberClasses } = await supabase
+      .from('member_classes')
+      .select('class_id')
+      .eq('member_id', formData.member_id)
+
+    if (memberClasses && memberClasses.length === 1) {
+       const start = new Date(periodStart)
+       const end = new Date(periodEnd)
+       let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+       if (months < 1) months = 1
+       
+       await processStudentPayment(payment.id, payment.amount, months, memberClasses[0].class_id)
     }
 
     revalidatePath('/members')

@@ -22,6 +22,10 @@ export type Member = Tables<'members'>
 export type MemberClass = Tables<'member_classes'>
 export type Payment = Tables<'payments'>
 export type FrozenLog = Tables<'frozen_logs'>
+export type DanceType = Tables<'dance_types'>
+export type InstructorRate = Tables<'instructor_rates'>
+export type InstructorLedger = Tables<'instructor_ledger'>
+export type InstructorPayout = Tables<'instructor_payouts'>
 
 // Insert types
 export type InstructorInsert = Inserts<'instructors'>
@@ -30,6 +34,10 @@ export type MemberInsert = Inserts<'members'>
 export type MemberClassInsert = Inserts<'member_classes'>
 export type PaymentInsert = Inserts<'payments'>
 export type FrozenLogInsert = Inserts<'frozen_logs'>
+export type DanceTypeInsert = Inserts<'dance_types'>
+export type InstructorRateInsert = Inserts<'instructor_rates'>
+export type InstructorLedgerInsert = Inserts<'instructor_ledger'>
+export type InstructorPayoutInsert = Inserts<'instructor_payouts'>
 
 // Update types
 export type InstructorUpdate = Updates<'instructors'>
@@ -38,6 +46,10 @@ export type MemberUpdate = Updates<'members'>
 export type MemberClassUpdate = Updates<'member_classes'>
 export type PaymentUpdate = Updates<'payments'>
 export type FrozenLogUpdate = Updates<'frozen_logs'>
+export type DanceTypeUpdate = Updates<'dance_types'>
+export type InstructorRateUpdate = Updates<'instructor_rates'>
+export type InstructorLedgerUpdate = Updates<'instructor_ledger'>
+export type InstructorPayoutUpdate = Updates<'instructor_payouts'>
 
 // Extended types with relations
 export type MemberWithClasses = Member & {
@@ -84,6 +96,14 @@ export interface FreezeFormData {
   end_date?: string
   reason?: string
   is_indefinite?: boolean
+}
+
+export interface InstructorFormData {
+  first_name: string
+  last_name: string
+  specialty?: string
+  phone?: string
+  rates?: { dance_type_id: number; rate: number }[]
 }
 
 // API Response types
