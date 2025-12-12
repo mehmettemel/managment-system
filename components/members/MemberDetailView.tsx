@@ -17,6 +17,7 @@ import {
   Tabs,
   Button,
   Grid,
+  Modal,
 } from '@mantine/core';
 import {
   IconArrowLeft,
@@ -37,9 +38,12 @@ import {
 } from '@/types';
 import { EnrollmentCard } from './EnrollmentCard';
 import { MemberTransferModal } from './MemberTransferModal';
-import { FreezeStatusCard } from './FreezeStatusCard'; // Import new component
+import { FreezeStatusCard } from './FreezeStatusCard';
+import { PaymentScheduleTable } from './PaymentScheduleTable';
 import { PaymentConfirmModal } from '@/components/payments/PaymentConfirmModal';
 import { DataTable, DataTableColumn } from '@/components/shared/DataTable';
+import { getPaymentSchedule } from '@/actions/payments';
+import type { PaymentScheduleItem } from '@/types';
 import { showSuccess, showError } from '@/utils/notifications';
 import { useClasses } from '@/hooks/use-classes';
 import { TruncatedTooltip } from '@/components/shared/TruncatedTooltip';
@@ -72,6 +76,11 @@ export function MemberDetailView({
     open: boolean;
     enrollment: MemberClassWithDetails | null;
   }>({ open: false, enrollment: null });
+  const [scheduleModal, setScheduleModal] = useState<{
+    open: boolean;
+    enrollment: MemberClassWithDetails | null;
+    schedule: PaymentScheduleItem[];
+  }>({ open: false, enrollment: null, schedule: [] });
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -111,6 +120,17 @@ export function MemberDetailView({
 
   const handlePayClick = (enrollment: MemberClassWithDetails) => {
     setPayModal({ open: true, enrollment });
+  };
+
+  const handleViewSchedule = async (enrollment: MemberClassWithDetails) => {
+    setActionLoading(true);
+    const res = await getPaymentSchedule(memberId, enrollment.class_id);
+    if (res.data) {
+      setScheduleModal({ open: true, enrollment, schedule: res.data });
+    } else {
+      showError('Ödeme planı yüklenemedi');
+    }
+    setActionLoading(false);
   };
 
   const onTransferConfirm = async (values: {
@@ -334,6 +354,7 @@ export function MemberDetailView({
                 effectiveDate={effectiveDate}
                 onPay={() => handlePayClick(enrollment)}
                 onTransfer={() => handleTransferClick(enrollment)}
+                onViewSchedule={() => handleViewSchedule(enrollment)}
               />
             ))}
           </SimpleGrid>
@@ -394,6 +415,28 @@ export function MemberDetailView({
           }}
         />
       )}
+
+      {/* Payment Schedule Modal */}
+      <Modal
+        opened={scheduleModal.open}
+        onClose={() => setScheduleModal({ ...scheduleModal, open: false })}
+        title={`${scheduleModal.enrollment?.classes?.name} - Ödeme Planı`}
+        size="xl"
+        centered
+      >
+        {scheduleModal.enrollment && (
+          <PaymentScheduleTable
+            schedule={scheduleModal.schedule}
+            memberId={memberId}
+            classId={scheduleModal.enrollment.class_id}
+            onUpdate={() => {
+              fetchData();
+              // Refresh schedule after payment
+              handleViewSchedule(scheduleModal.enrollment!);
+            }}
+          />
+        )}
+      </Modal>
     </Container>
   );
 }

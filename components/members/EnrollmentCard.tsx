@@ -16,6 +16,7 @@ import {
   IconCreditCard,
   IconArrowsExchange,
   IconDots,
+  IconList,
 } from '@tabler/icons-react';
 import { formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
@@ -27,6 +28,7 @@ interface EnrollmentCardProps {
   effectiveDate: string;
   onPay: () => void;
   onTransfer: () => void;
+  onViewSchedule?: () => void; // NEW
 }
 
 export function EnrollmentCard({
@@ -34,6 +36,7 @@ export function EnrollmentCard({
   effectiveDate,
   onPay,
   onTransfer,
+  onViewSchedule,
 }: EnrollmentCardProps) {
   const isOverdue =
     enrollment.next_payment_date &&
@@ -107,16 +110,24 @@ export function EnrollmentCard({
         </Group>
       </Stack>
 
-      <Button
-        fullWidth
-        mt="md"
-        leftSection={<IconCreditCard size={16} />}
-        onClick={onPay}
-        variant={isOverdue ? 'filled' : 'light'}
-        color={isOverdue ? 'red' : 'blue'}
-      >
-        {isOverdue ? 'Ödeme Yap (Gecikmiş)' : 'Ödeme Yap'}
-      </Button>
+      <Group mt="md" grow>
+        <Button
+          leftSection={<IconList size={16} />}
+          onClick={onViewSchedule}
+          variant="light"
+          color="gray"
+        >
+          Tüm Ödemeler
+        </Button>
+        <Button
+          leftSection={<IconCreditCard size={16} />}
+          onClick={onPay}
+          variant={isOverdue ? 'filled' : 'light'}
+          color={isOverdue ? 'red' : 'blue'}
+        >
+          {isOverdue ? 'Öde (Gecikmiş)' : 'Öde'}
+        </Button>
+      </Group>
     </Card>
   );
 }

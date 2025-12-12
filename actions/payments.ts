@@ -100,39 +100,51 @@ export async function getPaymentSchedule(
     }
 
     // 3. Generate Schedule
-    // Start from member join date or class creation date (fallback to join date is safer)
-    // memberClass.created_at is reliable if created after schema change, but fallback to member join date
-    // 3. Generate Schedule
     // Start from enrollment date (created_at)
     // Fallback to join_date only if created_at is missing (legacy data)
     const startDate = dayjs(
       memberClass.created_at || (memberClass as any).members?.join_date
     );
 
-    const membershipDurationMonths = (memberClass as any).payment_interval || 1;
-    let effectiveEndDate;
+    const now = await getServerNow();
+    const schedule: PaymentScheduleItem[] = [];
 
-    // Logic:
-    // - Fixed Term (e.g. 3, 6, 12 months): Show exactly that period.
-    // - Monthly (1 month): Show from start date until 1 year from NOW (rolling window).
-    if (membershipDurationMonths > 1) {
-      // Fixed Duration Package
-      effectiveEndDate = startDate.add(membershipDurationMonths, 'month');
+    // NEW LOGIC: Only show COMMITTED months
+    // - All paid months (from payments)
+    // - Plus 1 next unpaid/overdue period
+    // - Do NOT show hypothetical future months
+
+    // Step 1: Find the "commitment end date" = last paid period + 1 month
+    // If no payments, commitment is just the first month
+    const paidPeriods = (payments || [])
+      .filter((p) => p.period_start)
+      .map((p) => dayjs(p.period_start))
+      .sort((a, b) => a.valueOf() - b.valueOf());
+
+    // The member is committed from start to (last paid + 1 month) or just start + 1 if no payments
+    let commitmentEndDate;
+    if (paidPeriods.length > 0) {
+      const lastPaidPeriod = paidPeriods[paidPeriods.length - 1];
+      // Commitment extends to next unpaid month (so they can pay it)
+      commitmentEndDate = lastPaidPeriod.add(2, 'month'); // last paid + 1 (next due)
     } else {
-      // Monthly recurring - Show history + future 12 months
-      const now = await getServerNow();
-      effectiveEndDate = now.add(12, 'month');
+      // No payments yet, just show the first month as due
+      commitmentEndDate = startDate.add(1, 'month');
     }
 
-    const schedule: PaymentScheduleItem[] = [];
-    let currentMonth = startDate; // Use exact start date (e.g. 15th), do NOT snap to startOf('month')
+    // Also ensure we show at least up to current month if member is overdue
+    if (now.isAfter(commitmentEndDate)) {
+      commitmentEndDate = now.add(1, 'month');
+    }
 
-    // Generate schedule until effective end date
-    while (currentMonth.isBefore(effectiveEndDate)) {
+    let currentMonth = startDate;
+
+    // Generate schedule until commitment end date
+    while (currentMonth.isBefore(commitmentEndDate)) {
       const periodStart = currentMonth.format('YYYY-MM-DD');
       const nextMonth = currentMonth.add(1, 'month');
 
-      // Find if paid: existing payment coverage
+      // Find if paid
       const paidPayment = payments?.find((p) => {
         if (!p.period_start) return false;
         return dayjs(p.period_start).isSame(currentMonth, 'month');
@@ -141,9 +153,7 @@ export async function getPaymentSchedule(
       let status: PaymentScheduleItem['status'] = 'unpaid';
       if (paidPayment) {
         status = 'paid';
-      } else if (
-        currentMonth.isBefore((await getServerNow()).startOf('month'))
-      ) {
+      } else if (currentMonth.isBefore(now.startOf('month'))) {
         status = 'overdue';
       }
 
@@ -290,8 +300,12 @@ export async function processClassPayment(
       (memberClass.classes as any)?.price_monthly ||
       0;
 
-    // Safety check for division by zero
-    if (pricePerMonth === 0) pricePerMonth = amount;
+    // CRITICAL: Reject payment if price is not set
+    if (pricePerMonth === 0) {
+      return errorResponse(
+        'Ders fiyatı belirlenmemiş. Lütfen ders ayarlarını kontrol edin.'
+      );
+    }
 
     // Calculate months (rounding to nearest, e.g. 799.99 -> 1)
     let monthsPaid = Math.round(amount / pricePerMonth);
@@ -399,7 +413,24 @@ export async function deletePayment(id: number): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
 
-    // 1. Delete associated instructor ledger entries first (Cascade Safety in Code)
+    // SECURITY: Check if there are already-paid commissions
+    const { data: ledgerEntries, error: checkError } = await supabase
+      .from('instructor_ledger')
+      .select('status')
+      .eq('student_payment_id', id);
+
+    if (checkError) {
+      logError('deletePayment - check ledger', checkError);
+      return errorResponse(handleSupabaseError(checkError));
+    }
+
+    if (ledgerEntries?.some((e) => e.status === 'paid')) {
+      return errorResponse(
+        'Bu ödemeye bağlı ödenmiş komisyonlar var. Silinemez.'
+      );
+    }
+
+    // 1. Delete associated instructor ledger entries (for unpaid ones)
     const { error: ledgerError } = await supabase
       .from('instructor_ledger')
       .delete()

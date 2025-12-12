@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Modal,
   Button,
@@ -10,18 +10,23 @@ import {
   Stack,
   Text,
   NumberInput,
+  Paper,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { IconCurrencyLira, IconCreditCard } from '@tabler/icons-react';
+import {
+  IconCurrencyLira,
+  IconCreditCard,
+  IconCalendar,
+} from '@tabler/icons-react';
 import { PaymentScheduleItem } from '@/types';
 import { formatCurrency } from '@/utils/formatters';
 
 export interface PaymentItem {
   amount: number;
   periodLabel: string;
-  periodMonth?: string; // ISO date string for the period
+  periodMonth?: string;
   status?: string;
-  description?: string; // Pre-filled description
+  description?: string;
 }
 
 interface PaymentConfirmModalProps {
@@ -31,6 +36,7 @@ interface PaymentConfirmModalProps {
     amount: number;
     paymentMethod: string;
     description?: string;
+    monthCount?: number;
   }) => Promise<void>;
   item: PaymentScheduleItem | null;
   loading?: boolean;
@@ -43,30 +49,37 @@ export function PaymentConfirmModal({
   item,
   loading = false,
 }: PaymentConfirmModalProps) {
+  const [monthCount, setMonthCount] = useState<string>('1');
+  const pricePerMonth = item?.amount || 0;
+  const totalAmount = pricePerMonth * Number(monthCount);
+
   const form = useForm({
     initialValues: {
-      amount: item.amount,
-      paymentMethod: 'cash',
-      description: item.description || '',
+      paymentMethod: 'Nakit',
+      description: item?.description || '',
     },
     validate: {
-      amount: (value) => (value <= 0 ? 'Tutar 0 dan büyük olmalıdır' : null),
       paymentMethod: (value) => (!value ? 'Ödeme yöntemi seçiniz' : null),
     },
   });
 
-  // Update form when item changes
-  if (item && form.values.amount !== item.amount && !form.isDirty('amount')) {
-    form.setFieldValue('amount', item.amount);
-  }
+  // Reset month count when modal opens with new item
+  useEffect(() => {
+    if (opened) {
+      setMonthCount('1');
+      form.setFieldValue('description', item?.description || '');
+    }
+  }, [opened, item]);
 
   const handleSubmit = async (values: typeof form.values) => {
     await onConfirm({
-      amount: values.amount,
+      amount: totalAmount,
       paymentMethod: values.paymentMethod,
       description: values.description,
+      monthCount: Number(monthCount),
     });
     form.reset();
+    setMonthCount('1');
   };
 
   return (
@@ -81,19 +94,41 @@ export function PaymentConfirmModal({
         <Stack gap="md">
           {item && (
             <Text size="sm" c="dimmed">
-              <strong>{item.periodLabel}</strong> dönemi ödemesi
+              <strong>{item.periodLabel}</strong> döneminden itibaren ödeme
             </Text>
           )}
 
-          <NumberInput
-            label="Tutar"
-            placeholder="0.00"
-            leftSection={<IconCurrencyLira size={16} />}
-            thousandSeparator=","
-            decimalSeparator="."
-            hideControls
-            {...form.getInputProps('amount')}
+          <Select
+            label="Kaç Ay Ödenecek?"
+            description="Seçilen ay sayısı kadar ödeme alınacak"
+            value={monthCount}
+            onChange={(val) => setMonthCount(val || '1')}
+            data={[
+              { value: '1', label: '1 Ay' },
+              { value: '2', label: '2 Ay' },
+              { value: '3', label: '3 Ay' },
+              { value: '6', label: '6 Ay' },
+              { value: '12', label: '12 Ay (1 Yıl)' },
+            ]}
+            leftSection={<IconCalendar size={16} />}
           />
+
+          <Paper withBorder p="sm" radius="md">
+            <Group justify="space-between">
+              <Text size="sm" c="dimmed">
+                Aylık Ücret:
+              </Text>
+              <Text fw={500}>{formatCurrency(pricePerMonth)}</Text>
+            </Group>
+            <Group justify="space-between" mt="xs">
+              <Text size="sm" c="dimmed">
+                Toplam ({monthCount} ay):
+              </Text>
+              <Text fw={700} size="lg" c="blue">
+                {formatCurrency(totalAmount)}
+              </Text>
+            </Group>
+          </Paper>
 
           <Select
             label="Ödeme Yöntemi"
@@ -118,7 +153,7 @@ export function PaymentConfirmModal({
               İptal
             </Button>
             <Button type="submit" loading={loading}>
-              Ödemeyi Tamamla
+              {formatCurrency(totalAmount)} Öde
             </Button>
           </Group>
         </Stack>
