@@ -190,6 +190,8 @@ export function MemberDrawer({
               if (newPrice !== undefined || newDuration !== undefined) {
                 await updateMemberClassDetails(member.id, mc.class_id, {
                   price: newPrice !== undefined ? Number(newPrice) : undefined,
+                  custom_price:
+                    newPrice !== undefined ? Number(newPrice) : undefined,
                   payment_interval:
                     newDuration !== undefined ? Number(newDuration) : undefined,
                 });
@@ -350,6 +352,8 @@ export function MemberDrawer({
                               label="Anlaşılan Ücret"
                               prefix="₺ "
                               min={0}
+                              thousandSeparator=","
+                              decimalSeparator="."
                               {...form.getInputProps(`prices.${cId}`)}
                             />
                           </Grid.Col>

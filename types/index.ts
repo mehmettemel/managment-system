@@ -66,6 +66,13 @@ export type MemberWithPayments = Member & {
   payments: Payment[];
 };
 
+export type InstructorPayoutWithDetails = InstructorPayout & {
+  instructors: {
+    first_name: string;
+    last_name: string;
+  } | null;
+};
+
 // Extended member class with class details
 export interface MemberClassWithDetails {
   id: number;

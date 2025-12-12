@@ -315,7 +315,7 @@ export function MemberDetailView({ memberId }: MemberDetailViewProps) {
         <MemberTransferModal
           opened={transferModal.open}
           onClose={() => setTransferModal({ ...transferModal, open: false })}
-          currentClassId={transferModal.enrollment.class_id}
+          enrollment={transferModal.enrollment}
           classes={classes}
           onConfirm={onTransferConfirm}
           loading={actionLoading}

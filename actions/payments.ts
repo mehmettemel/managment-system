@@ -397,3 +397,87 @@ export async function deletePayment(id: number): Promise<ApiResponse<boolean>> {
     return errorResponse(handleSupabaseError(error));
   }
 }
+
+/**
+ * Get filtered and paginated payments
+ */
+export async function getFilteredPayments(
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: {
+    memberIds?: string[];
+    classIds?: string[];
+    paymentMethods?: string[];
+  },
+  sort?: {
+    field: string;
+    direction: 'asc' | 'desc';
+  }
+): Promise<
+  ApiResponse<{
+    data: Payment[];
+    meta: { total: number; page: number; pageSize: number };
+  }>
+> {
+  try {
+    const supabase = await createClient();
+
+    let query = supabase.from('payments').select(
+      `
+        *,
+        classes (id, name),
+        members (id, first_name, last_name)
+      `,
+      { count: 'exact' }
+    );
+
+    // Apply Filters
+    if (filters?.memberIds && filters.memberIds.length > 0) {
+      query = query.in('member_id', filters.memberIds.map(Number));
+    }
+
+    if (filters?.classIds && filters.classIds.length > 0) {
+      query = query.in('class_id', filters.classIds.map(Number));
+    }
+
+    if (filters?.paymentMethods && filters.paymentMethods.length > 0) {
+      query = query.in('payment_method', filters.paymentMethods);
+    }
+
+    // Pagination
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    // Sorting
+    // Default to payment_date desc if no valid sort provided
+    const sortField = sort?.field || 'payment_date';
+    const sortDir = sort?.direction === 'asc';
+
+    // Handle special cases or default
+    query = query.order(sortField, { ascending: sortDir });
+
+    // For consistent paging, always add secondary sort if primary isn't unique/id
+    if (sortField !== 'id') {
+      query = query.order('id', { ascending: false });
+    }
+
+    const { data, error, count } = await query.range(from, to);
+
+    if (error) {
+      logError('getFilteredPayments', error);
+      return errorResponse(handleSupabaseError(error));
+    }
+
+    return successResponse({
+      data: (data as Payment[]) || [],
+      meta: {
+        total: count || 0,
+        page,
+        pageSize,
+      },
+    });
+  } catch (error) {
+    logError('getFilteredPayments', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}

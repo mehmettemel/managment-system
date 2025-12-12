@@ -1,14 +1,7 @@
-/**
- * Payments Page
- */
-
 import { Title, Text, Stack } from '@mantine/core';
-import { getRecentPayments } from '@/actions/payments';
-import { PaymentsContent } from '@/components/payments/PaymentsContent';
+import { PaymentsTable } from '@/components/payments/PaymentsTable';
 
-export default async function PaymentsPage() {
-  const { data: payments } = await getRecentPayments(50); // Last 50 payments
-
+export default function PaymentsPage() {
   return (
     <Stack gap="xl">
       <div>
@@ -16,7 +9,7 @@ export default async function PaymentsPage() {
         <Text c="dimmed">Son yapılan ödemeler ve finansal hareketler.</Text>
       </div>
 
-      <PaymentsContent initialPayments={payments || []} />
+      <PaymentsTable />
     </Stack>
   );
 }

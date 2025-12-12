@@ -7,10 +7,7 @@ import { getPayableLedger, getInstructorPayouts } from '@/actions/finance';
 import { InstructorPaymentsTable } from '@/components/payments/InstructorPaymentsTable';
 
 export default async function InstructorPaymentsPage() {
-  const [payableRes, payoutsRes] = await Promise.all([
-    getPayableLedger(),
-    getInstructorPayouts(),
-  ]);
+  const payableRes = await getPayableLedger();
 
   return (
     <Stack gap="xl">
@@ -21,10 +18,7 @@ export default async function InstructorPaymentsPage() {
         </Text>
       </div>
 
-      <InstructorPaymentsTable
-        data={payableRes.data || []}
-        payouts={payoutsRes.data || []}
-      />
+      <InstructorPaymentsTable data={payableRes.data || []} />
     </Stack>
   );
 }

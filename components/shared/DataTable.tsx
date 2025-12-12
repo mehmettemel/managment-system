@@ -49,6 +49,14 @@ interface DataTableProps<T> {
   emptyText?: string;
   idField?: keyof T;
   filters?: React.ReactNode;
+  // Server-side pagination props
+  totalRecords?: number;
+  page?: number;
+  onPageChange?: (page: number) => void;
+  // Server-side sorting props
+  sortField?: string | null;
+  sortDirection?: 'asc' | 'desc';
+  onSort?: (field: string, direction: 'asc' | 'desc') => void;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -62,12 +70,34 @@ export function DataTable<T extends Record<string, any>>({
   emptyText = 'Kayıt bulunamadı',
   idField = 'id' as keyof T,
   filters,
+  totalRecords,
+  page,
+  onPageChange,
+  sortField,
+  sortDirection,
+  onSort,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [internalSortBy, setInternalSortBy] = useState<string | null>(null);
+  const [internalSortOrder, setInternalSortOrder] = useState<'asc' | 'desc'>(
+    'asc'
+  );
   const [selectedRows, setSelectedRows] = useState<Set<any>>(new Set());
-  const [currentPage, setCurrentPage] = useState(1);
+  const [internalPage, setInternalPage] = useState(1);
+
+  const currentPage = page || internalPage;
+  // Use controlled sort state if provided, otherwise internal
+  const sortBy = sortField !== undefined ? sortField : internalSortBy;
+  const sortOrder =
+    sortDirection !== undefined ? sortDirection : internalSortOrder;
+
+  const handlePageChange = (newPage: number) => {
+    if (onPageChange) {
+      onPageChange(newPage);
+    } else {
+      setInternalPage(newPage);
+    }
+  };
 
   // Filter data based on search
   const filteredData = useMemo(() => {
@@ -82,8 +112,17 @@ export function DataTable<T extends Record<string, any>>({
     });
   }, [data, searchQuery, columns]);
 
-  // Sort data
+  // Sort data (Client-side)
+  // Note: If using server-side sort (onSort provided), we might still want this for optimistic updates
+  // OR we rely entirely on data prop updating.
+  // If totalRecords is provided (Server Side Pagination), we assume data is ALREADY sorted by server.
+  // So client-side sort is only for "all data loaded" mode.
   const sortedData = useMemo(() => {
+    // If server-side data (totalRecords defined), we don't client-sort here usually,
+    // BUT if the user wants to sort the *current page* only, they could.
+    // However, usually server-sort implies data comes back sorted.
+    if (totalRecords !== undefined) return filteredData;
+
     if (!sortBy) return filteredData;
 
     return [...filteredData].sort((a, b) => {
@@ -104,24 +143,33 @@ export function DataTable<T extends Record<string, any>>({
 
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }, [filteredData, sortBy, sortOrder]);
+  }, [filteredData, sortBy, sortOrder, totalRecords]);
 
   // Paginate data
   const paginatedData = useMemo(() => {
+    if (totalRecords !== undefined) return data; // Server-side data
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
     return sortedData.slice(start, end);
-  }, [sortedData, currentPage, pageSize]);
+  }, [data, sortedData, currentPage, pageSize, totalRecords]);
 
-  const totalPages = Math.ceil(sortedData.length / pageSize);
+  const totalPages = useMemo(() => {
+    if (totalRecords !== undefined) return Math.ceil(totalRecords / pageSize);
+    return Math.ceil(sortedData.length / pageSize);
+  }, [sortedData.length, pageSize, totalRecords]);
 
   // Handle sort
   const handleSort = (columnKey: string) => {
+    let newOrder: 'asc' | 'desc' = 'asc';
     if (sortBy === columnKey) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    }
+
+    if (onSort) {
+      onSort(columnKey, newOrder);
     } else {
-      setSortBy(columnKey);
-      setSortOrder('asc');
+      setInternalSortBy(columnKey);
+      setInternalSortOrder(newOrder);
     }
   };
 
@@ -134,25 +182,53 @@ export function DataTable<T extends Record<string, any>>({
       newSelected.add(id);
     }
     setSelectedRows(newSelected);
-
+    // Logic for onSelectionChange
     if (onSelectionChange) {
+      // For server side, we might need a different strategy to get full items if they aren't all loaded.
+      // But assuming we only select from visible:
       const selectedItems = data.filter((item) =>
         newSelected.has(item[idField])
       );
+      // Note: This only returns selected items FROM CURRENT PAGE if server side.
+      // For full cross-page selection state, we'd need more complex logic.
+      // For now, let's assume selection is per-page or accumulated differently.
+      // Actually, standard DataTable behavior often clears selection on page change or accumulates IDs.
+      // Let's keep it simple: strict ID match from current data.
       onSelectionChange(selectedItems);
     }
   };
 
   const toggleAll = () => {
-    if (selectedRows.size === paginatedData.length) {
-      setSelectedRows(new Set());
-      onSelectionChange?.([]);
+    if (paginatedData.every((item) => selectedRows.has(item[idField]))) {
+      // Unselect all on this page
+      const newSelected = new Set(selectedRows);
+      paginatedData.forEach((item) => newSelected.delete(item[idField]));
+      setSelectedRows(newSelected);
+      if (onSelectionChange) {
+        // Re-calculate selected items list (difficult if data is partial)
+        // Sending [] might be wrong if we have other pages selected.
+        // Let's just send what we can find in 'data'.
+        const selectedItems = data.filter((item) =>
+          newSelected.has(item[idField])
+        );
+        onSelectionChange(selectedItems);
+      }
     } else {
-      const allIds = new Set(paginatedData.map((item) => item[idField]));
-      setSelectedRows(allIds);
-      const selectedItems = data.filter((item) => allIds.has(item[idField]));
-      onSelectionChange?.(selectedItems);
+      // Select all on this page
+      const newSelected = new Set(selectedRows);
+      paginatedData.forEach((item) => newSelected.add(item[idField]));
+      setSelectedRows(newSelected);
+      if (onSelectionChange) {
+        const selectedItems = data.filter((item) =>
+          newSelected.has(item[idField])
+        );
+        onSelectionChange(selectedItems);
+      }
     }
+  };
+
+  const headerCheckboxChange = () => {
+    toggleAll();
   };
 
   return (
@@ -171,7 +247,7 @@ export function DataTable<T extends Record<string, any>>({
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setCurrentPage(1);
+                  handlePageChange(1);
                 }}
                 style={{ width: 300 }}
               />
@@ -193,25 +269,31 @@ export function DataTable<T extends Record<string, any>>({
                     <Checkbox
                       checked={
                         paginatedData.length > 0 &&
-                        selectedRows.size === paginatedData.length
+                        paginatedData.every((item) =>
+                          selectedRows.has(item[idField])
+                        )
                       }
                       indeterminate={
-                        selectedRows.size > 0 &&
-                        selectedRows.size < paginatedData.length
+                        paginatedData.some((item) =>
+                          selectedRows.has(item[idField])
+                        ) &&
+                        !paginatedData.every((item) =>
+                          selectedRows.has(item[idField])
+                        )
                       }
-                      onChange={toggleAll}
+                      onChange={headerCheckboxChange}
                     />
                   </Table.Th>
                 )}
                 {columns.map((column) => (
                   <Table.Th
-                    key={String(column.key)}
+                    key={column.key as string}
                     style={{
                       cursor: column.sortable ? 'pointer' : 'default',
                       width: column.width,
                     }}
                     onClick={() =>
-                      column.sortable && handleSort(String(column.key))
+                      column.sortable && handleSort(column.key as string)
                     }
                   >
                     <Group gap="xs" wrap="nowrap">
@@ -246,6 +328,8 @@ export function DataTable<T extends Record<string, any>>({
                 <Table.Tr>
                   <Table.Td
                     colSpan={columns.length + (enableSelection ? 1 : 0)}
+                    align="center"
+                    py="xl"
                   >
                     <Text ta="center" py="xl" c="dimmed">
                       Yükleniyor...
@@ -256,6 +340,8 @@ export function DataTable<T extends Record<string, any>>({
                 <Table.Tr>
                   <Table.Td
                     colSpan={columns.length + (enableSelection ? 1 : 0)}
+                    align="center"
+                    py="xl"
                   >
                     <Text ta="center" py="xl" c="dimmed">
                       {emptyText}
@@ -270,19 +356,19 @@ export function DataTable<T extends Record<string, any>>({
                     style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                   >
                     {enableSelection && (
-                      <Table.Td>
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedRows.has(item[idField])}
                           onChange={() => toggleRow(item[idField])}
-                          onClick={(e) => e.stopPropagation()}
                         />
                       </Table.Td>
                     )}
                     {columns.map((column) => (
-                      <Table.Td key={String(column.key)}>
+                      <Table.Td key={column.key as string}>
                         {column.render
                           ? column.render(item)
-                          : String(item[column.key as keyof T] ?? '-')}
+                          : ((item[column.key as keyof T] as React.ReactNode) ??
+                            '-')}
                       </Table.Td>
                     ))}
                   </Table.Tr>
@@ -301,13 +387,16 @@ export function DataTable<T extends Record<string, any>>({
             <Group justify="space-between">
               <Text size="sm" c="dimmed">
                 {(currentPage - 1) * pageSize + 1}-
-                {Math.min(currentPage * pageSize, sortedData.length)} /{' '}
-                {sortedData.length}
+                {Math.min(
+                  currentPage * pageSize,
+                  totalRecords ?? sortedData.length
+                )}{' '}
+                / {totalRecords ?? sortedData.length}
               </Text>
               <Pagination
                 total={totalPages}
                 value={currentPage}
-                onChange={setCurrentPage}
+                onChange={handlePageChange}
                 size="sm"
               />
             </Group>

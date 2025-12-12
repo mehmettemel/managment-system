@@ -87,6 +87,7 @@ export async function getMemberById(
           price,
           active,
           payment_interval,
+          custom_price,
           classes (*)
         )
       `
@@ -172,6 +173,7 @@ export async function createMember(
           price: reg.price,
           active: true,
           payment_interval: reg.duration,
+          custom_price: reg.price,
         };
       });
 
@@ -325,7 +327,7 @@ export async function getOverdueMembers(): Promise<ApiListResponse<Member>> {
 export async function updateMemberClassDetails(
   memberId: number,
   classId: number,
-  updates: { price?: number; payment_interval?: number }
+  updates: { price?: number; payment_interval?: number; custom_price?: number }
 ): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
@@ -429,6 +431,71 @@ export async function transferMember(
     return successResponse(true);
   } catch (error) {
     logError('transferMember', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Permanently delete a member and all related data
+ * WARNING: This action is irreversible
+ */
+export async function deleteMember(id: number): Promise<ApiResponse<boolean>> {
+  try {
+    const supabase = await createClient();
+
+    // 1. Delete related records first (Manual Cascade)
+    await Promise.all([
+      supabase.from('payments').delete().eq('member_id', id),
+      supabase.from('member_classes').delete().eq('member_id', id),
+      supabase.from('frozen_logs').delete().eq('member_id', id),
+    ]);
+
+    // 2. Delete the member
+    const { error } = await supabase.from('members').delete().eq('id', id);
+
+    if (error) {
+      logError('deleteMember', error);
+      return errorResponse(handleSupabaseError(error));
+    }
+
+    revalidatePath('/members');
+    return successResponse(true);
+  } catch (error) {
+    logError('deleteMember', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Bulk delete members permanently
+ */
+export async function deleteMembers(
+  ids: number[]
+): Promise<ApiResponse<boolean>> {
+  try {
+    const supabase = await createClient();
+
+    if (ids.length === 0) return successResponse(true);
+
+    // 1. Delete related records first
+    await Promise.all([
+      supabase.from('payments').delete().in('member_id', ids),
+      supabase.from('member_classes').delete().in('member_id', ids),
+      supabase.from('frozen_logs').delete().in('member_id', ids),
+    ]);
+
+    // 2. Delete members
+    const { error } = await supabase.from('members').delete().in('id', ids);
+
+    if (error) {
+      logError('deleteMembers', error);
+      return errorResponse(handleSupabaseError(error));
+    }
+
+    revalidatePath('/members');
+    return successResponse(true);
+  } catch (error) {
+    logError('deleteMembers', error);
     return errorResponse(handleSupabaseError(error));
   }
 }

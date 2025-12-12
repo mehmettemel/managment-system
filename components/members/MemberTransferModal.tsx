@@ -12,7 +12,8 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { ClassWithInstructor } from '@/types';
+import { ClassWithInstructor, MemberClassWithDetails } from '@/types';
+import { formatCurrency } from '@/utils/formatters';
 
 interface MemberTransferModalProps {
   opened: boolean;
@@ -21,7 +22,7 @@ interface MemberTransferModalProps {
     newClassId: string;
     priceStrategy: 'KEEP_OLD' | 'USE_NEW';
   }) => Promise<void>;
-  currentClassId: number;
+  enrollment: MemberClassWithDetails;
   classes: ClassWithInstructor[];
   loading?: boolean;
 }
@@ -30,7 +31,7 @@ export function MemberTransferModal({
   opened,
   onClose,
   onConfirm,
-  currentClassId,
+  enrollment,
   classes,
   loading = false,
 }: MemberTransferModalProps) {
@@ -51,21 +52,46 @@ export function MemberTransferModal({
 
   // Filter out current class
   const availableClasses = classes
-    .filter((c) => c.id !== currentClassId && !c.archived)
+    .filter((c) => c.id !== enrollment.class_id && !c.archived)
     .map((c) => ({
       value: String(c.id),
-      label: `${c.name} (${c.price_monthly} TL)`,
+      label: `${c.name} (${formatCurrency(c.price_monthly)})`,
     }));
 
   return (
     <Modal opened={opened} onClose={onClose} title="Sınıf Transferi" centered>
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
+          {enrollment && (
+            <Stack
+              gap="xs"
+              p="sm"
+              bg="var(--mantine-color-gray-1)"
+              style={{ borderRadius: 'var(--mantine-radius-sm)' }}
+            >
+              <Text size="sm" fw={600} c="dimmed">
+                Mevcut Kayıt
+              </Text>
+              <Group justify="space-between">
+                <Text size="sm">{enrollment.classes?.name}</Text>
+                <Text size="sm" fw={700}>
+                  {formatCurrency(
+                    enrollment.custom_price ??
+                      enrollment.classes?.price_monthly ??
+                      0
+                  )}
+                </Text>
+              </Group>
+            </Stack>
+          )}
+
           <Select
             label="Yeni Sınıf"
             placeholder="Sınıf seçiniz"
             data={availableClasses}
             {...form.getInputProps('newClassId')}
+            searchable
+            nothingFoundMessage="Sınıf bulunamadı"
           />
 
           <Radio.Group

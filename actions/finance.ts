@@ -12,6 +12,7 @@ import type {
   InstructorLedger,
   DanceType,
   Instructor,
+  InstructorPayoutWithDetails,
 } from '@/types';
 import {
   successResponse,
@@ -385,5 +386,80 @@ export async function getInstructorPayouts(): Promise<ApiListResponse<any>> {
   } catch (error) {
     logError('getInstructorPayouts', error);
     return errorListResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Get filtered and paginated instructor payouts
+ */
+export async function getFilteredInstructorPayouts(
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: {
+    instructorIds?: string[];
+  },
+  sort?: {
+    field: string;
+    direction: 'asc' | 'desc';
+  }
+): Promise<
+  ApiResponse<{
+    data: InstructorPayoutWithDetails[];
+    meta: { total: number; page: number; pageSize: number };
+  }>
+> {
+  try {
+    const supabase = await createClient();
+
+    let query = supabase.from('instructor_payouts').select(
+      `
+        *,
+        instructors (first_name, last_name)
+      `,
+      { count: 'exact' }
+    );
+
+    // Apply Filters
+    if (filters?.instructorIds && filters.instructorIds.length > 0) {
+      query = query.in('instructor_id', filters.instructorIds.map(Number));
+    }
+
+    // Pagination
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    // Sorting
+    const sortField = sort?.field || 'payment_date';
+    const sortDir = sort?.direction === 'asc';
+
+    query = query.order(sortField, { ascending: sortDir });
+    if (sortField !== 'id') {
+      query = query.order('id', { ascending: false });
+    }
+
+    const { data, error, count } = await query.range(from, to);
+
+    if (error) {
+      logError('getFilteredInstructorPayouts', error);
+      return errorResponse(handleSupabaseError(error));
+    }
+
+    // Cast as InstructorPayoutWithType which assumes joined data structure
+    // We need to define or import this type if not globally available,
+    // but for now relying on usage or local definition in file matching component.
+    // Ideally this type should be in types/index.ts or local.
+    // The component defined `InstructorPayoutWithType`. We should use `InstructorPayout` joined.
+
+    return successResponse({
+      data: (data as any[]) || [],
+      meta: {
+        total: count || 0,
+        page,
+        pageSize,
+      },
+    });
+  } catch (error) {
+    logError('getFilteredInstructorPayouts', error);
+    return errorResponse(handleSupabaseError(error));
   }
 }

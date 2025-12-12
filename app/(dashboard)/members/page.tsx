@@ -31,7 +31,12 @@ import { FreezeMemberDrawer } from '@/components/members/FreezeMemberDrawer';
 import { modals } from '@mantine/modals';
 import { useMembers } from '@/hooks/use-members';
 import { useClasses } from '@/hooks/use-classes';
-import { archiveMember, unarchiveMember } from '@/actions/members';
+import {
+  archiveMember,
+  unarchiveMember,
+  deleteMember,
+  deleteMembers,
+} from '@/actions/members';
 import { unfreezeMembership } from '@/actions/freeze';
 import { showSuccess, showError } from '@/utils/notifications';
 import { formatDate } from '@/utils/date-helpers'; // Removed isPaymentOverdue
@@ -46,7 +51,60 @@ export default function MembersPage() {
   const [freezeDrawerOpened, setFreezeDrawerOpened] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  // Removed detailed modal state
+  const [selectedRows, setSelectedRows] = useState<MemberWithClasses[]>([]);
+
+  // ... existing handlers ...
+
+  const handleDelete = (member: Member, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    modals.openConfirmModal({
+      title: 'Üyeyi Kalıcı Sil',
+      children: (
+        <Text size="sm">
+          {member.first_name} {member.last_name} ve tüm verileri kalıcı olarak
+          silinecek. Bu işlem geri alınamaz!
+        </Text>
+      ),
+      labels: { confirm: 'Kalıcı Sil', cancel: 'İptal' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        const result = await deleteMember(member.id);
+        if (result.error) {
+          showError(result.error);
+        } else {
+          showSuccess('Üye kalıcı olarak silindi');
+          setRefreshTrigger((prev) => prev + 1);
+        }
+      },
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedRows.length === 0) return;
+
+    modals.openConfirmModal({
+      title: 'Seçilenleri Kalıcı Sil',
+      children: (
+        <Text size="sm">
+          Seçili {selectedRows.length} üye ve tüm verileri kalıcı olarak
+          silinecek. Bu işlem geri alınamaz!
+        </Text>
+      ),
+      labels: { confirm: 'Hepsini Sil', cancel: 'İptal' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        const ids = selectedRows.map((m) => m.id);
+        const result = await deleteMembers(ids);
+        if (result.error) {
+          showError(result.error);
+        } else {
+          showSuccess(`${ids.length} üye kalıcı olarak silindi`);
+          setSelectedRows([]);
+          setRefreshTrigger((prev) => prev + 1);
+        }
+      },
+    });
+  };
 
   const { members, loading, error } = useMembers(statusFilter, refreshTrigger);
   const { classes } = useClasses();
@@ -264,6 +322,18 @@ export default function MembersPage() {
                 Arşivle
               </Menu.Item>
             )}
+            {member.status === 'archived' && (
+              <>
+                <Menu.Divider />
+                <Menu.Item
+                  leftSection={<IconTrash size={16} />}
+                  color="red"
+                  onClick={(e) => handleDelete(member, e)}
+                >
+                  Kalıcı Sil
+                </Menu.Item>
+              </>
+            )}
           </Menu.Dropdown>
         </Menu>
       ),
@@ -278,9 +348,21 @@ export default function MembersPage() {
           <Title order={1}>Üyeler</Title>
           <Text c="dimmed">Üye listesini yönetin</Text>
         </div>
-        <Button leftSection={<IconPlus size={16} />} onClick={handleAddNew}>
-          Yeni Üye
-        </Button>
+        <Group>
+          {statusFilter === 'archived' && selectedRows.length > 0 && (
+            <Button
+              color="red"
+              variant="light"
+              leftSection={<IconTrash size={16} />}
+              onClick={handleBulkDelete}
+            >
+              Seçilenleri Sil ({selectedRows.length})
+            </Button>
+          )}
+          <Button leftSection={<IconPlus size={16} />} onClick={handleAddNew}>
+            Yeni Üye
+          </Button>
+        </Group>
       </Group>
 
       {/* Data Table */}
@@ -295,6 +377,10 @@ export default function MembersPage() {
           data={members}
           columns={columns}
           loading={loading}
+          enableSelection={statusFilter === 'archived'}
+          onSelectionChange={(rows) =>
+            setSelectedRows(rows as MemberWithClasses[])
+          }
           emptyText={
             statusFilter === 'archived'
               ? 'Arşivlenmiş üye bulunmamaktadır.'
@@ -309,7 +395,10 @@ export default function MembersPage() {
           filters={
             <SegmentedControl
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={(val) => {
+                setStatusFilter(val);
+                setSelectedRows([]); // Clear selection on filter change
+              }}
               data={[
                 { label: 'Aktif', value: 'active' },
                 { label: 'Dondurulmuş', value: 'frozen' },
