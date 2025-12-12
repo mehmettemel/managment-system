@@ -45,6 +45,19 @@ export async function freezeMembership(
 
     const supabase = await createClient();
 
+    // 0. Check if already frozen
+    const { data: member, error: memberError } = await supabase
+      .from('members')
+      .select('status')
+      .eq('id', formData.member_id)
+      .single();
+
+    if (memberError) return errorResponse(handleSupabaseError(memberError));
+
+    if (member.status === 'frozen') {
+      return errorResponse('Üye zaten dondurulmuş durumda.');
+    }
+
     // Create freeze log
     // If indefinite, end_date is null.
     // If specific date, we log it, but logic for extension happens on Unfreeze usually?
@@ -194,7 +207,6 @@ export async function unfreezeMembership(
     }
 
     // 5. Update Member Status
-    // Removed next_payment_due_date update as it's deprecated
     const { error: updateMemberError } = await supabase
       .from('members')
       .update({

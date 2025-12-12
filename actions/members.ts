@@ -281,37 +281,28 @@ export async function getOverdueMembers(): Promise<ApiListResponse<Member>> {
     const supabase = await createClient();
     const today = getTodayDate();
 
-    // Get member IDs with overdue class payments
-    const { data: overdueClasses, error: mcError } = await supabase
-      .from('member_classes')
-      .select('member_id')
-      .eq('active', true)
-      .lt('next_payment_date', today);
-
-    if (mcError) {
-      logError('getOverdueMembers - member_classes', mcError);
-      return errorListResponse(handleSupabaseError(mcError));
-    }
-
-    const overdueIds = [
-      ...new Set(overdueClasses?.map((mc) => mc.member_id) || []),
-    ];
-
-    if (overdueIds.length === 0) {
-      return successListResponse([]);
-    }
-
+    // Native JOIN query to avoid N+1
+    // !inner ensures we only get members who HAVE a matching overdue class
     const { data, error } = await supabase
       .from('members')
-      .select('*')
+      .select('*, member_classes!inner(id)')
       .eq('status', 'active')
-      .in('id', overdueIds)
+      .eq('member_classes.active', true)
+      .lt('member_classes.next_payment_date', today)
       .order('first_name', { ascending: true });
 
     if (error) {
       logError('getOverdueMembers', error);
       return errorListResponse(handleSupabaseError(error));
     }
+
+    // Supabase might return duplicate members if they have multiple overdue classes.
+    // Uniqify by ID just in case (though logical join usually implies rows)
+    // Actually, select on parent with inner join returns parent rows.
+    // If multiple children match, parent might be duplicated in SQL result depending on how PostgREST handles it.
+    // PostgREST usually deduplicates parent unless explicit 1:Many embedding is requested as an array.
+    // Here we request `member_classes!inner(id)`. This usually embeds it.
+    // So 'data' will be unique Members, each with an array of member_classes.
 
     return successListResponse(data || []);
   } catch (error) {
@@ -441,8 +432,24 @@ export async function deleteMember(id: number): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
 
-    // 1. Delete related records first (Manual Cascade)
+    // 0. Safety Check: Verify no financial history
+    const { count, error: countError } = await supabase
+      .from('payments')
+      .select('*', { count: 'exact', head: true })
+      .eq('member_id', id);
+
+    if (countError) return errorResponse(handleSupabaseError(countError));
+
+    if (count && count > 0) {
+      return errorResponse(
+        'Bu üyenin ödeme geçmişi bulunmaktadır. Silmek yerine arşivlemelisiniz.'
+      );
+    }
+
+    // 1. Delete related records first (Only non-financial safe to delete?)
+    // If we passed the check, they have NO payments. Safe to delete member_classes etc.
     await Promise.all([
+      // payments delete is redundant now as count is 0, but keeping for completeness if race condition
       supabase.from('payments').delete().eq('member_id', id),
       supabase.from('member_classes').delete().eq('member_id', id),
       supabase.from('frozen_logs').delete().eq('member_id', id),

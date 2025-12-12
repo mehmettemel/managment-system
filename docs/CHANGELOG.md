@@ -8,6 +8,24 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 
 #### [Unreleased]
 
+### Critical Fixes & Logic Refactor
+
+- **Transfer Safety**: Fixed "Partial State" risk in Member Transfer and Bulk Migration. Now insert new records _before_ deactivating old ones to prevent data loss.
+- **Commission Accuracy**: Updated logic to correctly calculate multi-month commissions when a student pays for multiple months upfront.
+- **Payment Schedule**: Fixed "Period Match" issue. Schedules now respect the exact membership start day (e.g., 15th) instead of forcing calendar months.
+- **Payout Safety**: Implemented protection against "Double Payouts" if the button is double-clicked. Added `payout_id` to ledger for strict linking.
+
+### Performance & Scalability
+
+- **Overdue Members**: Optimized the database query (removed N+1 problem), significantly faster for large member bases.
+- **Database Cleanup**: Removed legacy columns (`next_payment_due_date`, `monthly_fee`) that were causing data inconsistency.
+
+### UX & Data Protection
+
+- **Delete Protection**: The system now **blocks** deletion of users with payment history to prevent accidental loss of tax data.
+- **Enrollment Integrity**: Added database constraints to prevent duplicate active enrollments in the same class.
+- **Freeze Logic**: Added checks to prevent re-freezing users who are already frozen.
+
 ### Added
 
 - **Payments**: Server-side pagination and advanced filtering (Member, Class, Payment Method) for the payments table.

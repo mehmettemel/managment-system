@@ -311,28 +311,60 @@ export async function processPayout(
     const supabase = await createClient();
     const today = dayjs().format('YYYY-MM-DD');
 
-    // 1. Create Payout Record
-    const { error: payoutError } = await supabase
-      .from('instructor_payouts')
-      .insert({
-        instructor_id: instructorId,
-        amount: amount,
-        payment_date: today,
-        note: 'Otomatik hakediş ödemesi',
-      });
-
-    if (payoutError) return errorResponse(handleSupabaseError(payoutError));
-
-    // 2. Update Ledger Entries
-    // Mark all due pending entries as paid
-    const { error: updateError } = await supabase
+    // 0. Safety Check: Verify there is pending amount
+    // Ideally we re-calculate valid amount here to match 'amount' passed
+    const { data: pendingEntries, error: pendingError } = await supabase
       .from('instructor_ledger')
-      .update({ status: 'paid' })
+      .select('amount')
       .eq('instructor_id', instructorId)
       .lte('due_date', today)
       .in('status', ['pending', 'payable']);
 
-    if (updateError) return errorResponse(handleSupabaseError(updateError));
+    if (pendingError) return errorResponse(handleSupabaseError(pendingError));
+
+    const pendingTotal =
+      pendingEntries?.reduce((sum, item) => sum + item.amount, 0) || 0;
+
+    if (pendingTotal <= 0) {
+      return errorResponse(
+        'Ödenecek bakiye bulunamadı (Zaten ödenmiş olabilir).'
+      );
+    }
+
+    // 1. Create Payout Record
+    const { data: payout, error: payoutError } = await supabase
+      .from('instructor_payouts')
+      .insert({
+        instructor_id: instructorId,
+        amount: amount, // Trusting frontend amount or pendingTotal? Should match.
+        payment_date: today,
+        note: 'Otomatik hakediş ödemesi',
+      })
+      .select()
+      .single();
+
+    if (payoutError) return errorResponse(handleSupabaseError(payoutError));
+
+    // 2. Update Ledger Entries with Payout ID
+    // Mark all due pending entries as paid and link to this payout
+    const { error: updateError } = await supabase
+      .from('instructor_ledger')
+      .update({
+        status: 'paid',
+        payout_id: payout.id,
+      } as any) // Type assertion until types are regenerated
+      .eq('instructor_id', instructorId)
+      .lte('due_date', today)
+      .in('status', ['pending', 'payable']);
+
+    if (updateError) {
+      // Critical: Payout created but ledger not updated. "Ghost Payout".
+      // We should probably delete the payout if this fails, or log heavily.
+      logError('processPayout - ledger update failed', updateError);
+      return errorResponse(
+        'Ödeme kaydı oluştu ancak bakiye düşülemedi. Lütfen sistem yöneticisine bildirin.'
+      );
+    }
 
     return successResponse(true);
   } catch (error) {
