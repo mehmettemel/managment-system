@@ -39,7 +39,6 @@ create table members (
   status text default 'active', -- active, frozen, archived
   notes text,
   last_payment_date date, -- Son ödeme yaptığı tarih
-  next_payment_due_date date, -- Bir sonraki ödeme tarihi (Sistem bunu otomatik hesaplayacak)
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 

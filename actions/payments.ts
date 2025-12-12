@@ -395,11 +395,16 @@ export async function deletePayment(id: number): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
 
-    // 1. Delete associated instructor ledger entries first (Cascade)
-    await supabase
+    // 1. Delete associated instructor ledger entries first (Cascade Safety in Code)
+    const { error: ledgerError } = await supabase
       .from('instructor_ledger')
       .delete()
       .eq('student_payment_id', id);
+
+    if (ledgerError) {
+      logError('deletePayment - ledger', ledgerError);
+      return errorResponse(handleSupabaseError(ledgerError));
+    }
 
     // 2. Delete the payment
     const { error } = await supabase.from('payments').delete().eq('id', id);
@@ -411,7 +416,6 @@ export async function deletePayment(id: number): Promise<ApiResponse<boolean>> {
 
     // Must revalidate related paths to update schedule status
     revalidatePath('/members');
-    // Ideally we know the memberId to revalidate specific page, but broadly:
     return successResponse(true);
   } catch (error) {
     logError('deletePayment', error);

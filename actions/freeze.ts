@@ -112,53 +112,55 @@ export async function freezeMembership(
 /**
  * Unfreeze a member's membership (Stop the stopwatch)
  */
+/**
+ * Unfreeze a member's membership (Stop the stopwatch)
+ */
 export async function unfreezeMembership(
   memberId: number
 ): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
-    console.log(`Unfreezing member: ${memberId}`);
 
-    // 1. Find the open freeze log or latest log
-    let { data: openLog } = await supabase
+    // 1. Find the OPEN freeze log
+    const { data: openLog, error: logError } = await supabase
       .from('frozen_logs')
       .select('*')
       .eq('member_id', memberId)
       .is('end_date', null)
-      .order('start_date', { ascending: false })
-      .limit(1)
-      .single();
+      .maybeSingle(); // Use maybeSingle to avoid 406 if none found
 
-    // Use current date for "Now"
-    const today = dayjs().format('YYYY-MM-DD');
-    let startDate = openLog?.start_date;
+    if (logError) {
+      logError('unfreezeMembership - fetch log', logError);
+      return errorResponse(handleSupabaseError(logError));
+    }
 
-    // Fallback: search for latest log if no open log found
     if (!openLog) {
-      const { data: latestLog } = await supabase
-        .from('frozen_logs')
-        .select('*')
-        .eq('member_id', memberId)
-        .order('start_date', { ascending: false })
-        .limit(1)
-        .single();
+      // If no open log exists, check if they are actually frozen?
+      // If status is frozen but no log, just activate them.
+      // But if we want to be strict, we return error.
+      // For safety, let's allow "Force Unfreeze" effect by just setting active if no log found.
+      const { error: activateError } = await supabase
+        .from('members')
+        .update({ status: 'active' })
+        .eq('id', memberId);
 
-      if (latestLog) {
-        openLog = latestLog;
-        startDate = latestLog.start_date;
-      }
+      if (activateError)
+        return errorResponse(handleSupabaseError(activateError));
+
+      revalidatePath('/members');
+      return successResponse(true);
     }
 
-    if (!startDate || !openLog) {
-      return errorResponse('Aktif bir dondurma kaydı bulunamadı.');
-    }
-
-    // 2. Calculate Duration
-    const daysDiff = dayjs(today).diff(dayjs(startDate), 'day');
+    const today = dayjs();
+    const startDate = dayjs(openLog.start_date);
+    const daysDiff = today.diff(startDate, 'day');
     const effectiveDays = Math.max(0, daysDiff);
 
-    // 3. Update Member Classes (The core fix)
-    // Fetch all active enrollments for this member
+    // 2. Update ALL active member_classes
+    // We need to shift next_payment_date by effectiveDays
+    // We can do this via JS loop to be DB-agnostic regarding SQL date functions,
+    // or use RPC if we had one. JS loop is fine for small number of classes per member.
+
     const { data: enrollments, error: enrollError } = await supabase
       .from('member_classes')
       .select('*')
@@ -167,55 +169,48 @@ export async function unfreezeMembership(
 
     if (enrollError) {
       logError('unfreezeMembership - fetch classes', enrollError);
-      return errorResponse('Ders kayıtları alınamadı');
+      return errorResponse(handleSupabaseError(enrollError));
     }
 
-    // Update each class enrollment date
     if (enrollments && enrollments.length > 0) {
-      for (const enrollment of enrollments) {
-        if (enrollment.next_payment_date) {
-          const newDate = dayjs(enrollment.next_payment_date)
-            .add(effectiveDays, 'day')
-            .format('YYYY-MM-DD');
+      // Process updates in parallel
+      await Promise.all(
+        enrollments.map(async (enrollment) => {
+          if (enrollment.next_payment_date) {
+            const newDate = dayjs(enrollment.next_payment_date)
+              .add(effectiveDays, 'day')
+              .format('YYYY-MM-DD');
 
-          await supabase
-            .from('member_classes')
-            .update({ next_payment_date: newDate })
-            .eq('id', enrollment.id);
-        }
-      }
-    }
-
-    // 4. Close the log
-    // Only update if it was open (end_date was null)
-    // If we picked up a closed log (latestLog fallback), we technically shouldn't update it unless logic dictates.
-    // However, if member is 'frozen', we must have an open log usually.
-    // If we used fallback, it might mean data inconsistency, but let's try to close if it's null.
-    if (!openLog.end_date) {
-      const { error: closeLogError } = await supabase
-        .from('frozen_logs')
-        .update({
-          end_date: today,
-          days_count: effectiveDays,
+            await supabase
+              .from('member_classes')
+              .update({ next_payment_date: newDate })
+              .eq('id', enrollment.id);
+          }
         })
-        .eq('id', openLog.id);
-
-      if (closeLogError) {
-        logError('unfreezeMembership - close log', closeLogError);
-        return errorResponse('Dondurma kaydı kapatılamadı.');
-      }
+      );
     }
 
-    // 5. Update Member Status
+    // 3. Close the freeze log
+    const { error: closeLogError } = await supabase
+      .from('frozen_logs')
+      .update({
+        end_date: today.format('YYYY-MM-DD'),
+        days_count: effectiveDays,
+      })
+      .eq('id', openLog.id);
+
+    if (closeLogError) {
+      logError('unfreezeMembership - close log', closeLogError);
+      return errorResponse(handleSupabaseError(closeLogError));
+    }
+
+    // 4. Update Member Status
     const { error: updateMemberError } = await supabase
       .from('members')
-      .update({
-        status: 'active',
-      })
+      .update({ status: 'active' })
       .eq('id', memberId);
 
     if (updateMemberError) {
-      logError('unfreezeMembership', updateMemberError);
       return errorResponse(handleSupabaseError(updateMemberError));
     }
 

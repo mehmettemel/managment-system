@@ -41,7 +41,7 @@ export async function getMembers(
 
     let query = supabase
       .from('members')
-      .select('*')
+      .select('*, member_classes(*, classes(name))')
       .order('created_at', { ascending: false });
 
     if (status && status !== 'all') {
@@ -405,6 +405,7 @@ export async function transferMember(
     }
 
     // 4. Deactivate old (UPDATE SECOND)
+    // Only reachable if insert succeeded
     const { error: deactivateError } = await supabase
       .from('member_classes')
       .update({ active: false })

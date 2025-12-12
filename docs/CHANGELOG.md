@@ -10,10 +10,13 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 
 ### Critical Fixes & Logic Refactor
 
+- **Freeze Logic**: Rewritten to shift dates for ALL active classes based on actual freeze duration (daysDiff).
+- **Payment Deletion**: Added strict safety to delete `instructor_ledger` entries BEFORE deleting the payment to prevent ghost records.
 - **Transfer Safety**: Fixed "Partial State" risk in Member Transfer and Bulk Migration. Now insert new records _before_ deactivating old ones to prevent data loss.
 - **Commission Accuracy**: Updated logic to correctly calculate multi-month commissions when a student pays for multiple months upfront.
 - **Payment Schedule**: Fixed "Period Match" issue. Schedules now respect the exact membership start day (e.g., 15th) instead of forcing calendar months.
 - **Payout Safety**: Implemented protection against "Double Payouts" if the button is double-clicked. Added `payout_id` to ledger for strict linking.
+- **DB Constraints**: Added `docs/011_critical_fixes.sql` with Unique Keys for Enrollment/Freeze and Cascade Deletes for Payments.
 
 ### Performance & Scalability
 

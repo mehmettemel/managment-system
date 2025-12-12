@@ -11,6 +11,7 @@ import {
   ActionIcon,
   Menu,
   Text,
+  Tooltip,
 } from '@mantine/core';
 import {
   IconPlus,
@@ -21,6 +22,7 @@ import {
   IconCreditCard,
   IconPlayerPlay,
   IconRotateClockwise,
+  IconAlertCircle,
 } from '@tabler/icons-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -210,17 +212,43 @@ export default function MembersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
 
+  // Fix hydration mismatch by only checking dates on client side after mount
+  const [clientDate, setClientDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setClientDate(new Date());
+  }, []);
+
   const columns: DataTableColumn<MemberWithClasses>[] = [
     {
       key: 'first_name',
       label: 'Ad Soyad',
       sortable: true,
       searchable: true,
-      render: (member) => (
-        <Text fw={500}>
-          {member.first_name} {member.last_name}
-        </Text>
-      ),
+      render: (member) => {
+        // Check for overdue payments - ONLY on client side to avoid hydration mismatch
+        const isOverdue =
+          clientDate &&
+          member.member_classes?.some((mc) => {
+            if (!mc.active || !mc.next_payment_date) return false;
+            // next_payment_date is YYYY-MM-DD (UTC midnight usually)
+            // Compare with clientDate
+            return new Date(mc.next_payment_date) < clientDate;
+          });
+
+        return (
+          <Group gap="xs">
+            <Text fw={500}>
+              {member.first_name} {member.last_name}
+            </Text>
+            {isOverdue && (
+              <Tooltip label="Gecikmiş Ödeme" withArrow>
+                <IconAlertCircle size={18} color="var(--mantine-color-red-6)" />
+              </Tooltip>
+            )}
+          </Group>
+        );
+      },
     },
     {
       key: 'phone',
