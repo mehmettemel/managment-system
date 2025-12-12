@@ -28,9 +28,16 @@ import { getMemberById, transferMember } from '@/actions/members';
 import { getMemberPayments, processClassPayment } from '@/actions/payments';
 import { formatPhone, formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
-import { Member, MemberClassWithDetails, Payment } from '@/types';
+import {
+  Member,
+  MemberClassWithDetails,
+  Payment,
+  FrozenLog,
+  MemberWithClasses,
+} from '@/types';
 import { EnrollmentCard } from './EnrollmentCard';
 import { MemberTransferModal } from './MemberTransferModal';
+import { FreezeStatusCard } from './FreezeStatusCard'; // Import new component
 import { PaymentConfirmModal } from '@/components/payments/PaymentConfirmModal';
 import { DataTable, DataTableColumn } from '@/components/shared/DataTable';
 import { showSuccess, showError } from '@/utils/notifications';
@@ -39,13 +46,17 @@ import { TruncatedTooltip } from '@/components/shared/TruncatedTooltip';
 
 interface MemberDetailViewProps {
   memberId: number;
+  effectiveDate: string;
 }
 
-export function MemberDetailView({ memberId }: MemberDetailViewProps) {
+export function MemberDetailView({
+  memberId,
+  effectiveDate,
+}: MemberDetailViewProps) {
   const router = useRouter();
   const { classes } = useClasses(); // For transfer modal options
 
-  const [member, setMember] = useState<Member | null>(null);
+  const [member, setMember] = useState<MemberWithClasses | null>(null);
   const [activeEnrollments, setActiveEnrollments] = useState<
     MemberClassWithDetails[]
   >([]);
@@ -157,6 +168,26 @@ export function MemberDetailView({ memberId }: MemberDetailViewProps) {
     } else {
       showSuccess('Ödeme alındı');
       setPayModal({ open: false, enrollment: null });
+      fetchData();
+    }
+    setActionLoading(false);
+  };
+
+  const handleUnfreeze = async () => {
+    if (!member) return;
+
+    // We can use a modal confirm here or just call action if card confirms?
+    // Card button says "Şimdi Aktifleştir".
+    setActionLoading(true);
+    // Dynamic import to avoid circular dep if needed, or just import at top?
+    // We need to import unfreezeMembership from actions/freeze.
+    const { unfreezeMembership } = await import('@/actions/freeze');
+
+    const result = await unfreezeMembership(member.id);
+    if (result.error) {
+      showError(result.error);
+    } else {
+      showSuccess('Üyelik aktifleştirildi');
       fetchData();
     }
     setActionLoading(false);
@@ -276,6 +307,16 @@ export function MemberDetailView({ memberId }: MemberDetailViewProps) {
           </Group>
         </Group>
 
+        {/* Freeze Status Card */}
+        {member.frozen_logs && (
+          <FreezeStatusCard
+            member={member}
+            logs={(member as any).frozen_logs || []}
+            effectiveDate={effectiveDate}
+            onUnfreezeClick={handleUnfreeze}
+          />
+        )}
+
         {/* Active Enrollments */}
         <Title order={4}>Kayıtlı Dersler</Title>
         {activeEnrollments.length === 0 ? (
@@ -290,6 +331,7 @@ export function MemberDetailView({ memberId }: MemberDetailViewProps) {
               <EnrollmentCard
                 key={enrollment.id}
                 enrollment={enrollment}
+                effectiveDate={effectiveDate}
                 onPay={() => handlePayClick(enrollment)}
                 onTransfer={() => handleTransferClick(enrollment)}
               />
@@ -345,8 +387,10 @@ export function MemberDetailView({ memberId }: MemberDetailViewProps) {
               ? formatDate(payModal.enrollment.next_payment_date, 'MMMM YYYY')
               : 'Ödeme',
             status: 'unpaid',
-            periodMonth:
-              payModal.enrollment.next_payment_date || new Date().toISOString(),
+            periodMonth: payModal.enrollment.next_payment_date || effectiveDate,
+            description: payModal.enrollment.next_payment_date
+              ? `${formatDate(payModal.enrollment.next_payment_date, 'MMMM YYYY')} Ödemesi`
+              : 'Ödeme',
           }}
         />
       )}

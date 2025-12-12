@@ -27,7 +27,7 @@ import {
 import { ClassDrawer } from './ClassDrawer';
 import { ClassMembersDrawer } from './ClassMembersDrawer';
 import { ClassMigrateModal } from './ClassMigrateModal';
-import { ClassWithInstructor, Instructor, Class } from '@/types';
+import { ClassWithInstructor, Instructor, Class, DanceType } from '@/types';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useDisclosure } from '@mantine/hooks';
 import { deactivateClass, bulkMigrateClass } from '@/actions/classes';
@@ -37,11 +37,13 @@ import { formatCurrency } from '@/utils/formatters';
 interface ClassesContentProps {
   initialClasses: ClassWithInstructor[];
   instructors: Instructor[];
+  danceTypes: DanceType[];
 }
 
 export function ClassesContent({
   initialClasses,
   instructors,
+  danceTypes,
 }: ClassesContentProps) {
   const [opened, { open, close }] = useDisclosure(false);
   const [membersDrawerOpen, { open: openMembers, close: closeMembers }] =
@@ -214,6 +216,7 @@ export function ClassesContent({
         onClose={close}
         classItem={selectedClass}
         instructors={instructors}
+        danceTypes={danceTypes}
       />
 
       <ClassMembersDrawer

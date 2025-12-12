@@ -24,6 +24,7 @@ import {
   logError,
 } from '@/utils/response-helpers';
 import { getTodayDate } from '@/utils/date-helpers';
+import { getServerToday, getServerNow } from '@/utils/server-date-helper';
 import { processStudentPayment } from '@/actions/finance';
 import dayjs from 'dayjs';
 import 'dayjs/locale/tr';
@@ -119,7 +120,8 @@ export async function getPaymentSchedule(
       effectiveEndDate = startDate.add(membershipDurationMonths, 'month');
     } else {
       // Monthly recurring - Show history + future 12 months
-      effectiveEndDate = dayjs().add(12, 'month');
+      const now = await getServerNow();
+      effectiveEndDate = now.add(12, 'month');
     }
 
     const schedule: PaymentScheduleItem[] = [];
@@ -139,7 +141,9 @@ export async function getPaymentSchedule(
       let status: PaymentScheduleItem['status'] = 'unpaid';
       if (paidPayment) {
         status = 'paid';
-      } else if (currentMonth.isBefore(dayjs().startOf('month'))) {
+      } else if (
+        currentMonth.isBefore((await getServerNow()).startOf('month'))
+      ) {
         status = 'overdue';
       }
 
@@ -186,7 +190,7 @@ export async function processClassPayment(
     }
 
     const supabase = await createClient();
-    const todayStr = dayjs().format('YYYY-MM-DD');
+    const todayStr = await getServerToday();
 
     // Fetch payment interval and class details for snapshot
     const { data: memberClass, error: mcError } = await supabase

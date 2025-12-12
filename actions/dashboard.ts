@@ -10,6 +10,7 @@ import {
   logError,
   errorResponse,
   successResponse,
+  handleSupabaseError,
 } from '@/utils/response-helpers';
 import type { ApiResponse } from '@/types';
 import { getOverdueMembers, getMembers } from '@/actions/members';
@@ -85,5 +86,58 @@ export async function getLessonPopularityStats(): Promise<
   } catch (error) {
     logError('getLessonPopularityStats', error);
     return errorResponse('Veri alınamadı');
+  }
+}
+
+import { getServerNow } from '@/utils/server-date-helper';
+import dayjs from 'dayjs';
+/**
+ * Get new members Stats (Last 6 Months)
+ */
+export async function getMemberGrowthStats(): Promise<
+  ApiResponse<{ date: string; count: number }[]>
+> {
+  try {
+    const supabase = await createClient();
+    const today = await getServerNow();
+
+    // Get start date (6 months ago)
+    const startDate = today.subtract(5, 'month').startOf('month');
+
+    const { data: members, error } = await supabase
+      .from('members')
+      .select('join_date')
+      .gte('join_date', startDate.format('YYYY-MM-DD'));
+
+    if (error) {
+      logError('getMemberGrowthStats', error);
+      return errorResponse(handleSupabaseError(error));
+    }
+
+    // Initialize last 6 months
+    const stats = [];
+    for (let i = 0; i < 6; i++) {
+      const d = startDate.clone().add(i, 'month');
+      stats.push({
+        date: d.format('MMMM'), // Full month name (Turkish locale if configured)
+        key: d.format('YYYY-MM'), // For sorting/grouping
+        count: 0,
+      });
+    }
+
+    // Aggregate
+    members.forEach((m) => {
+      const joinMonth = dayjs(m.join_date).format('YYYY-MM');
+      const stat = stats.find((s) => s.key === joinMonth);
+      if (stat) {
+        stat.count++;
+      }
+    });
+
+    // Return only name and count
+    return successResponse(stats.map(({ date, count }) => ({ date, count })));
+  } catch (error) {
+    logError('getMemberGrowthStats', error);
+    return errorResponse(handleSupabaseError(error));
   }
 }

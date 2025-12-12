@@ -37,18 +37,24 @@ export function calculatePeriodEndDate(startDate: Date | string): string {
 /**
  * Check if a payment is overdue
  */
-export function isPaymentOverdue(dueDate: Date | string | null): boolean {
+export function isPaymentOverdue(
+  dueDate: Date | string | null,
+  referenceDate?: Date | string
+): boolean {
   if (!dueDate) return false;
-  return dayjs(dueDate).isBefore(dayjs(), 'day');
+  return dayjs(dueDate).isBefore(dayjs(referenceDate || new Date()), 'day');
 }
 
 /**
  * Get days until next payment
  * Returns negative number if overdue
  */
-export function getDaysUntilPayment(dueDate: Date | string | null): number {
+export function getDaysUntilPayment(
+  dueDate: Date | string | null,
+  referenceDate?: Date | string
+): number {
   if (!dueDate) return 0;
-  return dayjs(dueDate).diff(dayjs(), 'day');
+  return dayjs(dueDate).diff(dayjs(referenceDate || new Date()), 'day');
 }
 
 /**
@@ -65,9 +71,13 @@ export function formatDate(
 /**
  * Format date as relative time (e.g., "3 gün önce", "5 gün sonra")
  */
-export function formatRelativeDate(date: Date | string | null): string {
+export function formatRelativeDate(
+  date: Date | string | null,
+  referenceDate?: Date | string
+): string {
   if (!date) return '-';
-  const diff = dayjs(date).diff(dayjs(), 'day');
+  const now = dayjs(referenceDate || new Date());
+  const diff = dayjs(date).diff(now, 'day');
 
   if (diff === 0) return 'Bugün';
   if (diff === 1) return 'Yarın';
@@ -79,8 +89,8 @@ export function formatRelativeDate(date: Date | string | null): string {
 /**
  * Get today's date in YYYY-MM-DD format
  */
-export function getTodayDate(): string {
-  return dayjs().format('YYYY-MM-DD');
+export function getTodayDate(referenceDate?: Date | string): string {
+  return dayjs(referenceDate || new Date()).format('YYYY-MM-DD');
 }
 
 /**
@@ -88,10 +98,11 @@ export function getTodayDate(): string {
  */
 export function adjustPaymentDateForFreeze(
   currentDueDate: string | null,
-  freezeDays: number
+  freezeDays: number,
+  referenceDate?: Date | string
 ): string {
   if (!currentDueDate) {
-    return calculateNextPaymentDate(getTodayDate());
+    return calculateNextPaymentDate(getTodayDate(referenceDate));
   }
   return dayjs(currentDueDate).add(freezeDays, 'day').format('YYYY-MM-DD');
 }

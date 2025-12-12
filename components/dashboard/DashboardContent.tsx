@@ -4,7 +4,7 @@ import { StatsCard } from '@/components/shared/StatsCard';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { MemberStatsChart } from '@/components/dashboard/MemberStatsChart';
 import { PaymentStatusChart } from '@/components/dashboard/PaymentStatusChart';
-import { LessonPopularityChart } from '@/components/dashboard/LessonPopularityChart';
+import { NewMembersChart } from '@/components/dashboard/NewMembersChart';
 import StaggerContainer, {
   itemVariants,
 } from '@/components/shared/StaggerContainer';
@@ -117,7 +117,7 @@ export function DashboardContent({
             <PaymentStatusChart />
           </MotionDiv>
           <MotionDiv>
-            <LessonPopularityChart />
+            <NewMembersChart />
           </MotionDiv>
         </SimpleGrid>
       </Stack>

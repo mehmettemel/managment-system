@@ -29,18 +29,15 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { getMembers, getOverdueMembers } from '@/actions/members';
 import { getRevenueByDateRange } from '@/actions/payments';
 import { formatDate, getDaysUntilPayment } from '@/utils/date-helpers';
+import { getServerNow } from '@/utils/server-date-helper';
 import type { DataTableColumn } from '@/components/shared/DataTable';
 import type { Member } from '@/types';
 
 // Stats Component (Server Component)
 async function DashboardStats() {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split('T')[0];
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split('T')[0];
+  const now = await getServerNow();
+  const firstDay = now.startOf('month').format('YYYY-MM-DD');
+  const lastDay = now.endOf('month').format('YYYY-MM-DD');
 
   const [
     activeMembersResult,
@@ -102,13 +99,13 @@ async function DashboardStats() {
 // Revenue Chart Component
 async function RevenueChart() {
   // Mock data - gerçek projeye entegre edilecek
-  const now = new Date();
+  const now = await getServerNow();
   const monthlyData = [];
 
   for (let i = 5; i >= 0; i--) {
-    const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const month = now.subtract(i, 'month');
     monthlyData.push({
-      month: month.toLocaleDateString('tr-TR', { month: 'short' }),
+      month: month.toDate().toLocaleDateString('tr-TR', { month: 'short' }),
       gelir: Math.floor(Math.random() * 50000) + 30000,
     });
   }

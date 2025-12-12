@@ -20,21 +20,24 @@ import {
 import { formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
 import { MemberClassWithDetails } from '@/types';
+import dayjs from 'dayjs';
 
 interface EnrollmentCardProps {
   enrollment: MemberClassWithDetails;
+  effectiveDate: string;
   onPay: () => void;
   onTransfer: () => void;
 }
 
 export function EnrollmentCard({
   enrollment,
+  effectiveDate,
   onPay,
   onTransfer,
 }: EnrollmentCardProps) {
   const isOverdue =
     enrollment.next_payment_date &&
-    new Date(enrollment.next_payment_date) < new Date();
+    dayjs(enrollment.next_payment_date).isBefore(dayjs(effectiveDate), 'day');
 
   // Use custom_price if active, else list price
   const displayPrice =

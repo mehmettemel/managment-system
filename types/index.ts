@@ -56,6 +56,7 @@ export type MemberWithClasses = Member & {
   member_classes: (MemberClass & {
     classes: Class | null;
   })[];
+  frozen_logs?: FrozenLog[];
 };
 
 export type ClassWithInstructor = Class & {

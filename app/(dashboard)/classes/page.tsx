@@ -5,12 +5,14 @@
 import { Title, Text, Stack } from '@mantine/core';
 import { getClasses } from '@/actions/classes';
 import { getInstructors } from '@/actions/instructors';
+import { getDanceTypes } from '@/actions/dance-types';
 import { ClassesContent } from '@/components/classes/ClassesContent';
 
 export default async function ClassesPage() {
-  const [classesRes, instructorsRes] = await Promise.all([
+  const [classesRes, instructorsRes, danceTypesRes] = await Promise.all([
     getClasses(),
     getInstructors(),
+    getDanceTypes(),
   ]);
 
   return (
@@ -23,6 +25,7 @@ export default async function ClassesPage() {
       <ClassesContent
         initialClasses={classesRes.data || []}
         instructors={instructorsRes.data || []}
+        danceTypes={danceTypesRes.data || []}
       />
     </Stack>
   );

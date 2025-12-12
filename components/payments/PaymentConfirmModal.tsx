@@ -16,6 +16,14 @@ import { IconCurrencyLira, IconCreditCard } from '@tabler/icons-react';
 import { PaymentScheduleItem } from '@/types';
 import { formatCurrency } from '@/utils/formatters';
 
+export interface PaymentItem {
+  amount: number;
+  periodLabel: string;
+  periodMonth?: string; // ISO date string for the period
+  status?: string;
+  description?: string; // Pre-filled description
+}
+
 interface PaymentConfirmModalProps {
   opened: boolean;
   onClose: () => void;
@@ -37,9 +45,9 @@ export function PaymentConfirmModal({
 }: PaymentConfirmModalProps) {
   const form = useForm({
     initialValues: {
-      amount: item?.amount || 0,
-      paymentMethod: 'Nakit',
-      description: '',
+      amount: item.amount,
+      paymentMethod: 'cash',
+      description: item.description || '',
     },
     validate: {
       amount: (value) => (value <= 0 ? 'Tutar 0 dan büyük olmalıdır' : null),

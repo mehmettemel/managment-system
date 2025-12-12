@@ -25,7 +25,11 @@ import {
   adjustPaymentDateForFreeze,
   calculateDaysBetween,
 } from '@/utils/date-helpers';
+import { getServerNow } from '@/utils/server-date-helper';
 import dayjs from 'dayjs';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
+dayjs.extend(isSameOrBefore);
 
 /**
  * Freeze a member's membership (Start the stopwatch)
@@ -121,24 +125,22 @@ export async function unfreezeMembership(
   try {
     const supabase = await createClient();
 
-    // 1. Find the OPEN freeze log
-    const { data: openLog, error: logError } = await supabase
+    // 1. Find the ACTIVE freeze log (Most recent one)
+    const { data: openLog, error: fetchLogError } = await supabase
       .from('frozen_logs')
       .select('*')
       .eq('member_id', memberId)
-      .is('end_date', null)
-      .maybeSingle(); // Use maybeSingle to avoid 406 if none found
+      .order('start_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (logError) {
-      logError('unfreezeMembership - fetch log', logError);
-      return errorResponse(handleSupabaseError(logError));
+    if (fetchLogError) {
+      logError('unfreezeMembership - fetch log', fetchLogError);
+      return errorResponse(handleSupabaseError(fetchLogError));
     }
 
     if (!openLog) {
-      // If no open log exists, check if they are actually frozen?
-      // If status is frozen but no log, just activate them.
-      // But if we want to be strict, we return error.
-      // For safety, let's allow "Force Unfreeze" effect by just setting active if no log found.
+      // If no log exists but status is frozen, force activate
       const { error: activateError } = await supabase
         .from('members')
         .update({ status: 'active' })
@@ -146,12 +148,26 @@ export async function unfreezeMembership(
 
       if (activateError)
         return errorResponse(handleSupabaseError(activateError));
-
       revalidatePath('/members');
       return successResponse(true);
     }
 
-    const today = dayjs();
+    const today = await getServerNow();
+
+    // Check if this log is already "closed" in the past
+    if (openLog.end_date && dayjs(openLog.end_date).isBefore(today)) {
+      // It was a past freeze. Member shouldn't be frozen probably?
+      // Just force activate.
+      const { error: activateError } = await supabase
+        .from('members')
+        .update({ status: 'active' })
+        .eq('id', memberId);
+
+      if (activateError)
+        return errorResponse(handleSupabaseError(activateError));
+      return successResponse(true);
+    }
+
     const startDate = dayjs(openLog.start_date);
     const daysDiff = today.diff(startDate, 'day');
     const effectiveDays = Math.max(0, daysDiff);
@@ -262,15 +278,165 @@ export async function getFrozenMembers(): Promise<ApiListResponse<FrozenLog>> {
       .select('*')
       .is('end_date', null)
       .order('start_date', { ascending: false });
-
-    if (error) {
-      logError('getFrozenMembers', error);
-      return errorListResponse(handleSupabaseError(error));
-    }
-
     return successListResponse(data || []);
   } catch (error) {
     logError('getFrozenMembers', error);
     return errorListResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Cancel a future scheduled freeze
+ */
+export async function cancelFutureFreeze(
+  logId: number
+): Promise<ApiResponse<boolean>> {
+  try {
+    const supabase = await createClient();
+
+    // 1. Verify it IS a future freeze
+    const { data: log, error: fetchError } = await supabase
+      .from('frozen_logs')
+      .select('*')
+      .eq('id', logId)
+      .single();
+
+    if (fetchError || !log) return errorResponse('Dondurma kaydı bulunamadı');
+
+    const today = await getServerNow();
+    if (
+      dayjs(log.start_date).isBefore(today) ||
+      dayjs(log.start_date).isSame(today, 'day')
+    ) {
+      return errorResponse(
+        'Bu dondurma işlemi şuan aktif veya geçmişte kalmış. İptal edilemez, ancak "Unfreeze" yapabilirsiniz.'
+      );
+    }
+
+    // 2. Delete the log
+    const { error: deleteError } = await supabase
+      .from('frozen_logs')
+      .delete()
+      .eq('id', logId);
+
+    if (deleteError) {
+      logError('cancelFutureFreeze', deleteError);
+      return errorResponse(handleSupabaseError(deleteError));
+    }
+
+    revalidatePath('/members');
+    return successResponse(true);
+  } catch (error) {
+    logError('cancelFutureFreeze', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Sync all member statuses based on current date
+ * (Used for Simulation Time Travel)
+ */
+export async function syncMemberStatuses(): Promise<
+  ApiResponse<{ updated: number; total: number }>
+> {
+  try {
+    const supabase = await createClient();
+    const today = await getServerNow();
+
+    // Fetch all members with their logs join
+    // We need to know if they have ANY log that covers "Today"
+    const { data: members, error } = await supabase
+      .from('members')
+      .select(
+        `
+        id, 
+        status, 
+        frozen_logs (
+          start_date,
+          end_date
+        )
+      `
+      )
+      .order('id');
+
+    if (error) throw error;
+    if (!members) return successResponse({ updated: 0, total: 0 });
+
+    let updatedCount = 0;
+    const updates = [];
+
+    for (const member of members) {
+      let shouldBeFrozen = false;
+
+      // Check logs
+      // Check logs
+      if (member.frozen_logs && member.frozen_logs.length > 0) {
+        // Is there any log where start <= today AND (end is null OR end > today)
+        shouldBeFrozen = member.frozen_logs.some((log) => {
+          const start = dayjs(log.start_date);
+          const end = log.end_date ? dayjs(log.end_date) : null;
+
+          console.log(
+            `[Sync] Member ${member.id} Log: ${log.start_date} - ${log.end_date || 'Ingdif'}. Today: ${today.format('YYYY-MM-DD')}`
+          );
+
+          // If start is in future, it doesn't count yet
+          if (start.isAfter(today, 'day')) {
+            console.log(`[Sync] Member ${member.id}: Start date is future.`);
+            return false;
+          }
+
+          // If it started, did it end?
+          // If ends TODAY, we treat as ended (active).
+          if (end && end.isSameOrBefore(today, 'day')) {
+            console.log(
+              `[Sync] Member ${member.id}: Ended on or before today.`
+            );
+            return false;
+          }
+
+          console.log(`[Sync] Member ${member.id}: MATCHES freeze condition.`);
+          return true;
+        });
+      }
+
+      // Determine correct status
+      let correctStatus = member.status;
+      if (shouldBeFrozen && member.status !== 'frozen') {
+        correctStatus = 'frozen';
+        console.log(
+          `[Sync] Member ${member.id}: Changing status ACTIVE -> FROZEN`
+        );
+      } else if (!shouldBeFrozen && member.status === 'frozen') {
+        correctStatus = 'active'; // Or whatever it was? Usually active.
+        console.log(
+          `[Sync] Member ${member.id}: Changing status FROZEN -> ACTIVE`
+        );
+      } else {
+        // Status matches logic, no change needed.
+        continue;
+      }
+
+      // If status needs change
+      if (correctStatus !== member.status) {
+        updatedCount++;
+        updates.push(
+          supabase
+            .from('members')
+            .update({ status: correctStatus })
+            .eq('id', member.id)
+        );
+      }
+    }
+
+    if (updates.length > 0) {
+      await Promise.all(updates);
+      revalidatePath('/members');
+    }
+
+    return successResponse({ updated: updatedCount, total: members.length });
+  } catch (error) {
+    logError('syncMemberStatuses', error);
+    return errorResponse(handleSupabaseError(error));
   }
 }

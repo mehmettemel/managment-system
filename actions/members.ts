@@ -28,6 +28,7 @@ import {
   validateRequiredFields,
 } from '@/utils/response-helpers';
 import { getTodayDate } from '@/utils/date-helpers';
+import { getServerToday } from '@/utils/server-date-helper';
 import dayjs from 'dayjs';
 
 /**
@@ -70,7 +71,7 @@ export async function getMembers(
  */
 export async function getMemberById(
   id: number
-): Promise<ApiResponse<Member & { member_classes: MemberClassWithDetails[] }>> {
+): Promise<ApiResponse<MemberWithClasses>> {
   try {
     const supabase = await createClient();
 
@@ -89,7 +90,8 @@ export async function getMemberById(
           payment_interval,
           custom_price,
           classes (*)
-        )
+        ),
+        frozen_logs (*)
       `
       )
       .eq('id', id)
@@ -100,9 +102,7 @@ export async function getMemberById(
       return errorResponse(handleSupabaseError(error));
     }
 
-    return successResponse(
-      data as Member & { member_classes: MemberClassWithDetails[] }
-    );
+    return successResponse(data as unknown as MemberWithClasses);
   } catch (error) {
     logError('getMemberById', error);
     return errorResponse(handleSupabaseError(error));
@@ -131,7 +131,7 @@ export async function createMember(
     }
 
     const supabase = await createClient();
-    const today = getTodayDate();
+    const today = await getServerToday();
 
     // Prepare member data (no payment dates on member level anymore)
     const memberData: MemberInsert = sanitizeInput({
@@ -279,7 +279,7 @@ export async function searchMembers(
 export async function getOverdueMembers(): Promise<ApiListResponse<Member>> {
   try {
     const supabase = await createClient();
-    const today = getTodayDate();
+    const today = await getServerToday();
 
     // Native JOIN query to avoid N+1
     // !inner ensures we only get members who HAVE a matching overdue class

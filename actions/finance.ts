@@ -23,6 +23,7 @@ import {
   logError,
 } from '@/utils/response-helpers';
 import dayjs from 'dayjs';
+import { getServerNow } from '@/utils/server-date-helper';
 
 /**
  * Calculate and Process Instructor Commission for a Student Payment
@@ -91,7 +92,7 @@ export async function processStudentPayment(
 
     // 5. Insert into Ledger
     const ledgerEntries = [];
-    const today = dayjs();
+    const today = await getServerNow();
 
     for (let i = 0; i < monthsCount; i++) {
       const dueDate = today.add(i, 'month').format('YYYY-MM-DD');
@@ -252,7 +253,7 @@ export async function getPayableLedger(): Promise<
 > {
   try {
     const supabase = await createClient();
-    const today = dayjs().format('YYYY-MM-DD');
+    const today = (await getServerNow()).format('YYYY-MM-DD');
 
     // Fetch active instructors
     const { data: instructors } = await supabase
@@ -309,7 +310,7 @@ export async function processPayout(
 ): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
-    const today = dayjs().format('YYYY-MM-DD');
+    const today = (await getServerNow()).format('YYYY-MM-DD');
 
     // 0. Safety Check: Verify there is pending amount
     // Ideally we re-calculate valid amount here to match 'amount' passed

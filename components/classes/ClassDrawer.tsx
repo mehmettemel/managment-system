@@ -20,7 +20,7 @@ import { TimeInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { createClass, updateClass } from '@/actions/classes';
 import { showSuccess, showError } from '@/utils/notifications';
-import type { Class, ClassInsert, Instructor } from '@/types';
+import type { Class, ClassInsert, Instructor, DanceType } from '@/types';
 import { IconClock } from '@tabler/icons-react';
 
 interface ClassDrawerProps {
@@ -28,6 +28,7 @@ interface ClassDrawerProps {
   onClose: () => void;
   classItem?: Class | null;
   instructors: Instructor[];
+  danceTypes: DanceType[];
   onSuccess?: () => void;
 }
 
@@ -36,6 +37,7 @@ export function ClassDrawer({
   onClose,
   classItem,
   instructors,
+  danceTypes,
   onSuccess,
 }: ClassDrawerProps) {
   const [loading, setLoading] = useState(false);
@@ -44,6 +46,7 @@ export function ClassDrawer({
     initialValues: {
       name: '',
       instructor_id: null,
+      dance_type_id: null,
       day_of_week: 'Pazartesi',
       start_time: '19:00',
       duration_minutes: 60,
@@ -52,6 +55,7 @@ export function ClassDrawer({
     validate: {
       name: (value) => (value.trim().length < 2 ? 'Ders adı gerekli' : null),
       instructor_id: (value) => (!value ? 'Eğitmen seçimi zorunludur' : null),
+      dance_type_id: (value) => (!value ? 'Dans türü seçimi zorunludur' : null),
       start_time: (value) => (!value ? 'Başlangıç saati zorunludur' : null),
     },
   });
@@ -61,6 +65,7 @@ export function ClassDrawer({
       form.setValues({
         name: classItem.name,
         instructor_id: classItem.instructor_id,
+        dance_type_id: classItem.dance_type_id,
         day_of_week: classItem.day_of_week,
         start_time: classItem.start_time,
         duration_minutes: classItem.duration_minutes,
@@ -78,6 +83,7 @@ export function ClassDrawer({
       const payload = {
         ...values,
         instructor_id: Number(values.instructor_id),
+        dance_type_id: Number(values.dance_type_id),
         duration_minutes: Number(values.duration_minutes),
         price_monthly: Number(values.price_monthly),
       };
@@ -162,6 +168,26 @@ export function ClassDrawer({
             }
             onChange={(val) =>
               form.setFieldValue('instructor_id', val ? Number(val) : null)
+            }
+          />
+
+          <Select
+            label="Dans Türü"
+            placeholder="Seçin"
+            data={danceTypes.map((dt) => ({
+              value: String(dt.id),
+              label: dt.name,
+            }))}
+            searchable
+            required
+            {...form.getInputProps('dance_type_id')}
+            value={
+              form.values.dance_type_id
+                ? String(form.values.dance_type_id)
+                : null
+            }
+            onChange={(val) =>
+              form.setFieldValue('dance_type_id', val ? Number(val) : null)
             }
           />
 
