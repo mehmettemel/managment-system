@@ -22,14 +22,16 @@ Proje, "Genel Üyelik" yerine **"Ders Bazlı Kayıt"** (Enrollment) mantığıyl
 
 ## 💰 Finans & Ödemeler
 
-### Öğrenci Ödemeleri
+### 3. Ödeme Yönetimi
 
-- Ödemeler belirli bir ders (`class_id`) için alınır.
-- **Snapshot Pricing**: Ödeme alındığı andaki fiyat ve ders adı veritabanına kaydedilir. İleride ders fiyatı değişse bile geçmiş ödeme kayıtları değişmez.
-- **Payment Interval**: Aylık, 3 aylık, 6 aylık veya Yıllık ödeme planları desteklenir.
-- **Kısmi Ödeme**: Şimdilik desteklenmemektedir, tam dönem ücreti alınır.
-
-### Eğitmen Hakedişleri (Instructor Payouts)
+- **Detaylı Takip**: Ödemelerin tarih, tutar, yöntem ve üye bazlı takibi.
+- **Gelişmiş Filtreleme**: Üye, Ders ve Ödeme Yöntemine göre çoklu filtreleme imkanı.
+- **Sayfalama**: Yüksek veri hacimleri için sunucu taraflı sayfalama ve sıralama.
+- **Eğitmen Ödemeleri**:
+  - Eğitmen hakedişlerinin hesaplanması (sabit oran veya ders bazlı).
+  - Hakediş ödemelerinin kaydı ve "Ödenecekler" listesi.
+  - Detaylı "Ödeme Geçmişi" tablosu (Filtrelenebilir ve Sıralanabilir).
+- **Notlar**: Ödemelere dair açıklamaların tooltip ile görüntülenebilmesi.
 
 Sistem, eğitmenlerin ne kadar kazanacağını otomatik hesaplar.
 

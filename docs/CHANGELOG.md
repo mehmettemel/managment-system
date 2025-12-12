@@ -6,6 +6,20 @@ Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 
 ### 🚀 Major Features: Enrollment System & Finance
 
+#### [Unreleased]
+
+### Added
+
+- **Payments**: Server-side pagination and advanced filtering (Member, Class, Payment Method) for the payments table.
+- **Instructors**: "Payment History" (Geçmiş Ödemeler) tab with server-side pagination, sorting, and instructor filtering.
+- **Notes**: Added `description` (Payment Note) column to payments tables with smart truncation and tooltip support.
+- **UI**: Improved `DataTable` component with server-side sorting and controlled pagination props.
+
+### Changed
+
+- Refactored `getRecentPayments` to `getFilteredPayments` to support robust data fetching.
+- Updated `InstructorPaymentsTable` to use the shared `DataTable` component for history.
+
 #### Enrollment-Based Membership (Kayıt Bazlı Sistem)
 
 - ✅ **Class Specific Enrollment**: Üyeler artık genel bir üyelik yerine spesifik derslere kayıt oluyor (`member_classes` tablosu genişletildi).

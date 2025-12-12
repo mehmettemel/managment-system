@@ -35,6 +35,7 @@ import { PaymentConfirmModal } from '@/components/payments/PaymentConfirmModal';
 import { DataTable, DataTableColumn } from '@/components/shared/DataTable';
 import { showSuccess, showError } from '@/utils/notifications';
 import { useClasses } from '@/hooks/use-classes';
+import { TruncatedTooltip } from '@/components/shared/TruncatedTooltip';
 
 interface MemberDetailViewProps {
   memberId: number;
@@ -198,6 +199,13 @@ export function MemberDetailView({ memberId }: MemberDetailViewProps) {
       label: 'Kayıtlı Fiyat',
       render: (row) =>
         row.snapshot_price ? formatCurrency(row.snapshot_price) : '-',
+    },
+    {
+      key: 'description',
+      label: 'Açıklama',
+      render: (row) => (
+        <TruncatedTooltip text={row.description} maxLength={20} size="sm" />
+      ),
     },
   ];
 

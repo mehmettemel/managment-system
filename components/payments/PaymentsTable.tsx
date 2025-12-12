@@ -10,6 +10,7 @@ import { Payment } from '@/types';
 import { formatCurrency } from '@/utils/formatters';
 import dayjs from 'dayjs';
 import { showError } from '@/utils/notifications';
+import { TruncatedTooltip } from '@/components/shared/TruncatedTooltip';
 
 // Extend Payment type to include joined relations
 interface PaymentWithRelations extends Payment {
@@ -132,6 +133,13 @@ export function PaymentsTable() {
         <Badge variant="light" color="gray">
           {item.payment_method}
         </Badge>
+      ),
+    },
+    {
+      key: 'description',
+      label: 'Açıklama',
+      render: (item) => (
+        <TruncatedTooltip text={item.description} maxLength={25} size="sm" />
       ),
     },
     {
