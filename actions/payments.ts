@@ -101,35 +101,34 @@ export async function getPaymentSchedule(
     // 3. Generate Schedule
     // Start from member join date or class creation date (fallback to join date is safer)
     // memberClass.created_at is reliable if created after schema change, but fallback to member join date
+    // 3. Generate Schedule
+    // Start from enrollment date (created_at)
+    // Fallback to join_date only if created_at is missing (legacy data)
     const startDate = dayjs(
-      (memberClass as any).members?.join_date || memberClass.created_at
+      memberClass.created_at || (memberClass as any).members?.join_date
     );
 
-    // Generate up to 6 months in future from today
-    const endDate = dayjs().add(6, 'month');
+    const membershipDurationMonths = (memberClass as any).payment_interval || 1;
+    let effectiveEndDate;
+
+    // Logic:
+    // - Fixed Term (e.g. 3, 6, 12 months): Show exactly that period.
+    // - Monthly (1 month): Show from start date until 1 year from NOW (rolling window).
+    if (membershipDurationMonths > 1) {
+      // Fixed Duration Package
+      effectiveEndDate = startDate.add(membershipDurationMonths, 'month');
+    } else {
+      // Monthly recurring - Show history + future 12 months
+      effectiveEndDate = dayjs().add(12, 'month');
+    }
 
     const schedule: PaymentScheduleItem[] = [];
-    // interval (duration) logic: if user specified duration (e.g. 1, 3, 6, 12),
-    // we should generate exactly that many months from start date.
-    // If interval is null/1, default to standard view (e.g. 6 months ahead).
-
-    // We treat 'payment_interval' as the Total Duration of the membership.
-    // We want to generate MONTHLY items for that duration.
-
-    const membershipDurationMonths = (memberClass as any).payment_interval || 1;
-
-    // Recalculate endDate based on duration
-    // If it's a fixed duration membership (e.g. > 1 month plan), show exactly that many months
-    // If it's standard monthly (interval=1), show 6 months ahead + history?
-    // User logic implies strict plans: "1 yıllık seçerse her ay 750 tl".
-    const effectiveEndDate = startDate.add(membershipDurationMonths, 'month');
-
-    let currentMonth = startDate.startOf('month');
+    let currentMonth = startDate; // Use exact start date (e.g. 15th), do NOT snap to startOf('month')
 
     // Generate schedule until effective end date
     while (currentMonth.isBefore(effectiveEndDate)) {
       const periodStart = currentMonth.format('YYYY-MM-DD');
-      const nextMonth = currentMonth.add(1, 'month'); // Always 1 month increment
+      const nextMonth = currentMonth.add(1, 'month');
 
       // Find if paid: existing payment coverage
       const paidPayment = payments?.find((p) => {
@@ -158,13 +157,7 @@ export async function getPaymentSchedule(
       currentMonth = nextMonth;
     }
 
-    // Reverse to show latest first? User asked for "alt alta listele", usually descending for history, ascending for future?
-    // Let's sort Descending for table (Future -> Past), or filter tabs?
-    // "Geçmiş ve gelecek tüm ödemeleri o datatableda listelensin"
-    // Usually chronological is better for reading "what happened then what happens".
-    // Let's return Ascending (Oldest first) so user sees history flow. Or Descending.
-    // Let's stick to Descending (Newest first) as it's standard for ledgers.
-
+    // Return Descending (Newest First) so user sees upcoming/recent first
     return successListResponse(schedule.reverse());
   } catch (error) {
     logError('getPaymentSchedule', error);
@@ -228,7 +221,8 @@ export async function processClassPayment(
       : (memberClass.classes as any)?.name;
 
     // Always pay for 1 month regardless of total membership duration
-    const periodStart = dayjs(periodDate).startOf('month').format('YYYY-MM-DD');
+    // Use EXACT date provided (e.g. 15th), do not snap to 1st.
+    const periodStart = dayjs(periodDate).format('YYYY-MM-DD');
     const periodEnd = dayjs(periodDate).add(1, 'month').format('YYYY-MM-DD');
     const periodLabel = dayjs(periodDate).format('MMMM YYYY');
 
@@ -284,7 +278,27 @@ export async function processClassPayment(
     }
 
     // 3. Process instructor commission
-    await processStudentPayment(payment.id, payment.amount, 1, classId);
+    // Calculate how many months this payment covers
+    // Use snapshotPrice (amount paid) vs memberClass price logic?
+    // Usually: Amount Paid / Price Per Month = Months Count
+    let pricePerMonth =
+      memberClass.custom_price ||
+      (memberClass.classes as any)?.price_monthly ||
+      0;
+
+    // Safety check for division by zero
+    if (pricePerMonth === 0) pricePerMonth = amount;
+
+    // Calculate months (rounding to nearest, e.g. 799.99 -> 1)
+    let monthsPaid = Math.round(amount / pricePerMonth);
+    if (monthsPaid < 1) monthsPaid = 1;
+
+    await processStudentPayment(
+      payment.id,
+      payment.amount,
+      monthsPaid,
+      classId
+    );
 
     revalidatePath(`/members/${memberId}`);
     return successResponse(payment);
@@ -381,6 +395,13 @@ export async function deletePayment(id: number): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
 
+    // 1. Delete associated instructor ledger entries first (Cascade)
+    await supabase
+      .from('instructor_ledger')
+      .delete()
+      .eq('student_payment_id', id);
+
+    // 2. Delete the payment
     const { error } = await supabase.from('payments').delete().eq('id', id);
 
     if (error) {

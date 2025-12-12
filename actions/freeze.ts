@@ -104,14 +104,10 @@ export async function unfreezeMembership(
 ): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
-    console.log(`Unfreezing member: ${memberId}`); // Debug log
+    console.log(`Unfreezing member: ${memberId}`);
 
-    // 1. Find the open freeze log (end_date is null) OR the latest one that started?
-    // Ideally we look for one where end_date IS NULL.
-    // But if they set a specific date and came back EARLY? We should find the latest active freeze.
-    // For simplicity per requirements: "Veritabanından o üyenin kapanmamış (end_date is NULL) kaydını bul"
-
-    let { data: openLog, error: logErrorMsg } = await supabase
+    // 1. Find the open freeze log or latest log
+    let { data: openLog } = await supabase
       .from('frozen_logs')
       .select('*')
       .eq('member_id', memberId)
@@ -124,11 +120,8 @@ export async function unfreezeMembership(
     const today = dayjs().format('YYYY-MM-DD');
     let startDate = openLog?.start_date;
 
-    // Fallback: If no NULL end_date log found (maybe they set a date but want to unfreeze early/now),
-    // find the latest log that covers today? Or just the latest log where member is frozen?
-    // Since member status is 'frozen', there MUST be a log.
+    // Fallback: search for latest log if no open log found
     if (!openLog) {
-      // Attempt to find latest log even if it has end_date (maybe future end date)
       const { data: latestLog } = await supabase
         .from('frozen_logs')
         .select('*')
@@ -143,61 +136,69 @@ export async function unfreezeMembership(
       }
     }
 
-    if (!startDate) {
+    if (!startDate || !openLog) {
       return errorResponse('Aktif bir dondurma kaydı bulunamadı.');
     }
 
     // 2. Calculate Duration
-    // If StartDate is 15 March, Today is 15 June. Diff = 90 days.
     const daysDiff = dayjs(today).diff(dayjs(startDate), 'day');
-
-    // Ensure positive (if unfreezing same day)
     const effectiveDays = Math.max(0, daysDiff);
 
-    // 3. Update Member Dates
-    const { data: member, error: memberError } = await supabase
-      .from('members')
-      .select('next_payment_due_date')
-      .eq('id', memberId)
-      .single();
+    // 3. Update Member Classes (The core fix)
+    // Fetch all active enrollments for this member
+    const { data: enrollments, error: enrollError } = await supabase
+      .from('member_classes')
+      .select('*')
+      .eq('member_id', memberId)
+      .eq('active', true);
 
-    if (memberError || !member) {
-      logError(
-        'unfreezeMembership - Member not found via ID',
-        memberError || { message: `ID: ${memberId}` }
-      );
-      return errorResponse('Üye bulunamadı');
+    if (enrollError) {
+      logError('unfreezeMembership - fetch classes', enrollError);
+      return errorResponse('Ders kayıtları alınamadı');
     }
 
-    // If member has a due date, extend it.
-    let newDueDate = member.next_payment_due_date;
-    if (newDueDate) {
-      newDueDate = dayjs(newDueDate)
-        .add(effectiveDays, 'day')
-        .format('YYYY-MM-DD');
+    // Update each class enrollment date
+    if (enrollments && enrollments.length > 0) {
+      for (const enrollment of enrollments) {
+        if (enrollment.next_payment_date) {
+          const newDate = dayjs(enrollment.next_payment_date)
+            .add(effectiveDays, 'day')
+            .format('YYYY-MM-DD');
+
+          await supabase
+            .from('member_classes')
+            .update({ next_payment_date: newDate })
+            .eq('id', enrollment.id);
+        }
+      }
     }
 
     // 4. Close the log
-    const { error: closeLogError } = await supabase
-      .from('frozen_logs')
-      .update({
-        end_date: today,
-        days_count: effectiveDays,
-      })
-      .eq('id', openLog!.id); // We know openLog exists here
+    // Only update if it was open (end_date was null)
+    // If we picked up a closed log (latestLog fallback), we technically shouldn't update it unless logic dictates.
+    // However, if member is 'frozen', we must have an open log usually.
+    // If we used fallback, it might mean data inconsistency, but let's try to close if it's null.
+    if (!openLog.end_date) {
+      const { error: closeLogError } = await supabase
+        .from('frozen_logs')
+        .update({
+          end_date: today,
+          days_count: effectiveDays,
+        })
+        .eq('id', openLog.id);
 
-    if (closeLogError) {
-      logError('unfreezeMembership - close log', closeLogError);
-      // Continue? Critical step.
-      return errorResponse('Dondurma kaydı kapatılamadı.');
+      if (closeLogError) {
+        logError('unfreezeMembership - close log', closeLogError);
+        return errorResponse('Dondurma kaydı kapatılamadı.');
+      }
     }
 
     // 5. Update Member Status
+    // Removed next_payment_due_date update as it's deprecated
     const { error: updateMemberError } = await supabase
       .from('members')
       .update({
         status: 'active',
-        next_payment_due_date: newDueDate,
       })
       .eq('id', memberId);
 

@@ -290,9 +290,7 @@ export async function bulkMigrateClass(
     }));
 
     // 4. Transaction-like execution
-    // A. Insert new records
-    // Note: If using multiple inserts, we might need a loop or simple bulk insert if columns match.
-    // Supabase insert takes array.
+    // A. Insert new records FIRST
     const { error: insertError } = await supabase
       .from('member_classes')
       .insert(newEnrollments);
@@ -302,18 +300,18 @@ export async function bulkMigrateClass(
       return errorResponse(handleSupabaseError(insertError));
     }
 
-    // B. Deactivate old records
+    // B. Deactivate old records SECOND
     const { error: deactivateError } = await supabase
       .from('member_classes')
       .update({ active: false })
       .eq('class_id', oldClassId);
 
     if (deactivateError) {
-      // Warning: Partial failure potential here if insert succeeded but this failed.
+      // Warning: Duplicate active state risk.
       logError('bulkMigrateClass - deactivate members', deactivateError);
     }
 
-    // C. Archive old class
+    // C. Archive old class LAST
     const { error: archiveError } = await supabase
       .from('classes')
       .update({ archived: true, active: false })

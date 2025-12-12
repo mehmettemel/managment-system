@@ -117,12 +117,34 @@ export function useOverdueMembers() {
         const supabase = createClient();
         const today = new Date().toISOString().split('T')[0];
 
+        // 1. Find overdue enrollments first
+        // We select distinct member_id ideally, but JS client select distinct is tricky.
+        // We fetch minimal data.
+        const { data: overdueClasses, error: classError } = await supabase
+          .from('member_classes')
+          .select('member_id')
+          .eq('active', true)
+          .lt('next_payment_date', today);
+
+        if (classError) throw classError;
+
+        if (!overdueClasses || overdueClasses.length === 0) {
+          setMembers([]);
+          return;
+        }
+
+        // 2. Get unique distinct IDs
+        const uniqueMemberIds = [
+          ...new Set(overdueClasses.map((item) => item.member_id)),
+        ];
+
+        // 3. Fetch members
         const { data, error }: any = await supabase
           .from('members')
           .select('*')
+          .in('id', uniqueMemberIds)
           .eq('status', 'active')
-          .lt('next_payment_due_date', today)
-          .order('next_payment_due_date', { ascending: true });
+          .order('first_name');
 
         if (error) throw error;
 

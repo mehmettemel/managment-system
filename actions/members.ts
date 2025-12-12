@@ -140,7 +140,6 @@ export async function createMember(
       phone: formData.phone || null,
       join_date: today,
       status: 'active',
-      monthly_fee: 0, // No global monthly fee anymore
     });
 
     // Create member
@@ -397,19 +396,7 @@ export async function transferMember(
     }
     // IF USE_NEW, custom_price remains null (will use new class list price)
 
-    // 3. Deactivate old
-    const { error: deactivateError } = await supabase
-      .from('member_classes')
-      .update({ active: false })
-      .eq('id', oldEnrollment.id);
-
-    if (deactivateError) {
-      return errorResponse(
-        'Eski kayıt kapatılamadı: ' + deactivateError.message
-      );
-    }
-
-    // 4. Create new enrollment
+    // 3. Create new enrollment (INSERT FIRST for safety)
     const { error: insertError } = await supabase
       .from('member_classes')
       .insert({
@@ -423,8 +410,19 @@ export async function transferMember(
 
     if (insertError) {
       logError('transferMember - insert', insertError);
-      // Rollback attempt? For now, risk of partial state.
       return errorResponse(handleSupabaseError(insertError));
+    }
+
+    // 4. Deactivate old (UPDATE SECOND)
+    const { error: deactivateError } = await supabase
+      .from('member_classes')
+      .update({ active: false })
+      .eq('id', oldEnrollment.id);
+
+    if (deactivateError) {
+      // Critical: New created, Old not deactivated. Duplicate state.
+      // We log highly visible error but don't fail the request as the user is effectively transferred.
+      logError('transferMember - deactivate OLD failed', deactivateError);
     }
 
     revalidatePath(`/members/${memberId}`);
