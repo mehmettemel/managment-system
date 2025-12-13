@@ -73,11 +73,12 @@ export function ClassMembersDrawer({
                 <Table.Th>Ad Soyad</Table.Th>
                 <Table.Th>Telefon</Table.Th>
                 <Table.Th>Durum</Table.Th>
+                <Table.Th>Kayıt Tarihi</Table.Th>
                 <Table.Th w={50}></Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {members.map((m) => (
+              {members.map((m: any) => (
                 <Table.Tr key={m.id}>
                   <Table.Td>
                     {m.first_name} {m.last_name}
@@ -93,6 +94,15 @@ export function ClassMembersDrawer({
                         {m.status}
                       </Badge>
                     )}
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm">
+                      {m.enrollment_date
+                        ? new Date(m.enrollment_date).toLocaleDateString(
+                            'tr-TR'
+                          )
+                        : '-'}
+                    </Text>
                   </Table.Td>
                   <Table.Td>
                     <Tooltip label="Üye Detayına Git">

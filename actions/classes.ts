@@ -220,9 +220,17 @@ export async function getClassMembers(
       return errorListResponse(handleSupabaseError(error));
     }
 
-    // Flatten result to return just members
-    // Flatten result to return just members
-    const members = data.map((item: any) => item.members).filter(Boolean);
+    // Flatten result to return just members with enrollment_date
+    const members = data
+      .map((item: any) => {
+        if (!item.members) return null;
+        return {
+          ...item.members,
+          enrollment_date: item.created_at, // Add enrollment date from member_class
+        };
+      })
+      .filter(Boolean);
+
     return successListResponse(members);
   } catch (error) {
     logError('getClassMembers', error);

@@ -17,6 +17,7 @@ import {
   IconArrowsExchange,
   IconDots,
   IconList,
+  IconHistory,
 } from '@tabler/icons-react';
 import { formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
@@ -85,6 +86,20 @@ export function EnrollmentCard({
             {enrollment.next_payment_date
               ? formatDate(enrollment.next_payment_date)
               : 'Belirlenmedi'}
+          </Text>
+        </Group>
+
+        <Group justify="space-between">
+          <Group gap="xs">
+            <ThemeIcon color="gray" variant="light" size="sm">
+              <IconHistory size={14} />
+            </ThemeIcon>
+            <Text size="sm" c="dimmed">
+              Kayıt Tarihi
+            </Text>
+          </Group>
+          <Text fw={500} size="sm">
+            {enrollment.created_at ? formatDate(enrollment.created_at) : '-'}
           </Text>
         </Group>
 

@@ -27,6 +27,7 @@ import {
   updateMember,
   getMemberById,
   updateMemberClassDetails,
+  addMemberToClasses,
 } from '@/actions/members';
 import { showSuccess, showError } from '@/utils/notifications';
 import type { Member, MemberFormData } from '@/types';
@@ -175,29 +176,63 @@ export function MemberDrawer({
         const result = await updateMember(member.id, {
           first_name: values.first_name.trim(),
           last_name: values.last_name.trim(),
-          phone: values.phone?.trim() || null,
         });
 
         // Update class details (price and duration)
         // We iterate over existing classes and update them if needed
+        const existingClassIds = new Set<string>();
+
         if ((member as any).member_classes) {
           await Promise.all(
             (member as any).member_classes.map(async (mc: any) => {
               const cId = String(mc.class_id);
-              const newPrice = values.prices[cId];
-              const newDuration = values.durations[cId];
+              existingClassIds.add(cId); // Track existing
 
-              if (newPrice !== undefined || newDuration !== undefined) {
-                await updateMemberClassDetails(member.id, mc.class_id, {
-                  price: newPrice !== undefined ? Number(newPrice) : undefined,
-                  custom_price:
-                    newPrice !== undefined ? Number(newPrice) : undefined,
-                  payment_interval:
-                    newDuration !== undefined ? Number(newDuration) : undefined,
-                });
+              // Only process if it is STILL selected (logic below keeps select enabled)
+              // But currently removal is not supported, so they should be in values.class_ids
+              if (values.class_ids.includes(cId)) {
+                const newPrice = values.prices[cId];
+                const newDuration = values.durations[cId];
+
+                if (newPrice !== undefined || newDuration !== undefined) {
+                  await updateMemberClassDetails(member.id, mc.class_id, {
+                    price:
+                      newPrice !== undefined ? Number(newPrice) : undefined,
+                    custom_price:
+                      newPrice !== undefined ? Number(newPrice) : undefined,
+                    payment_interval:
+                      newDuration !== undefined
+                        ? Number(newDuration)
+                        : undefined,
+                  });
+                }
               }
             })
           );
+        }
+
+        // D1: Identify NEW classes and add them
+        const newClassIds = values.class_ids.filter(
+          (id) => !existingClassIds.has(id)
+        );
+
+        if (newClassIds.length > 0) {
+          const newRegistrations = newClassIds.map((id) => ({
+            class_id: Number(id),
+            price: values.prices[id] || 0,
+            duration: values.durations[id] || 1,
+          }));
+
+          const addResult = await addMemberToClasses(
+            member.id,
+            newRegistrations
+          );
+          if (addResult.error) {
+            showError(
+              'Yeni dersler eklenirken hata oluştu: ' + addResult.error
+            );
+            // Return or continue? Let's assume partial success is OK or just notify.
+          }
         }
 
         if (result.error) showError(result.error);
@@ -206,6 +241,8 @@ export function MemberDrawer({
           onSuccess?.();
           onClose();
         }
+        onClose(); // Ensure close runs if success
+        // Note: onClose calls reset so we are good.
       } else {
         // Create Logic
         const classRegistrations = values.class_ids.map((id) => ({
@@ -310,10 +347,10 @@ export function MemberDrawer({
                 {...form.getInputProps('class_ids')}
                 description={
                   member
-                    ? 'Düzenleme modunda ders değişikliği yapılamaz'
+                    ? 'Yeni ders ekleyebilir veya mevcut derslerin ücretini güncelleyebilirsiniz'
                     : 'Üyenin katılacağı dersler'
                 }
-                disabled={!!member} // Disable class changes in edit mode for simplicity/safety
+                // disabled={!!member} // Enabled for D1
               />
 
               {/* Dynamic Price/Duration Fields for Each Selected Class */}

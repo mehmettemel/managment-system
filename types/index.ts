@@ -55,6 +55,7 @@ export type InstructorPayoutUpdate = Updates<'instructor_payouts'>;
 export type MemberWithClasses = Member & {
   member_classes: (MemberClass & {
     classes: Class | null;
+    created_at: string | null;
   })[];
   frozen_logs?: FrozenLog[];
 };
@@ -85,6 +86,7 @@ export interface MemberClassWithDetails {
   payment_interval: number | null;
   custom_price: number | null;
   classes: Class;
+  created_at: string | null;
 }
 
 // Payment with class info
@@ -130,6 +132,7 @@ export interface ClassPaymentFormData {
   periodDate?: string; // Specific month to pay (YYYY-MM-DD)
   paymentMethod?: string;
   description?: string;
+  monthCount?: number; // Optional: Pay for multiple months at once
 }
 
 export interface FreezeFormData {

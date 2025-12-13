@@ -101,10 +101,8 @@ export async function getPaymentSchedule(
 
     // 3. Generate Schedule
     // Start from enrollment date (created_at)
-    // Fallback to join_date only if created_at is missing (legacy data)
-    const startDate = dayjs(
-      memberClass.created_at || (memberClass as any).members?.join_date
-    );
+    // A3: Use purely enrollment date, fallbacks removed to ensure accuracy per enrollment
+    const startDate = dayjs(memberClass.created_at);
 
     const now = await getServerNow();
     const schedule: PaymentScheduleItem[] = [];
@@ -224,102 +222,108 @@ export async function processClassPayment(
     }
 
     // Determine snapshot values
-    // Logic: Use custom_price if active/set, else use current class list price.
-    // However, the AMOUNT passed in formData is what was actually paid.
-    // We should probably trust the valid amount, but for snapshot_price we store the "rate" at that time.
-    // Let's assume snapshot_price = amount (since that's what was paid) OR the rate?
-    // User request: "snapshot_price olarak o an tahsil edilen tutarı... kaydet" -> So use 'amount'.
-    const snapshotPrice = amount;
     const snapshotClassName = Array.isArray(memberClass.classes)
       ? memberClass.classes[0]?.name
       : (memberClass.classes as any)?.name;
 
-    // Always pay for 1 month regardless of total membership duration
-    // Use EXACT date provided (e.g. 15th), do not snap to 1st.
-    const periodStart = dayjs(periodDate).format('YYYY-MM-DD');
-    const periodEnd = dayjs(periodDate).add(1, 'month').format('YYYY-MM-DD');
-    const periodLabel = dayjs(periodDate).format('MMMM YYYY');
-
-    // 1. Create payment record
-    const paymentData: PaymentInsert = {
-      member_id: memberId,
-      class_id: classId,
-      amount: amount,
-      payment_method: paymentMethod || 'Nakit',
-      payment_date: todayStr,
-      period_start: periodStart,
-      period_end: periodEnd,
-      description: formData.description || `${periodLabel} ödemesi`,
-      snapshot_price: snapshotPrice, // Enrollment System
-      snapshot_class_name: snapshotClassName, // Enrollment System
-    };
-
-    const { data: payment, error: paymentError } = await supabase
-      .from('payments')
-      .insert(paymentData)
-      .select()
-      .single();
-
-    if (paymentError) {
-      logError('processClassPayment - insert payment', paymentError);
-      return errorResponse(handleSupabaseError(paymentError));
-    }
-
-    // 2. Update next_payment_date logic
-    // New Enrollment Logic: Update next_payment_date for this specific enrollment.
-    // We set it to the END of the period we just paid for.
-    // If multiple months are paid, we should probably find the latest end date?
-    // For single month payment:
-    const newNextPaymentDate = periodEnd;
-
-    // Optimistic update: Just set it to periodEnd.
-    // If the user pays out of order, this might be tricky, but usually they pay linear.
-    // Ideally: MAX(current_next_payment_date, periodEnd)
-
-    // Let's fetch current to be safe? Or just use SQL?
-    // Supabase doesn't support GREATEST in update easily without RPC.
-    // Let's just set it to periodEnd as that matches "Extending the due date".
-
-    const { error: updateError } = await supabase
-      .from('member_classes')
-      .update({ next_payment_date: newNextPaymentDate })
-      .eq('member_id', memberId)
-      .eq('class_id', classId);
-
-    if (updateError) {
-      logError('processClassPayment - update date', updateError);
-      // Non-fatal?
-    }
-
-    // 3. Process instructor commission
-    // Calculate how many months this payment covers
-    // Use snapshotPrice (amount paid) vs memberClass price logic?
-    // Usually: Amount Paid / Price Per Month = Months Count
+    // Get price per month (base rate)
     let pricePerMonth =
       memberClass.custom_price ||
       (memberClass.classes as any)?.price_monthly ||
       0;
 
-    // CRITICAL: Reject payment if price is not set
     if (pricePerMonth === 0) {
       return errorResponse(
         'Ders fiyatı belirlenmemiş. Lütfen ders ayarlarını kontrol edin.'
       );
     }
 
-    // Calculate months (rounding to nearest, e.g. 799.99 -> 1)
-    let monthsPaid = Math.round(amount / pricePerMonth);
-    if (monthsPaid < 1) monthsPaid = 1;
+    // Determine how many months are being paid
+    // Ideally user provides monthCount. If not, calculate from amount/price.
+    // If formData.periodDate is provided, that's just the START date.
+    let monthCount = formData.monthCount || Math.round(amount / pricePerMonth);
+    if (monthCount < 1) monthCount = 1;
 
-    await processStudentPayment(
-      payment.id,
-      payment.amount,
-      monthsPaid,
-      classId
-    );
+    // Validate absolute amount equality?
+    // User might pay custom amount. If amount != pricePerMonth * monthCount,
+    // we should distributed it or just assign the total to the first/last payment?
+    // Let's assume uniform distribution for ledger, or split proportional.
+    // Simpler: Split amount evenly across months for the records.
+    const amountPerMonth = amount / monthCount;
+
+    const startPeriodDate = dayjs(periodDate);
+    const paymentsCreated: Payment[] = [];
+
+    // B3: Loop to create individual payment records for each month
+    for (let i = 0; i < monthCount; i++) {
+      // Calculate period for this specific month
+      const currentPeriodMonth = startPeriodDate.add(i, 'month');
+      const pStart = currentPeriodMonth.format('YYYY-MM-DD');
+      const pEnd = currentPeriodMonth.add(1, 'month').format('YYYY-MM-DD');
+      const pLabel = currentPeriodMonth.format('MMMM YYYY');
+
+      // Create payment record
+      const paymentData: PaymentInsert = {
+        member_id: memberId,
+        class_id: classId,
+        amount: amountPerMonth, // Distribute total amount
+        payment_method: paymentMethod || 'Nakit',
+        payment_date: todayStr,
+        period_start: pStart,
+        period_end: pEnd,
+        description: formData.description || `${pLabel} ödemesi`,
+        snapshot_price: pricePerMonth,
+        snapshot_class_name: snapshotClassName,
+      };
+
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .insert(paymentData)
+        .select()
+        .single();
+
+      if (paymentError) {
+        logError(
+          `processClassPayment - insert payment month ${i + 1}`,
+          paymentError
+        );
+        // If one fails, we might have partial state. Transaction would be better but not easily available via client.
+        // Continue or abort? Aborting might be better but partial payments exist.
+        // Let's continue and report error? Or return first error.
+        return errorResponse(handleSupabaseError(paymentError));
+      }
+
+      if (payment) {
+        paymentsCreated.push(payment);
+
+        // Process instructor commission for THIS single month payment
+        await processStudentPayment(
+          payment.id,
+          payment.amount,
+          1, // 1 month paid in this record
+          classId
+        );
+      }
+    }
+
+    // 2. Update next_payment_date logic
+    // Set to the END of the LAST period we just paid for.
+    const finalNextPaymentDate = startPeriodDate
+      .add(monthCount, 'month')
+      .format('YYYY-MM-DD');
+
+    const { error: updateError } = await supabase
+      .from('member_classes')
+      .update({ next_payment_date: finalNextPaymentDate })
+      .eq('member_id', memberId)
+      .eq('class_id', classId);
+
+    if (updateError) {
+      logError('processClassPayment - update date', updateError);
+    }
 
     revalidatePath(`/members/${memberId}`);
-    return successResponse(payment);
+    return successResponse(paymentsCreated[0]); // Return first payment as reference logic expects one
   } catch (error) {
     logError('processClassPayment', error);
     return errorResponse(handleSupabaseError(error));
