@@ -162,6 +162,7 @@ export interface Database {
           id: number;
           member_id: number | null;
           class_id: number | null;
+          member_class_id: number | null;
           amount: number;
           payment_date: string;
           payment_method: string;
@@ -176,6 +177,7 @@ export interface Database {
           id?: number;
           member_id?: number | null;
           class_id?: number | null;
+          member_class_id?: number | null;
           amount: number;
           payment_date?: string;
           payment_method?: string;
@@ -190,6 +192,7 @@ export interface Database {
           id?: number;
           member_id?: number | null;
           class_id?: number | null;
+          member_class_id?: number | null;
           amount?: number;
           payment_date?: string;
           payment_method?: string;
@@ -205,6 +208,7 @@ export interface Database {
         Row: {
           id: number;
           member_id: number | null;
+          member_class_id: number | null;
           start_date: string | null;
           end_date: string | null;
           reason: string | null;
@@ -213,6 +217,7 @@ export interface Database {
         Insert: {
           id?: number;
           member_id?: number | null;
+          member_class_id?: number | null;
           start_date?: string | null;
           end_date?: string | null;
           reason?: string | null;
@@ -221,6 +226,7 @@ export interface Database {
         Update: {
           id?: number;
           member_id?: number | null;
+          member_class_id?: number | null;
           start_date?: string | null;
           end_date?: string | null;
           reason?: string | null;

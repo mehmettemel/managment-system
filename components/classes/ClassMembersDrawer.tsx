@@ -89,6 +89,10 @@ export function ClassMembersDrawer({
                       <Badge color="green" size="sm">
                         Aktif
                       </Badge>
+                    ) : m.status === 'frozen' ? (
+                      <Badge color="cyan" size="sm">
+                        Donduruldu
+                      </Badge>
                     ) : (
                       <Badge color="gray" size="sm">
                         {m.status}

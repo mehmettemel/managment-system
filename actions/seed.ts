@@ -234,6 +234,95 @@ export async function seedDatabase() {
       ],
     });
 
+    // Scenario 9: Osman Dönüş (Re-join / Clean Slate)
+    // Joined 2 years ago, left 1 year ago. Joined again TODAY (active).
+    const osman = await createMemberScenario(supabase, {
+      firstName: 'Osman',
+      lastName: 'Dönüş',
+      phone: '5320000009',
+      status: 'active',
+      joinMonthOffset: -24,
+      enrollments: [
+        // Old enrollment (Inactive)
+        {
+          classId: salsaClass.id,
+          price: 1500,
+          paidMonths: 12,
+          active: false,
+        },
+        // New enrollment (Active) - Joined Today
+        // Actually createMemberScenario doesn't support creating a second enrollment with different start date easily.
+        // It uses joinMonthOffset for all.
+        // We will manually insert the second enrollment below.
+      ],
+    });
+    // Add new enrollment for Osman manually
+    const osmanNewDate = dayjs().format('YYYY-MM-DD');
+    await supabase.from('member_classes').insert({
+      member_id: osman.id,
+      class_id: salsaClass.id,
+      active: true,
+      price: 1500,
+      custom_price: 1500,
+      payment_interval: 1,
+      next_payment_date: osmanNewDate, // Next payment is Today
+      created_at: osmanNewDate, // Started today
+    });
+
+    // Scenario 10: Ece Sabit (Grandfathering)
+    // Joined 4 months ago. Price locked at 1000 TL (Current 1500).
+    await createMemberScenario(supabase, {
+      firstName: 'Ece',
+      lastName: 'Sabit',
+      phone: '5320000010',
+      status: 'active',
+      joinMonthOffset: -4,
+      enrollments: [
+        {
+          classId: salsaClass.id, // Current price 1500
+          price: 1500,
+          customPrice: 1000, // Locked price
+          paidMonths: 4, // Paid up to today. Next payment due today/tomorrow.
+        },
+      ],
+    });
+
+    // Scenario 11: Kaan Karma (Partial Freeze)
+    // Active in Salsa and Bachata. Only Salsa is Frozen.
+    const kaan = await createMemberScenario(supabase, {
+      firstName: 'Kaan',
+      lastName: 'Karma',
+      phone: '5320000011',
+      status: 'active', // Global status active because partial freeze
+      joinMonthOffset: -3,
+      enrollments: [
+        { classId: salsaClass.id, price: 1500, paidMonths: 3 },
+        { classId: bachataClass.id, price: 1800, paidMonths: 3 },
+      ],
+    });
+    // Freeze Salsa Only
+    // Need member_class_id for Salsa. Fetch it.
+    const { data: kaanSalsa } = await supabase
+      .from('member_classes')
+      .select('id')
+      .eq('member_id', kaan.id)
+      .eq('class_id', salsaClass.id)
+      .single();
+
+    if (kaanSalsa) {
+      await supabase.from('frozen_logs').insert({
+        member_id: kaan.id,
+        member_class_id: kaanSalsa.id,
+        start_date: dayjs().subtract(5, 'day').format('YYYY-MM-DD'),
+        end_date: null,
+        reason: 'Partial Freeze Test',
+      });
+      // Note: Global status stays 'active' because Partial Freeze.
+      // But the UI should show Salsa as Frozen? or just the freeze log?
+      // Our new FreezeStatusCard shows "Active Log" if it exists.
+      // It should handle partial logs correctly.
+    }
+
     revalidatePath('/');
     console.log('✅ Database seeded successfully!');
     return { success: true };

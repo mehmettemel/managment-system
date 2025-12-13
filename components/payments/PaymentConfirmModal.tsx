@@ -1,4 +1,3 @@
-'use client';
 import { useState, useEffect } from 'react';
 import {
   Modal,
@@ -11,10 +10,11 @@ import {
   Paper,
   Checkbox,
   ScrollArea,
+  NumberInput,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { IconCreditCard, IconCalendar } from '@tabler/icons-react';
-import { PaymentScheduleItem } from '@/types';
+import { IconCreditCard, IconCalendar, IconTag } from '@tabler/icons-react';
+import { PaymentScheduleItem, PaymentType } from '@/types';
 import { formatCurrency } from '@/utils/formatters';
 import dayjs from 'dayjs';
 import 'dayjs/locale/tr';
@@ -36,6 +36,7 @@ interface PaymentConfirmModalProps {
     description?: string;
     monthCount?: number;
     targetPeriods?: string[];
+    paymentType?: PaymentType;
   }) => Promise<void>;
   item: PaymentScheduleItem | null;
   loading?: boolean;
@@ -53,17 +54,19 @@ export function PaymentConfirmModal({
   // State for selected specific months (e.g. ['2025-03-01', '2025-04-01'])
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
 
+  // Base price per month
   const pricePerMonth = item?.amount || 0;
-  // If user selects multiple, sum them up
-  const totalAmount = pricePerMonth * (selectedPeriods.length || 1);
 
   const form = useForm({
     initialValues: {
+      amount: item?.amount || 0,
       paymentMethod: 'Nakit',
       description: item?.description || '',
+      paymentType: 'monthly' as PaymentType,
     },
     validate: {
       paymentMethod: (value) => (!value ? 'Ödeme yöntemi seçiniz' : null),
+      amount: (value) => (value <= 0 ? 'Tutar 0 dan büyük olmalı' : null),
     },
   });
 
@@ -76,11 +79,6 @@ export function PaymentConfirmModal({
     if (opened && item?.periodMonth) {
       const start = dayjs(item.periodMonth);
       const months = [];
-      // If maxMonths is defined, show up to that many + maybe a buffer?
-      // User requested "shows 1 and 3" if 3.
-      // We will show ALL individual months up to maxMonths, allowing user to tick them.
-      // But typically we pay sequentially.
-      // Let's generate maxMonths options.
       const limit = maxMonths > 0 ? maxMonths : 1;
 
       for (let i = 0; i < limit; i++) {
@@ -95,11 +93,15 @@ export function PaymentConfirmModal({
       // Default select JUST the first one
       setSelectedPeriods([months[0].value]);
 
-      form.setFieldValue('description', item?.description || '');
+      form.setValues({
+        amount: item?.amount || 0,
+        description: item?.description || '',
+        paymentType: 'monthly',
+      });
     }
   }, [opened, item, maxMonths]);
 
-  // Auto-update description when selected months change
+  // Auto-update amount and description when selection changes (if Monthly)
   useEffect(() => {
     if (selectedPeriods.length > 0) {
       // Sort to ensure chronological order in description
@@ -109,24 +111,36 @@ export function PaymentConfirmModal({
       const labels = sorted
         .map((p) => dayjs(p).locale('tr').format('MMMM YYYY'))
         .join(', ');
-      form.setFieldValue('description', `${labels} Ödemesi`);
+
+      const newDesc = `${labels} Ödemesi`;
+      const newAmount = pricePerMonth * selectedPeriods.length;
+
+      // Only auto-update if type is monthly (standard flow)
+      if (form.values.paymentType === 'monthly') {
+        form.setFieldValue('amount', newAmount);
+        form.setFieldValue('description', newDesc);
+      } else if (form.values.paymentType === 'difference') {
+        // Keep description logic but don't force amount (user enters diff)
+        // Actually diff description might be custom.
+        // Let's just suggest it.
+      }
     } else {
-      form.setFieldValue('description', '');
+      // Clear?
     }
-  }, [selectedPeriods]); // Dependencies: only when selection changes
+  }, [selectedPeriods, pricePerMonth, form.values.paymentType]);
 
   const handleSubmit = async (values: typeof form.values) => {
-    // Sort selected periods chronologically
     const sortedPeriods = [...selectedPeriods].sort(
       (a, b) => dayjs(a).valueOf() - dayjs(b).valueOf()
     );
 
     await onConfirm({
-      amount: totalAmount,
+      amount: values.amount,
       paymentMethod: values.paymentMethod,
-      description: values.description, // User can still edit it after auto-fill
+      description: values.description,
       monthCount: sortedPeriods.length,
       targetPeriods: sortedPeriods,
+      paymentType: values.paymentType,
     });
 
     form.reset();
@@ -151,39 +165,48 @@ export function PaymentConfirmModal({
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          <Text size="sm" fw={500}>
-            Ödenecek Aylar
-          </Text>
-          <Paper withBorder p="xs" radius="md">
-            <ScrollArea h={potentialMonths.length > 5 ? 200 : 'auto'}>
-              <Stack gap="xs">
-                {potentialMonths.map((m) => (
-                  <Checkbox
-                    key={m.value}
-                    label={m.label}
-                    checked={selectedPeriods.includes(m.value)}
-                    onChange={() => togglePeriod(m.value)}
-                  />
-                ))}
-              </Stack>
-            </ScrollArea>
-          </Paper>
+          {/* Payment Type Selection */}
+          <Select
+            label="Ödeme Türü"
+            data={[
+              { value: 'monthly', label: 'Aylık Aidat' },
+              { value: 'difference', label: 'Fark Ödemesi (Transfer)' },
+              { value: 'registration', label: 'Kayıt Ücreti' },
+            ]}
+            leftSection={<IconTag size={16} />}
+            {...form.getInputProps('paymentType')}
+          />
 
-          <Paper withBorder p="sm" radius="md">
-            <Group justify="space-between">
-              <Text size="sm" c="dimmed">
-                Aylık Ücret:
-              </Text>
-              <Text fw={500}>{formatCurrency(pricePerMonth)}</Text>
-            </Group>
-            <Group justify="space-between" mt="xs">
-              <Text size="sm" c="dimmed">
-                Toplam ({selectedPeriods.length} ay):
-              </Text>
-              <Text fw={700} size="lg" c="blue">
-                {formatCurrency(totalAmount)}
-              </Text>
-            </Group>
+          <Stack gap="xs">
+            <Text size="sm" fw={500}>
+              Dönemler
+            </Text>
+            <Paper withBorder p="xs" radius="md">
+              <ScrollArea h={potentialMonths.length > 5 ? 200 : 'auto'}>
+                <Stack gap="xs">
+                  {potentialMonths.map((m) => (
+                    <Checkbox
+                      key={m.value}
+                      label={m.label}
+                      checked={selectedPeriods.includes(m.value)}
+                      onChange={() => togglePeriod(m.value)}
+                    />
+                  ))}
+                </Stack>
+              </ScrollArea>
+            </Paper>
+          </Stack>
+
+          <Paper withBorder p="sm" radius="md" bg="gray.0">
+            <Stack gap="xs">
+              <NumberInput
+                label="Tutar"
+                leftSection="₺"
+                thousandSeparator=","
+                decimalSeparator="."
+                {...form.getInputProps('amount')}
+              />
+            </Stack>
           </Paper>
 
           <Select
@@ -213,7 +236,7 @@ export function PaymentConfirmModal({
               loading={loading}
               disabled={selectedPeriods.length === 0}
             >
-              {formatCurrency(totalAmount)} Öde
+              Ödeme Al
             </Button>
           </Group>
         </Stack>

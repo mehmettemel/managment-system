@@ -27,8 +27,12 @@ import { getTodayDate } from '@/utils/date-helpers';
 import { getServerToday, getServerNow } from '@/utils/server-date-helper';
 import { processStudentPayment } from '@/actions/finance';
 import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/tr';
 
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 dayjs.locale('tr');
 
 /**
@@ -48,6 +52,9 @@ export async function getMemberPayments(
         classes (
           id,
           name
+        ),
+        member_classes (
+          active
         )
       `
       )
@@ -95,9 +102,34 @@ export async function getPaymentSchedule(
       .eq('member_id', memberId)
       .eq('class_id', classId);
 
+    // 3. Get frozen logs for this enrollment
+    const { data: frozenLogs, error: fError } = await supabase
+      .from('frozen_logs')
+      .select('*')
+      .eq('member_class_id', memberClass.id)
+      .order('start_date', { ascending: true });
+
     if (pError) {
       return errorListResponse(handleSupabaseError(pError));
     }
+
+    // Helper function to check if a month is within a frozen period
+    const isMonthFrozen = (month: dayjs.Dayjs): boolean => {
+      if (!frozenLogs || frozenLogs.length === 0) return false;
+
+      return frozenLogs.some((log) => {
+        const freezeStart = dayjs(log.start_date).startOf('month');
+        const freezeEnd = log.end_date
+          ? dayjs(log.end_date).endOf('month')
+          : dayjs('2099-12-31'); // Indefinite freeze
+
+        // Check if month falls within freeze period
+        return (
+          month.isSameOrAfter(freezeStart, 'month') &&
+          month.isSameOrBefore(freezeEnd, 'month')
+        );
+      });
+    };
 
     // 3. Generate Schedule
     // Start from enrollment date (created_at)
@@ -111,6 +143,7 @@ export async function getPaymentSchedule(
     // - All paid months (from payments)
     // - Plus 1 next unpaid/overdue period
     // - Do NOT show hypothetical future months
+    // - SKIP frozen months
 
     // Step 1: Find the "commitment end date" = last paid period + 1 month
     // If no payments, commitment is just the first month
@@ -152,6 +185,12 @@ export async function getPaymentSchedule(
     while (currentMonth.isBefore(commitmentEndDate)) {
       const periodStart = currentMonth.format('YYYY-MM-DD');
       const nextMonth = currentMonth.add(1, 'month');
+
+      // CRITICAL: Skip frozen months
+      if (isMonthFrozen(currentMonth)) {
+        currentMonth = nextMonth;
+        continue;
+      }
 
       // Find if paid
       const paidPayment = payments?.find((p) => {
@@ -202,6 +241,7 @@ export async function processClassPayment(
       paymentMethod,
       periodDate,
       description,
+      paymentType,
     } = formData;
 
     if (!memberId || !classId || !amount || !periodDate) {
@@ -212,10 +252,12 @@ export async function processClassPayment(
     const todayStr = await getServerToday();
 
     // Fetch payment interval and class details for snapshot
+    // CRITICAL: Filter by active=true to get the CURRENT enrollment
     const { data: memberClass, error: mcError } = await supabase
       .from('member_classes')
       .select(
         `
+        id,
         payment_interval,
         custom_price,
         created_at,
@@ -227,6 +269,9 @@ export async function processClassPayment(
       )
       .eq('member_id', memberId)
       .eq('class_id', classId)
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (mcError || !memberClass || !memberClass.classes) {
@@ -245,9 +290,13 @@ export async function processClassPayment(
       0;
 
     if (pricePerMonth === 0) {
-      return errorResponse(
-        'Ders fiyatı belirlenmemiş. Lütfen ders ayarlarını kontrol edin.'
-      );
+      // It's possible price is 0 (free?), but usually warning.
+      // If amount > 0, we proceed.
+      if (amount <= 0) {
+        return errorResponse(
+          'Ders fiyatı belirlenmemiş. Lütfen ders ayarlarını kontrol edin.'
+        );
+      }
     }
 
     // Determine how many months are being paid and WHICH months
@@ -257,7 +306,12 @@ export async function processClassPayment(
     if (targetPeriods && targetPeriods.length > 0) {
       monthCount = targetPeriods.length;
     } else {
-      monthCount = formData.monthCount || Math.round(amount / pricePerMonth);
+      // If pricePerMonth is 0, avoid division by zero
+      if (pricePerMonth > 0) {
+        monthCount = formData.monthCount || Math.round(amount / pricePerMonth);
+      } else {
+        monthCount = formData.monthCount || 1;
+      }
       if (monthCount < 1) monthCount = 1;
     }
 
@@ -266,8 +320,7 @@ export async function processClassPayment(
 
     const paymentsCreated: Payment[] = [];
 
-    // B3: Loop to create individual payment records
-    // Loop based on Count, but determine date source
+    // Loop to create individual payment records
     for (let i = 0; i < monthCount; i++) {
       let currentPeriodMonth;
 
@@ -284,9 +337,11 @@ export async function processClassPayment(
       const pLabel = currentPeriodMonth.format('MMMM YYYY');
 
       // Create payment record
+      // Cast as any to avoid type error until TS definition updates
       const paymentData: PaymentInsert = {
         member_id: memberId,
         class_id: classId,
+        member_class_id: memberClass.id, // Linking to specific enrollment
         amount: amountPerMonth, // Distribute total amount
         payment_method: paymentMethod || 'Nakit',
         payment_date: todayStr,
@@ -295,7 +350,8 @@ export async function processClassPayment(
         description: formData.description || `${pLabel} ödemesi`,
         snapshot_price: pricePerMonth,
         snapshot_class_name: snapshotClassName,
-      };
+        payment_type: paymentType || 'monthly',
+      } as any;
 
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
@@ -324,32 +380,27 @@ export async function processClassPayment(
       }
     }
 
-    // 2. Update next_payment_date logic
-    // ROBUST: Find the first UNPAID month starting from enrollment (created_at)
-    // This ensures that if I pay for a future month but skip the current one, the "Next Payment"
-    // stays on the current unpaid month (filling the gap).
-
+    // Update next_payment_date logic
     // Fetch all payments to re-calculate continuity
     const { data: allPayments } = await supabase
       .from('payments')
       .select('period_start')
-      .eq('member_id', memberId)
-      .eq('class_id', classId);
+      .eq('member_class_id', memberClass.id);
 
     // Start checking from enrollment date
     let checkDate = dayjs(memberClass.created_at || todayStr);
+
     // Use set of paid months for O(1) lookup
     const paidMonths = new Set(
       (allPayments || []).map((p) => dayjs(p.period_start).format('YYYY-MM'))
     );
 
-    // Also add the newly created payments to this set (in case of replication lag or transaction visibility)
+    // Also add the newly created payments to this set
     paymentsCreated.forEach((p) => {
       paidMonths.add(dayjs(p.period_start).format('YYYY-MM'));
     });
 
     // Iterate forward to find first gap
-    // Safety limit: Check next 10 years max to avoid infinite loops
     for (let i = 0; i < 120; i++) {
       const key = checkDate.format('YYYY-MM');
       if (paidMonths.has(key)) {
@@ -364,15 +415,14 @@ export async function processClassPayment(
     const { error: updateError } = await supabase
       .from('member_classes')
       .update({ next_payment_date: finalNextPaymentDate })
-      .eq('member_id', memberId)
-      .eq('class_id', classId);
+      .eq('id', memberClass.id);
 
     if (updateError) {
       logError('processClassPayment - update date', updateError);
     }
 
     revalidatePath(`/members/${memberId}`);
-    return successResponse(paymentsCreated[0]); // Return first payment as reference logic expects one
+    return successResponse(paymentsCreated[0]);
   } catch (error) {
     logError('processClassPayment', error);
     return errorResponse(handleSupabaseError(error));

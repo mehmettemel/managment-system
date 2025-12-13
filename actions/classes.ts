@@ -209,7 +209,8 @@ export async function getClassMembers(
       .select(
         `
         *,
-        members (*)
+        members (*),
+        frozen_logs (id, end_date)
       `
       )
       .eq('class_id', classId)
@@ -220,13 +221,21 @@ export async function getClassMembers(
       return errorListResponse(handleSupabaseError(error));
     }
 
-    // Flatten result to return just members with enrollment_date
+    // Flatten result to return just members with enrollment_date and status
     const members = data
       .map((item: any) => {
         if (!item.members) return null;
+
+        // Check if frozen
+        const isFrozen = item.frozen_logs?.some((log: any) => !log.end_date);
+
         return {
           ...item.members,
           enrollment_date: item.created_at, // Add enrollment date from member_class
+          // Override status for this context if frozen
+          status: isFrozen ? 'frozen' : item.members.status,
+          // Note: If member is 'active' globally but frozen in this class, we return 'frozen'.
+          // If member is 'frozen' globally (all classes), we return 'frozen'.
         };
       })
       .filter(Boolean);

@@ -6,7 +6,6 @@ import {
   Group,
   Button,
   Badge,
-  Stack,
   ThemeIcon,
   Menu,
   ActionIcon,
@@ -15,32 +14,44 @@ import {
 import {
   IconCalendar,
   IconCreditCard,
-  IconArrowsExchange,
   IconDots,
   IconList,
   IconHistory,
+  IconSnowflake,
+  IconTrash,
+  IconDotsVertical,
+  IconPencil,
 } from '@tabler/icons-react';
 import { formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
-import { MemberClassWithDetails } from '@/types';
+import { MemberClassWithDetails, FrozenLog } from '@/types';
 import dayjs from 'dayjs';
 
 interface EnrollmentCardProps {
   enrollment: MemberClassWithDetails;
   effectiveDate: string;
+  activeFreezeLog?: FrozenLog | null;
   onPay: () => void;
-  onTransfer: () => void;
-  onViewSchedule?: () => void; // NEW
+  onDrop: () => void;
+  onFreeze: () => void;
+  onUnfreeze: () => void;
+  onViewSchedule?: () => void;
+  onEditPrice?: () => void;
 }
 
 export function EnrollmentCard({
   enrollment,
   effectiveDate,
+  activeFreezeLog,
   onPay,
-  onTransfer,
+  onDrop,
+  onFreeze,
+  onUnfreeze,
   onViewSchedule,
+  onEditPrice,
 }: EnrollmentCardProps) {
   const isOverdue =
+    !activeFreezeLog &&
     enrollment.next_payment_date &&
     dayjs(enrollment.next_payment_date).isBefore(dayjs(effectiveDate), 'day');
 
@@ -73,8 +84,18 @@ export function EnrollmentCard({
                     Aylık
                   </Badge>
                 )}
-                {/* Status Indicator inside card header if needed, or already covered by badge? */}
+                {activeFreezeLog && (
+                  <Badge color="cyan" leftSection={<IconSnowflake size={12} />}>
+                    Donduruldu
+                  </Badge>
+                )}
               </Group>
+              {activeFreezeLog && (
+                <Text size="xs" c="cyan" mt={4}>
+                  {formatDate(activeFreezeLog.start_date)} tarihinden beri
+                  dondurulmuş
+                </Text>
+              )}
             </div>
           </Group>
         </Grid.Col>
@@ -84,18 +105,29 @@ export function EnrollmentCard({
           <Group gap="xl" wrap="wrap">
             {/* Payment Date */}
             <Group gap={8}>
-              <ThemeIcon color="blue" variant="light" size="md" radius="md">
+              <ThemeIcon
+                color={activeFreezeLog ? 'gray' : 'blue'}
+                variant="light"
+                size="md"
+                radius="md"
+              >
                 <IconCalendar size={18} />
               </ThemeIcon>
               <div>
                 <Text size="xs" c="dimmed">
                   Sonraki Ödeme
                 </Text>
-                <Text fw={600} size="sm" c={isOverdue ? 'red' : undefined}>
-                  {enrollment.next_payment_date
-                    ? formatDate(enrollment.next_payment_date)
-                    : 'Belirlenmedi'}
-                </Text>
+                {activeFreezeLog ? (
+                  <Text fw={600} size="sm" c="dimmed">
+                    Donduruldu
+                  </Text>
+                ) : (
+                  <Text fw={600} size="sm" c={isOverdue ? 'red' : undefined}>
+                    {enrollment.next_payment_date
+                      ? formatDate(enrollment.next_payment_date)
+                      : 'Belirlenmedi'}
+                  </Text>
+                )}
               </div>
             </Group>
 
@@ -152,15 +184,29 @@ export function EnrollmentCard({
             >
               Geçmiş
             </Button>
-            <Button
-              variant={isOverdue ? 'filled' : 'light'}
-              color={isOverdue ? 'red' : 'blue'}
-              size="sm"
-              leftSection={<IconCreditCard size={16} />}
-              onClick={onPay}
-            >
-              {isOverdue ? 'Öde' : 'Öde'}
-            </Button>
+
+            {activeFreezeLog ? (
+              <Button
+                variant="outline"
+                color="cyan"
+                size="sm"
+                leftSection={<IconSnowflake size={16} />}
+                onClick={onUnfreeze}
+              >
+                Aktifleştir
+              </Button>
+            ) : (
+              <Button
+                variant={isOverdue ? 'filled' : 'light'}
+                color={isOverdue ? 'red' : 'blue'}
+                size="sm"
+                leftSection={<IconCreditCard size={16} />}
+                onClick={onPay}
+              >
+                {isOverdue ? 'Öde' : 'Öde'}
+              </Button>
+            )}
+
             <Menu position="bottom-end" withinPortal>
               <Menu.Target>
                 <ActionIcon variant="subtle" color="gray" size="lg">
@@ -168,11 +214,26 @@ export function EnrollmentCard({
                 </ActionIcon>
               </Menu.Target>
               <Menu.Dropdown>
+                {!activeFreezeLog && (
+                  <Menu.Item
+                    leftSection={<IconSnowflake size={14} />}
+                    onClick={onFreeze}
+                  >
+                    Dondur
+                  </Menu.Item>
+                )}
                 <Menu.Item
-                  leftSection={<IconArrowsExchange size={14} />}
-                  onClick={onTransfer}
+                  leftSection={<IconPencil size={14} />}
+                  onClick={onEditPrice}
                 >
-                  Sınıf Değiştir
+                  Fiyat/Plan Düzenle
+                </Menu.Item>
+                <Menu.Item
+                  color="red"
+                  leftSection={<IconTrash size={14} />}
+                  onClick={onDrop}
+                >
+                  Dersten Ayrıl
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>

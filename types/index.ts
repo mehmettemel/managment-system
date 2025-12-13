@@ -92,6 +92,7 @@ export interface MemberClassWithDetails {
 // Payment with class info
 export interface PaymentWithClass extends Payment {
   classes?: Class | null;
+  member_classes?: { active: boolean } | null;
 }
 
 // Member Class Registration Data
@@ -106,7 +107,7 @@ export interface MemberFormData {
   first_name: string;
   last_name: string;
   phone?: string;
-  class_registrations: ClassRegistration[];
+  class_registrations?: ClassRegistration[]; // Optional - can create member without classes
   // monthly_fee removed - price is now per class
   // initial_* fields removed - payments handled separately
 }
@@ -134,6 +135,7 @@ export interface ClassPaymentFormData {
   description?: string;
   monthCount?: number; // Optional: Pay for multiple months at once
   targetPeriods?: string[]; // Array of YYYY-MM-DD strings for specific months
+  paymentType?: PaymentType;
 }
 
 export interface FreezeFormData {
@@ -142,6 +144,7 @@ export interface FreezeFormData {
   end_date?: string;
   reason?: string;
   is_indefinite?: boolean;
+  selectedEnrollmentIds?: number[]; // IDs of member_classes to freeze
 }
 
 export interface InstructorFormData {
@@ -167,13 +170,22 @@ export type ApiListResponse<T> = {
 // Member status types
 export type MemberStatus = 'active' | 'frozen' | 'archived';
 
-// Payment method types
+// Payment Method and Type definitions
 export type PaymentMethod = 'Nakit' | 'Kredi Kartı' | 'Havale' | 'Diğer';
+
+export type PaymentType = 'monthly' | 'difference' | 'refund' | 'registration';
+
+// Extended Payment Interface override (optional if DB types not updated yet)
+// We rely on Tables<'payments'> usually, but for strong typing in app:
+export interface PaymentWithDetails extends Payment {
+  payment_type?: PaymentType;
+}
 
 // Days of week
 export type DayOfWeek =
   | 'Pazartesi'
   | 'Salı'
+  // ...
   | 'Çarşamba'
   | 'Perşembe'
   | 'Cuma'

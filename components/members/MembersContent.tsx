@@ -31,7 +31,6 @@ import { FreezeMemberDrawer } from '@/components/members/FreezeMemberDrawer';
 // Removed MemberDetailModal
 import { modals } from '@mantine/modals';
 import { useMembers } from '@/hooks/use-members';
-import { useClasses } from '@/hooks/use-classes';
 import {
   archiveMember,
   unarchiveMember,
@@ -43,7 +42,7 @@ import { showSuccess, showError } from '@/utils/notifications';
 import { formatDate, isPaymentOverdue } from '@/utils/date-helpers';
 import { formatPhone } from '@/utils/formatters';
 import type { DataTableColumn } from '@/components/shared/DataTable';
-import type { Member, MemberWithClasses } from '@/types';
+import type { Member, MemberWithClasses, MemberStatus } from '@/types';
 
 interface MembersContentProps {
   effectiveDate: string;
@@ -153,7 +152,6 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
   };
 
   const { members, loading, error } = useMembers(statusFilter, refreshTrigger);
-  const { classes } = useClasses();
 
   const handleEdit = (member: Member, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -321,7 +319,7 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
     {
       key: 'status',
       label: 'Durum',
-      render: (member) => <StatusBadge status={member.status as any} />,
+      render: (member) => <StatusBadge status={member.status as MemberStatus} />,
     },
     {
       key: 'actions',
@@ -473,7 +471,6 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
         opened={drawerOpened}
         onClose={handleDrawerClose}
         member={selectedMember}
-        classes={classes}
         onSuccess={handleSuccess}
       />
 

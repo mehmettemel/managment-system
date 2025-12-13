@@ -24,30 +24,48 @@ import {
   IconPhone,
   IconCalendar,
   IconHistory,
+  IconPlus,
 } from '@tabler/icons-react';
-import { getMemberById, transferMember } from '@/actions/members';
+import {
+  getMemberById,
+  updateMemberClassDetails,
+  terminateEnrollment,
+  addMemberToClasses,
+} from '@/actions/members';
 import { getMemberPayments, processClassPayment } from '@/actions/payments';
+import { getClasses } from '@/actions/classes';
+import { unfreezeLog, unfreezeMembership } from '@/actions/freeze';
+import { TerminationModal, TerminationFormValues } from './TerminationModal';
 import { formatPhone, formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
 import {
   Member,
   MemberClassWithDetails,
   Payment,
+  PaymentWithClass,
   FrozenLog,
   MemberWithClasses,
+  PaymentType,
+  Class,
 } from '@/types';
 import { EnrollmentCard } from './EnrollmentCard';
-import { MemberTransferModal } from './MemberTransferModal';
 import { FreezeStatusCard } from './FreezeStatusCard';
+import { FreezeMemberDrawer } from './FreezeMemberDrawer';
 import { PaymentScheduleTable } from './PaymentScheduleTable';
 import { PaymentConfirmModal } from '@/components/payments/PaymentConfirmModal';
 import { DataTable, DataTableColumn } from '@/components/shared/DataTable';
 import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { getPaymentSchedule } from '@/actions/payments';
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 import type { PaymentScheduleItem } from '@/types';
 import { showSuccess, showError } from '@/utils/notifications';
-import { useClasses } from '@/hooks/use-classes';
 import { TruncatedTooltip } from '@/components/shared/TruncatedTooltip';
+import { EditEnrollmentModal } from './EditEnrollmentModal';
+import { AddEnrollmentModal } from './AddEnrollmentModal';
 
 interface MemberDetailViewProps {
   memberId: number;
@@ -59,20 +77,16 @@ export function MemberDetailView({
   effectiveDate,
 }: MemberDetailViewProps) {
   const router = useRouter();
-  const { classes } = useClasses(); // For transfer modal options
 
   const [member, setMember] = useState<MemberWithClasses | null>(null);
   const [activeEnrollments, setActiveEnrollments] = useState<
     MemberClassWithDetails[]
   >([]);
-  const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentWithClass[]>([]);
+  const [allClasses, setAllClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modals state
-  const [transferModal, setTransferModal] = useState<{
-    open: boolean;
-    enrollment: MemberClassWithDetails | null;
-  }>({ open: false, enrollment: null });
   const [payModal, setPayModal] = useState<{
     open: boolean;
     enrollment: MemberClassWithDetails | null;
@@ -82,13 +96,36 @@ export function MemberDetailView({
     enrollment: MemberClassWithDetails | null;
     schedule: PaymentScheduleItem[];
   }>({ open: false, enrollment: null, schedule: [] });
+  const [freezeModal, setFreezeModal] = useState<{
+    open: boolean;
+    enrollment: MemberClassWithDetails | null;
+  }>({ open: false, enrollment: null });
+  // Drop modal (Dersten Ayrıl)
+  const [dropModal, setDropModal] = useState<{
+    open: boolean;
+    enrollment: MemberClassWithDetails | null;
+  }>({ open: false, enrollment: null });
+
+  // Edit modal
+  const [editModal, setEditModal] = useState<{
+    open: boolean;
+    enrollment: MemberClassWithDetails | null;
+  }>({ open: false, enrollment: null });
+
+  // Add class modal
+  const [addClassModal, setAddClassModal] = useState<{
+    open: boolean;
+    availableClasses: Class[];
+  }>({ open: false, availableClasses: [] });
+
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [memberRes, paymentsRes] = await Promise.all([
+      const [memberRes, paymentsRes, classesRes] = await Promise.all([
         getMemberById(memberId),
         getMemberPayments(memberId),
+        getClasses(),
       ]);
 
       if (memberRes.data) {
@@ -102,6 +139,10 @@ export function MemberDetailView({
       if (paymentsRes.data) {
         setPaymentHistory(paymentsRes.data);
       }
+
+      if (classesRes.data) {
+        setAllClasses(classesRes.data);
+      }
     } catch (error) {
       console.error(error);
       showError('Veriler yüklenirken hata oluştu');
@@ -114,6 +155,37 @@ export function MemberDetailView({
     fetchData();
   }, [fetchData]);
 
+  const handleEditPriceClick = (enrollment: MemberClassWithDetails) => {
+    setEditModal({ open: true, enrollment });
+  };
+
+  const onEditEnrollmentConfirm = async (values: {
+    price: number;
+    payment_interval: number;
+    custom_price?: number;
+  }) => {
+    if (!editModal.enrollment) return;
+
+    setActionLoading(true);
+    const result = await updateMemberClassDetails(
+      editModal.enrollment.member_id,
+      editModal.enrollment.class_id,
+      {
+        custom_price: values.custom_price,
+        payment_interval: values.payment_interval,
+      }
+    );
+
+    if (result.error) {
+      showError(result.error);
+    } else {
+      showSuccess('Ders planı güncellendi');
+      setEditModal({ open: false, enrollment: null });
+      fetchData();
+    }
+    setActionLoading(false);
+  };
+
   // Helper to calculate effective next payment date client-side
   const getComputedNextDate = (enrollment: MemberClassWithDetails): string => {
     const classPayments = paymentHistory.filter(
@@ -122,6 +194,26 @@ export function MemberDetailView({
     const paidMonths = new Set(
       classPayments.map((p) => dayjs(p.period_start).format('YYYY-MM'))
     );
+
+    // Get frozen logs for this enrollment
+    const enrollmentFrozenLogs = member?.frozen_logs?.filter(
+      (log) => log.member_class_id === enrollment.id
+    ) || [];
+
+    // Helper to check if a month is frozen
+    const isMonthFrozen = (month: dayjs.Dayjs): boolean => {
+      return enrollmentFrozenLogs.some((log) => {
+        const freezeStart = dayjs(log.start_date).startOf('month');
+        const freezeEnd = log.end_date
+          ? dayjs(log.end_date).endOf('month')
+          : dayjs('2099-12-31'); // Indefinite freeze
+
+        return (
+          month.isSameOrAfter(freezeStart, 'month') &&
+          month.isSameOrBefore(freezeEnd, 'month')
+        );
+      });
+    };
 
     let start = dayjs(enrollment.created_at || new Date());
     if (classPayments.length > 0) {
@@ -137,6 +229,13 @@ export function MemberDetailView({
 
     let check = start;
     for (let i = 0; i < 120; i++) {
+      // Skip frozen months
+      if (isMonthFrozen(check)) {
+        check = check.add(1, 'month');
+        continue;
+      }
+
+      // Check if paid
       if (paidMonths.has(check.format('YYYY-MM'))) {
         check = check.add(1, 'month');
       } else {
@@ -152,16 +251,32 @@ export function MemberDetailView({
   }));
 
   // Handlers
-  const handleTransferClick = (enrollment: MemberClassWithDetails) => {
-    setTransferModal({ open: true, enrollment });
-  };
-
   const handlePayClick = (enrollment: MemberClassWithDetails) => {
     const computedDate = getComputedNextDate(enrollment);
     setPayModal({
       open: true,
       enrollment: { ...enrollment, next_payment_date: computedDate },
     });
+  };
+
+  const handleFreezeClick = (enrollment: MemberClassWithDetails) => {
+    setFreezeModal({ open: true, enrollment });
+  };
+
+  const handleDropClick = (enrollment: MemberClassWithDetails) => {
+    setDropModal({ open: true, enrollment });
+  };
+
+  const handleUnfreezeLog = async (logId: number) => {
+    setActionLoading(true);
+    const result = await unfreezeLog(logId);
+    if (result.error) {
+      showError(result.error);
+    } else {
+      showSuccess('Ders aktifleştirildi');
+      fetchData();
+    }
+    setActionLoading(false);
   };
 
   const handleViewSchedule = async (enrollment: MemberClassWithDetails) => {
@@ -175,25 +290,56 @@ export function MemberDetailView({
     setActionLoading(false);
   };
 
-  const onTransferConfirm = async (values: {
-    newClassId: string;
-    priceStrategy: 'KEEP_OLD' | 'USE_NEW';
-  }) => {
-    if (!transferModal.enrollment) return;
-
-    setActionLoading(true);
-    const result = await transferMember(
-      memberId,
-      transferModal.enrollment.class_id,
-      Number(values.newClassId),
-      values.priceStrategy
+  const handleAddClassClick = () => {
+    // Filter out already enrolled classes
+    const enrolledClassIds = new Set(
+      activeEnrollments.map((e) => e.class_id)
     );
+    const available = allClasses.filter((c) => !enrolledClassIds.has(c.id));
+
+    if (available.length === 0) {
+      showError('Tüm derslere kayıtlısınız');
+      return;
+    }
+
+    setAddClassModal({ open: true, availableClasses: available });
+  };
+
+  const onAddClassConfirm = async (
+    registrations: {
+      class_id: number;
+      price: number;
+      duration: number;
+    }[]
+  ) => {
+    setActionLoading(true);
+    const result = await addMemberToClasses(memberId, registrations);
 
     if (result.error) {
       showError(result.error);
     } else {
-      showSuccess('Transfer başarıyla gerçekleşti');
-      setTransferModal({ open: false, enrollment: null });
+      showSuccess('Ders kayıtları eklendi');
+      setAddClassModal({ open: false, availableClasses: [] });
+      fetchData(); // Refresh data
+    }
+    setActionLoading(false);
+  };
+
+  const onDropConfirm = async (values: TerminationFormValues) => {
+    if (!dropModal.enrollment) return;
+
+    setActionLoading(true);
+    const result = await terminateEnrollment(dropModal.enrollment.id, {
+      terminationDate: values.terminationDate,
+      financialAction: values.financialAction,
+      refundAmount: values.refundAmount,
+    });
+
+    if (result.error) {
+      showError(result.error);
+    } else {
+      showSuccess('Ders sonlandırma işlemi başarılı');
+      setDropModal({ open: false, enrollment: null });
       fetchData();
     }
     setActionLoading(false);
@@ -203,6 +349,9 @@ export function MemberDetailView({
     amount: number;
     paymentMethod: string;
     description?: string;
+    monthCount?: number;
+    targetPeriods?: string[];
+    paymentType?: PaymentType;
   }) => {
     if (!payModal.enrollment) return;
 
@@ -223,6 +372,9 @@ export function MemberDetailView({
       paymentMethod: values.paymentMethod,
       periodDate: periodDate,
       description: values.description,
+      monthCount: values.monthCount,
+      targetPeriods: values.targetPeriods,
+      paymentType: values.paymentType,
     });
 
     if (result.error) {
@@ -235,16 +387,9 @@ export function MemberDetailView({
     setActionLoading(false);
   };
 
-  const handleUnfreeze = async () => {
+  const handleUnfreezeAll = async () => {
     if (!member) return;
-
-    // We can use a modal confirm here or just call action if card confirms?
-    // Card button says "Şimdi Aktifleştir".
     setActionLoading(true);
-    // Dynamic import to avoid circular dep if needed, or just import at top?
-    // We need to import unfreezeMembership from actions/freeze.
-    const { unfreezeMembership } = await import('@/actions/freeze');
-
     const result = await unfreezeMembership(member.id);
     if (result.error) {
       showError(result.error);
@@ -255,14 +400,25 @@ export function MemberDetailView({
     setActionLoading(false);
   };
 
-  // Setup column for payment history
-  const historyColumns: DataTableColumn<Payment>[] = [
+  const historyColumns: DataTableColumn<PaymentWithClass>[] = [
+    {
+      key: 'status',
+      label: 'Durum',
+      render: (row) => {
+        const isActive = row.member_classes?.active;
+        return (
+          <Badge color={isActive ? 'green' : 'gray'} variant="light" size="sm">
+            {isActive ? 'Aktif Kayıt' : 'Pasif Kayıt'}
+          </Badge>
+        );
+      },
+    },
     {
       key: 'snapshot_class_name',
       label: 'Ders',
       render: (row) => (
         <Text fw={500}>
-          {row.snapshot_class_name || (row as any).classes?.name || '-'}
+          {row.snapshot_class_name || row.classes?.name || '-'}
         </Text>
       ),
     },
@@ -373,32 +529,66 @@ export function MemberDetailView({
         {member.frozen_logs && (
           <FreezeStatusCard
             member={member}
-            logs={(member as any).frozen_logs || []}
+            logs={member.frozen_logs || []}
             effectiveDate={effectiveDate}
-            onUnfreezeClick={handleUnfreeze}
+            onUnfreezeClick={handleUnfreezeAll}
           />
         )}
 
         {/* Active Enrollments */}
-        <Title order={4}>Kayıtlı Dersler</Title>
+        <Group justify="space-between" align="center">
+          <Title order={4}>Kayıtlı Dersler</Title>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            variant="light"
+            onClick={handleAddClassClick}
+          >
+            Ders Ekle
+          </Button>
+        </Group>
         {computedEnrollments.length === 0 ? (
-          <Card withBorder>
-            <Text c="dimmed" ta="center">
-              Aktif ders kaydı bulunmuyor.
-            </Text>
+          <Card withBorder p="xl">
+            <Stack align="center" gap="md">
+              <Text c="dimmed" ta="center" size="lg" fw={500}>
+                Henüz ders kaydı bulunmuyor
+              </Text>
+              <Text c="dimmed" ta="center" size="sm">
+                Üyeyi derslerinize kaydetmek için aşağıdaki butona tıklayın
+              </Text>
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={handleAddClassClick}
+                size="md"
+              >
+                İlk Dersi Ekle
+              </Button>
+            </Stack>
           </Card>
         ) : (
           <Stack gap="md">
-            {computedEnrollments.map((enrollment) => (
-              <EnrollmentCard
-                key={enrollment.id}
-                enrollment={enrollment}
-                effectiveDate={effectiveDate}
-                onPay={() => handlePayClick(enrollment)}
-                onTransfer={() => handleTransferClick(enrollment)}
-                onViewSchedule={() => handleViewSchedule(enrollment)}
-              />
-            ))}
+            {computedEnrollments.map((enrollment) => {
+              // Find active freeze log for this enrollment
+              const activeLog = member.frozen_logs?.find(
+                (log) => log.member_class_id === enrollment.id && !log.end_date
+              );
+
+              return (
+                <EnrollmentCard
+                  key={enrollment.id}
+                  enrollment={enrollment}
+                  effectiveDate={effectiveDate}
+                  activeFreezeLog={activeLog}
+                  onPay={() => handlePayClick(enrollment)}
+                  onDrop={() => handleDropClick(enrollment)}
+                  onFreeze={() => handleFreezeClick(enrollment)}
+                  onUnfreeze={() => {
+                    if (activeLog) handleUnfreezeLog(activeLog.id);
+                  }}
+                  onViewSchedule={() => handleViewSchedule(enrollment)}
+                  onEditPrice={() => handleEditPriceClick(enrollment)}
+                />
+              );
+            })}
           </Stack>
         )}
 
@@ -422,19 +612,22 @@ export function MemberDetailView({
           </Tabs>
         </Card>
       </Stack>
-
       {/* Modals */}
-      {transferModal.enrollment && (
-        <MemberTransferModal
-          opened={transferModal.open}
-          onClose={() => setTransferModal({ ...transferModal, open: false })}
-          enrollment={transferModal.enrollment}
-          classes={classes}
-          onConfirm={onTransferConfirm}
-          loading={actionLoading}
-        />
-      )}
-
+      {/* Drop / Termination Modal */}
+      <TerminationModal
+        opened={dropModal.open}
+        onClose={() => setDropModal({ open: false, enrollment: null })}
+        enrollment={dropModal.enrollment}
+        onConfirm={onDropConfirm}
+        loading={actionLoading}
+      />
+      <FreezeMemberDrawer
+        opened={freezeModal.open}
+        onClose={() => setFreezeModal({ open: false, enrollment: null })}
+        member={member}
+        initialSelectedEnrollmentId={freezeModal.enrollment?.id}
+        onSuccess={fetchData}
+      />
       {payModal.enrollment && (
         <PaymentConfirmModal
           opened={payModal.open}
@@ -458,7 +651,6 @@ export function MemberDetailView({
           maxMonths={payModal.enrollment.payment_interval || 1}
         />
       )}
-
       {/* Payment Schedule Modal */}
       <Modal
         opened={scheduleModal.open}
@@ -480,6 +672,20 @@ export function MemberDetailView({
           />
         )}
       </Modal>
+      <EditEnrollmentModal
+        opened={editModal.open}
+        onClose={() => setEditModal({ open: false, enrollment: null })}
+        enrollment={editModal.enrollment}
+        onConfirm={onEditEnrollmentConfirm}
+        loading={actionLoading}
+      />
+      <AddEnrollmentModal
+        opened={addClassModal.open}
+        onClose={() => setAddClassModal({ open: false, availableClasses: [] })}
+        availableClasses={addClassModal.availableClasses}
+        onConfirm={onAddClassConfirm}
+        loading={actionLoading}
+      />
     </Container>
   );
 }

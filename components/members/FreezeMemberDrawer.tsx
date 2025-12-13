@@ -14,19 +14,22 @@ import {
   Switch,
   Group,
   LoadingOverlay,
+  Checkbox,
+  ScrollArea,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { IconSnowflake } from '@tabler/icons-react';
 import { freezeMembership } from '@/actions/freeze';
 import { showSuccess, showError } from '@/utils/notifications';
-import type { Member } from '@/types';
+import type { Member, MemberWithClasses } from '@/types';
 
 interface FreezeMemberDrawerProps {
   opened: boolean;
   onClose: () => void;
-  member: Member | null;
+  member: Member | MemberWithClasses | null;
   onSuccess?: () => void;
+  initialSelectedEnrollmentId?: number | null;
 }
 
 export function FreezeMemberDrawer({
@@ -34,9 +37,18 @@ export function FreezeMemberDrawer({
   onClose,
   member,
   onSuccess,
+  initialSelectedEnrollmentId,
 }: FreezeMemberDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [isIndefinite, setIsIndefinite] = useState(false);
+
+  // We need to know available classes to freeze
+  // Cast member to MemberWithClasses if possible
+  const memberWithClasses = member as MemberWithClasses | null;
+  const activeClasses =
+    memberWithClasses?.member_classes?.filter((mc) => mc.active) || [];
+
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
 
   const form = useForm({
     initialValues: {
@@ -59,11 +71,27 @@ export function FreezeMemberDrawer({
       form.reset();
       setLoading(false);
       setIsIndefinite(false);
+
+      // Handle initial selection
+      if (initialSelectedEnrollmentId) {
+        setSelectedClasses([String(initialSelectedEnrollmentId)]);
+      } else if (activeClasses.length > 0) {
+        // Default: select all active classes
+        setSelectedClasses(activeClasses.map((c) => String(c.id)));
+      } else {
+        setSelectedClasses([]);
+      }
     }
-  }, [opened, member]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [opened, member, initialSelectedEnrollmentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (values: typeof form.values) => {
     if (!member) return;
+
+    // If we have active classes but none selected, show error
+    if (activeClasses.length > 0 && selectedClasses.length === 0) {
+      showError('Lütfen en az bir ders seçin veya işlemi iptal edin.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -75,6 +103,7 @@ export function FreezeMemberDrawer({
           : values.end_date?.toISOString().split('T')[0],
         reason: values.reason,
         is_indefinite: isIndefinite,
+        selectedEnrollmentIds: selectedClasses.map(Number),
       };
 
       const res = await freezeMembership(formData);
@@ -104,6 +133,28 @@ export function FreezeMemberDrawer({
               {member?.first_name} {member?.last_name}
             </Text>
           </Text>
+
+          {activeClasses.length > 0 && (
+            <Stack gap="xs">
+              <Text size="sm" fw={500}>
+                Dondurulacak Dersler
+              </Text>
+              <Checkbox.Group
+                value={selectedClasses}
+                onChange={setSelectedClasses}
+              >
+                <Stack gap="xs">
+                  {activeClasses.map((mc) => (
+                    <Checkbox
+                      key={mc.id}
+                      value={String(mc.id)}
+                      label={`${mc.classes?.name || 'Ders'} (${mc.payment_interval ? mc.payment_interval + ' Ay' : 'Aylık'})`}
+                    />
+                  ))}
+                </Stack>
+              </Checkbox.Group>
+            </Stack>
+          )}
 
           <Switch
             label="Süresiz Dondur (Dönüş tarihi belli değil)"
@@ -146,6 +197,9 @@ export function FreezeMemberDrawer({
               type="submit"
               color="cyan"
               loading={loading}
+              disabled={
+                activeClasses.length > 0 && selectedClasses.length === 0
+              }
               leftSection={<IconSnowflake size={16} />}
             >
               Dondur
