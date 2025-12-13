@@ -27,6 +27,7 @@ import {
   IconUserCircle,
   IconSettings,
   IconLogout,
+  IconHelp,
 } from '@tabler/icons-react';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { usePathname, useRouter } from 'next/navigation';
@@ -61,6 +62,7 @@ const mainNavItems: NavItem[] = [
       },
     ],
   },
+  { label: 'Yardım', icon: <IconHelp size={20} />, href: '/help' },
 ];
 
 const bottomNavItems: NavItem[] = [

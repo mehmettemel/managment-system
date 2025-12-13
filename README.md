@@ -6,26 +6,38 @@ Modern, ölçeklenebilir ve kullanıcı dostu dans okulu yönetim sistemi.
 
 Projenin tüm detayları `docs/` klasörü altında sade ve anlaşılır bir şekilde belgelenmiştir:
 
-1.  **[🚀 Kurulum ve Başlangıç](./docs/01-GETTING-STARTED.md)**
+1.  **[📘 Detaylı Kullanım Kılavuzu (Her Şey Burada)](./docs/user-guide.md)**
+    - Adım adım resimli anlatım (gibi detaylı)
+    - Başlangıçtan ileri seviyeye her işlem
+
+2.  **[🌟 Proje Özeti](./docs/overview.md)**
+    - Projesinin amacı ve kapsamı
+    - Kimler için uygun?
+
+3.  **[🎬 Kullanım Senaryoları](./docs/usage-scenarios.md)**
+    - Günlük kullanım örnekleri
+    - Kayıt, ödeme, dondurma işlemleri
+
+4.  **[🚀 Kurulum ve Başlangıç](./docs/01-GETTING-STARTED.md)**
     - Önkoşullar (Node.js 20+, Supabase)
     - Kurulum adımları
     - Build kontrolleri
 
-2.  **[🏗️ Mimari ve Teknoloji](./docs/02-ARCHITECTURE.md)**
+5.  **[🏗️ Mimari ve Teknoloji](./docs/02-ARCHITECTURE.md)**
     - Tech Stack (Next.js 16, Mantine, Supabase)
     - State Management stratejisi
     - Data Fetching yöntemleri
 
-3.  **[💻 Geliştirme Kılavuzu](./docs/03-DEVELOPMENT.md)**
+6.  **[💻 Geliştirme Kılavuzu](./docs/03-DEVELOPMENT.md)**
     - Yeni özellik ekleme adımları
     - Kod standartları ve Best Practices
     - Sık kullanılan komutlar
 
-4.  **[🗄️ Veritabanı](./docs/04-DATABASE.md)**
+7.  **[🗄️ Veritabanı](./docs/04-DATABASE.md)**
     - Veritabanı şeması ve tablolar
     - TypeScript tip güncelleme
 
-5.  **[🚀 Yayına Alma (Deployment)](./docs/05-DEPLOYMENT.md)**
+8.  **[🚀 Yayına Alma (Deployment)](./docs/05-DEPLOYMENT.md)**
     - Vercel deployment
     - Environment variables
 

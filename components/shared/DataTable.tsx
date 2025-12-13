@@ -235,10 +235,7 @@ export function DataTable<T extends Record<string, any>>({
     <Paper withBorder radius="md">
       <Stack gap={0}>
         {/* Search Bar */}
-        <Box
-          p="md"
-          style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}
-        >
+        <Box p="md" className="border-b border-gray-200 dark:border-zinc-800">
           <Group justify="space-between">
             <Group gap="xs">
               <TextInput
@@ -380,10 +377,7 @@ export function DataTable<T extends Record<string, any>>({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Box
-            p="md"
-            style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}
-          >
+          <Box p="md" className="border-t border-gray-200 dark:border-zinc-800">
             <Group justify="space-between">
               <Text size="sm" c="dimmed">
                 {(currentPage - 1) * pageSize + 1}-

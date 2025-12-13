@@ -86,7 +86,7 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
                     {payment.period_start &&
                       dayjs(payment.period_start).format('MMM YYYY')}
                   </Table.Td>
-                  <Table.Td className="text-sm text-gray-500">
+                  <Table.Td className="text-sm text-gray-500 dark:text-gray-400">
                     {payment.description}
                   </Table.Td>
                   <Table.Td>
