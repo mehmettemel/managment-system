@@ -10,6 +10,7 @@ import {
   ThemeIcon,
   Menu,
   ActionIcon,
+  Grid,
 } from '@mantine/core';
 import {
   IconCalendar,
@@ -49,100 +50,135 @@ export function EnrollmentCard({
 
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Card.Section withBorder inheritPadding py="xs">
-        <Group justify="space-between">
-          <Text fw={600} size="lg">
-            {enrollment.classes?.name}
-          </Text>
-          <Menu position="bottom-end" withinPortal>
-            <Menu.Target>
-              <ActionIcon variant="subtle" color="gray">
-                <IconDots size={16} />
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item
-                leftSection={<IconArrowsExchange size={14} />}
-                onClick={onTransfer}
+      <Grid align="center" gutter="lg">
+        {/* 1. Header & Badges */}
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Group justify="space-between" align="center" wrap="nowrap">
+            <div>
+              <Text
+                fw={700}
+                size="xl"
+                className="text-gray-900 dark:text-white"
               >
-                Sınıf Değiştir
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Group>
-      </Card.Section>
-
-      <Stack mt="md" gap="sm">
-        <Group justify="space-between">
-          <Group gap="xs">
-            <ThemeIcon color="blue" variant="light" size="sm">
-              <IconCalendar size={14} />
-            </ThemeIcon>
-            <Text size="sm" c="dimmed">
-              Sonraki Ödeme
-            </Text>
+                {enrollment.classes?.name}
+              </Text>
+              <Group gap="xs" mt={4}>
+                {enrollment.payment_interval &&
+                enrollment.payment_interval > 1 ? (
+                  <Badge variant="dot" color="blue" size="md">
+                    {enrollment.payment_interval} Aylık Taahhüt
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" color="gray" size="sm">
+                    Aylık
+                  </Badge>
+                )}
+                {/* Status Indicator inside card header if needed, or already covered by badge? */}
+              </Group>
+            </div>
           </Group>
-          <Text fw={500} size="sm" c={isOverdue ? 'red' : undefined}>
-            {enrollment.next_payment_date
-              ? formatDate(enrollment.next_payment_date)
-              : 'Belirlenmedi'}
-          </Text>
-        </Group>
+        </Grid.Col>
 
-        <Group justify="space-between">
-          <Group gap="xs">
-            <ThemeIcon color="gray" variant="light" size="sm">
-              <IconHistory size={14} />
-            </ThemeIcon>
-            <Text size="sm" c="dimmed">
-              Kayıt Tarihi
-            </Text>
-          </Group>
-          <Text fw={500} size="sm">
-            {enrollment.created_at ? formatDate(enrollment.created_at) : '-'}
-          </Text>
-        </Group>
+        {/* 2. Info Columns (Date, Price, Payment Date) */}
+        <Grid.Col span={{ base: 12, md: 5 }}>
+          <Group gap="xl" wrap="wrap">
+            {/* Payment Date */}
+            <Group gap={8}>
+              <ThemeIcon color="blue" variant="light" size="md" radius="md">
+                <IconCalendar size={18} />
+              </ThemeIcon>
+              <div>
+                <Text size="xs" c="dimmed">
+                  Sonraki Ödeme
+                </Text>
+                <Text fw={600} size="sm" c={isOverdue ? 'red' : undefined}>
+                  {enrollment.next_payment_date
+                    ? formatDate(enrollment.next_payment_date)
+                    : 'Belirlenmedi'}
+                </Text>
+              </div>
+            </Group>
 
-        <Group justify="space-between">
-          <Group gap="xs">
-            <ThemeIcon color="green" variant="light" size="sm">
-              <IconCreditCard size={14} />
-            </ThemeIcon>
-            <Text size="sm" c="dimmed">
-              Ücret
-            </Text>
-          </Group>
-          <Group gap={4}>
-            <Text fw={700} size="lg">
-              {formatCurrency(displayPrice)}
-            </Text>
-            {enrollment.custom_price !== null && (
-              <Badge size="xs" variant="light" color="yellow">
-                Özel
-              </Badge>
-            )}
-          </Group>
-        </Group>
-      </Stack>
+            {/* Created At */}
+            <Group gap={8}>
+              <ThemeIcon color="gray" variant="light" size="md" radius="md">
+                <IconHistory size={18} />
+              </ThemeIcon>
+              <div>
+                <Text size="xs" c="dimmed">
+                  Kayıt Tarihi
+                </Text>
+                <Text fw={600} size="sm">
+                  {enrollment.created_at
+                    ? formatDate(enrollment.created_at)
+                    : '-'}
+                </Text>
+              </div>
+            </Group>
 
-      <Group mt="md" grow>
-        <Button
-          leftSection={<IconList size={16} />}
-          onClick={onViewSchedule}
-          variant="light"
-          color="gray"
-        >
-          Tüm Ödemeler
-        </Button>
-        <Button
-          leftSection={<IconCreditCard size={16} />}
-          onClick={onPay}
-          variant={isOverdue ? 'filled' : 'light'}
-          color={isOverdue ? 'red' : 'blue'}
-        >
-          {isOverdue ? 'Öde (Gecikmiş)' : 'Öde'}
-        </Button>
-      </Group>
+            {/* Price */}
+            <Group gap={8}>
+              <ThemeIcon color="green" variant="light" size="md" radius="md">
+                <IconCreditCard size={18} />
+              </ThemeIcon>
+              <div>
+                <Text size="xs" c="dimmed">
+                  Aylık Ücret
+                </Text>
+                <Group gap={4}>
+                  <Text fw={700} size="md">
+                    {formatCurrency(displayPrice)}
+                  </Text>
+                  {enrollment.custom_price !== null && (
+                    <Badge size="xs" variant="light" color="yellow">
+                      Özel
+                    </Badge>
+                  )}
+                </Group>
+              </div>
+            </Group>
+          </Group>
+        </Grid.Col>
+
+        {/* 3. Actions */}
+        <Grid.Col span={{ base: 12, md: 3 }}>
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="light"
+              color="gray"
+              size="sm"
+              leftSection={<IconList size={16} />}
+              onClick={onViewSchedule}
+            >
+              Geçmiş
+            </Button>
+            <Button
+              variant={isOverdue ? 'filled' : 'light'}
+              color={isOverdue ? 'red' : 'blue'}
+              size="sm"
+              leftSection={<IconCreditCard size={16} />}
+              onClick={onPay}
+            >
+              {isOverdue ? 'Öde' : 'Öde'}
+            </Button>
+            <Menu position="bottom-end" withinPortal>
+              <Menu.Target>
+                <ActionIcon variant="subtle" color="gray" size="lg">
+                  <IconDots size={20} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item
+                  leftSection={<IconArrowsExchange size={14} />}
+                  onClick={onTransfer}
+                >
+                  Sınıf Değiştir
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        </Grid.Col>
+      </Grid>
     </Card>
   );
 }

@@ -120,16 +120,27 @@ export async function getPaymentSchedule(
       .sort((a, b) => a.valueOf() - b.valueOf());
 
     // The member is committed from start to (last paid + 1 month) or just start + 1 if no payments
+    // BUT we must also consider the PAYMENT INTERVAL (Membership Duration)
+    // If user signed up for 6 months, we should show 6 months.
+
+    // 1. Base commitment from payments
     let commitmentEndDate;
     if (paidPeriods.length > 0) {
       const lastPaidPeriod = paidPeriods[paidPeriods.length - 1];
-      // Commitment extends to next unpaid month (so they can pay it)
       commitmentEndDate = lastPaidPeriod.add(2, 'month'); // last paid + 1 (next due)
     } else {
-      // No payments yet, just show the first month as due
-      commitmentEndDate = startDate.add(1, 'month');
+      commitmentEndDate = startDate.add(1, 'month'); // at least show first month
     }
 
+    // 2. Minimum commitment from Registration Duration (payment_interval)
+    const durationMonths = memberClass.payment_interval || 1;
+    const durationEndDate = startDate.add(durationMonths, 'month');
+
+    if (durationEndDate.isAfter(commitmentEndDate)) {
+      commitmentEndDate = durationEndDate;
+    }
+
+    // 3. Minimum commitment from Current Date (if overdue)
     // Also ensure we show at least up to current month if member is overdue
     if (now.isAfter(commitmentEndDate)) {
       commitmentEndDate = now.add(1, 'month');
@@ -207,6 +218,7 @@ export async function processClassPayment(
         `
         payment_interval,
         custom_price,
+        created_at,
         classes (
           name,
           price_monthly
@@ -238,26 +250,35 @@ export async function processClassPayment(
       );
     }
 
-    // Determine how many months are being paid
-    // Ideally user provides monthCount. If not, calculate from amount/price.
-    // If formData.periodDate is provided, that's just the START date.
-    let monthCount = formData.monthCount || Math.round(amount / pricePerMonth);
-    if (monthCount < 1) monthCount = 1;
+    // Determine how many months are being paid and WHICH months
+    const targetPeriods = formData.targetPeriods;
+    let monthCount = 0;
 
-    // Validate absolute amount equality?
-    // User might pay custom amount. If amount != pricePerMonth * monthCount,
-    // we should distributed it or just assign the total to the first/last payment?
-    // Let's assume uniform distribution for ledger, or split proportional.
-    // Simpler: Split amount evenly across months for the records.
+    if (targetPeriods && targetPeriods.length > 0) {
+      monthCount = targetPeriods.length;
+    } else {
+      monthCount = formData.monthCount || Math.round(amount / pricePerMonth);
+      if (monthCount < 1) monthCount = 1;
+    }
+
+    // Split amount evenly
     const amountPerMonth = amount / monthCount;
 
-    const startPeriodDate = dayjs(periodDate);
     const paymentsCreated: Payment[] = [];
 
-    // B3: Loop to create individual payment records for each month
+    // B3: Loop to create individual payment records
+    // Loop based on Count, but determine date source
     for (let i = 0; i < monthCount; i++) {
-      // Calculate period for this specific month
-      const currentPeriodMonth = startPeriodDate.add(i, 'month');
+      let currentPeriodMonth;
+
+      if (targetPeriods && targetPeriods[i]) {
+        currentPeriodMonth = dayjs(targetPeriods[i]);
+      } else {
+        // Legacy/Fallback: Sequential from periodDate
+        const startPeriodDate = dayjs(periodDate);
+        currentPeriodMonth = startPeriodDate.add(i, 'month');
+      }
+
       const pStart = currentPeriodMonth.format('YYYY-MM-DD');
       const pEnd = currentPeriodMonth.add(1, 'month').format('YYYY-MM-DD');
       const pLabel = currentPeriodMonth.format('MMMM YYYY');
@@ -284,12 +305,9 @@ export async function processClassPayment(
 
       if (paymentError) {
         logError(
-          `processClassPayment - insert payment month ${i + 1}`,
+          `processClassPayment - insert payment ${pLabel}`,
           paymentError
         );
-        // If one fails, we might have partial state. Transaction would be better but not easily available via client.
-        // Continue or abort? Aborting might be better but partial payments exist.
-        // Let's continue and report error? Or return first error.
         return errorResponse(handleSupabaseError(paymentError));
       }
 
@@ -307,10 +325,41 @@ export async function processClassPayment(
     }
 
     // 2. Update next_payment_date logic
-    // Set to the END of the LAST period we just paid for.
-    const finalNextPaymentDate = startPeriodDate
-      .add(monthCount, 'month')
-      .format('YYYY-MM-DD');
+    // ROBUST: Find the first UNPAID month starting from enrollment (created_at)
+    // This ensures that if I pay for a future month but skip the current one, the "Next Payment"
+    // stays on the current unpaid month (filling the gap).
+
+    // Fetch all payments to re-calculate continuity
+    const { data: allPayments } = await supabase
+      .from('payments')
+      .select('period_start')
+      .eq('member_id', memberId)
+      .eq('class_id', classId);
+
+    // Start checking from enrollment date
+    let checkDate = dayjs(memberClass.created_at || todayStr);
+    // Use set of paid months for O(1) lookup
+    const paidMonths = new Set(
+      (allPayments || []).map((p) => dayjs(p.period_start).format('YYYY-MM'))
+    );
+
+    // Also add the newly created payments to this set (in case of replication lag or transaction visibility)
+    paymentsCreated.forEach((p) => {
+      paidMonths.add(dayjs(p.period_start).format('YYYY-MM'));
+    });
+
+    // Iterate forward to find first gap
+    // Safety limit: Check next 10 years max to avoid infinite loops
+    for (let i = 0; i < 120; i++) {
+      const key = checkDate.format('YYYY-MM');
+      if (paidMonths.has(key)) {
+        checkDate = checkDate.add(1, 'month');
+      } else {
+        break; // Found the gap
+      }
+    }
+
+    const finalNextPaymentDate = checkDate.format('YYYY-MM-DD');
 
     const { error: updateError } = await supabase
       .from('member_classes')

@@ -90,6 +90,7 @@ export async function getMemberById(
           active,
           payment_interval,
           custom_price,
+          created_at,
           classes (*)
         ),
         frozen_logs (*)
@@ -161,10 +162,8 @@ export async function createMember(
       formData.class_registrations.length > 0
     ) {
       const memberClasses = formData.class_registrations.map((reg) => {
-        // Calculate initial next_payment_date based on duration
-        const nextPaymentDate = dayjs(today)
-          .add(reg.duration, 'month')
-          .format('YYYY-MM-DD');
+        // Initialize next_payment_date to TODAY for new registrations
+        const nextPaymentDate = today;
 
         return {
           member_id: member.id,
@@ -410,10 +409,9 @@ export async function addMemberToClasses(
     }
 
     const memberClasses = classRegistrations.map((reg) => {
-      // Calculate initial next_payment_date based on duration
-      const nextPaymentDate = dayjs(today)
-        .add(reg.duration, 'month')
-        .format('YYYY-MM-DD');
+      // Initialize next_payment_date to TODAY (start of period).
+      // It will advance as payments are made.
+      const nextPaymentDate = today;
 
       return {
         member_id: memberId,

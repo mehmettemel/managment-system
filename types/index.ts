@@ -133,6 +133,7 @@ export interface ClassPaymentFormData {
   paymentMethod?: string;
   description?: string;
   monthCount?: number; // Optional: Pay for multiple months at once
+  targetPeriods?: string[]; // Array of YYYY-MM-DD strings for specific months
 }
 
 export interface FreezeFormData {

@@ -42,6 +42,7 @@ import { FreezeStatusCard } from './FreezeStatusCard';
 import { PaymentScheduleTable } from './PaymentScheduleTable';
 import { PaymentConfirmModal } from '@/components/payments/PaymentConfirmModal';
 import { DataTable, DataTableColumn } from '@/components/shared/DataTable';
+import dayjs from 'dayjs';
 import { getPaymentSchedule } from '@/actions/payments';
 import type { PaymentScheduleItem } from '@/types';
 import { showSuccess, showError } from '@/utils/notifications';
@@ -113,13 +114,54 @@ export function MemberDetailView({
     fetchData();
   }, [fetchData]);
 
+  // Helper to calculate effective next payment date client-side
+  const getComputedNextDate = (enrollment: MemberClassWithDetails): string => {
+    const classPayments = paymentHistory.filter(
+      (p) => p.class_id === enrollment.class_id
+    );
+    const paidMonths = new Set(
+      classPayments.map((p) => dayjs(p.period_start).format('YYYY-MM'))
+    );
+
+    let start = dayjs(enrollment.created_at || new Date());
+    if (classPayments.length > 0) {
+      const sorted = [...classPayments].sort(
+        (a, b) =>
+          dayjs(a.period_start).valueOf() - dayjs(b.period_start).valueOf()
+      );
+      const firstPay = dayjs(sorted[0].period_start);
+      if (firstPay.isBefore(start)) {
+        start = firstPay;
+      }
+    }
+
+    let check = start;
+    for (let i = 0; i < 120; i++) {
+      if (paidMonths.has(check.format('YYYY-MM'))) {
+        check = check.add(1, 'month');
+      } else {
+        return check.format('YYYY-MM-DD');
+      }
+    }
+    return check.format('YYYY-MM-DD');
+  };
+
+  const computedEnrollments = activeEnrollments.map((e) => ({
+    ...e,
+    next_payment_date: getComputedNextDate(e),
+  }));
+
   // Handlers
   const handleTransferClick = (enrollment: MemberClassWithDetails) => {
     setTransferModal({ open: true, enrollment });
   };
 
   const handlePayClick = (enrollment: MemberClassWithDetails) => {
-    setPayModal({ open: true, enrollment });
+    const computedDate = getComputedNextDate(enrollment);
+    setPayModal({
+      open: true,
+      enrollment: { ...enrollment, next_payment_date: computedDate },
+    });
   };
 
   const handleViewSchedule = async (enrollment: MemberClassWithDetails) => {
@@ -339,15 +381,15 @@ export function MemberDetailView({
 
         {/* Active Enrollments */}
         <Title order={4}>Kayıtlı Dersler</Title>
-        {activeEnrollments.length === 0 ? (
+        {computedEnrollments.length === 0 ? (
           <Card withBorder>
             <Text c="dimmed" ta="center">
               Aktif ders kaydı bulunmuyor.
             </Text>
           </Card>
         ) : (
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-            {activeEnrollments.map((enrollment) => (
+          <Stack gap="md">
+            {computedEnrollments.map((enrollment) => (
               <EnrollmentCard
                 key={enrollment.id}
                 enrollment={enrollment}
@@ -357,7 +399,7 @@ export function MemberDetailView({
                 onViewSchedule={() => handleViewSchedule(enrollment)}
               />
             ))}
-          </SimpleGrid>
+          </Stack>
         )}
 
         {/* History Tabs */}
@@ -413,6 +455,7 @@ export function MemberDetailView({
               ? `${formatDate(payModal.enrollment.next_payment_date, 'MMMM YYYY')} Ödemesi`
               : 'Ödeme',
           }}
+          maxMonths={payModal.enrollment.payment_interval || 1}
         />
       )}
 
