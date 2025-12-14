@@ -132,10 +132,12 @@ export async function createClass(
 
 /**
  * Update a class
+ * @param updateExistingPrices - If true, updates price for all active enrollments in this class
  */
 export async function updateClass(
   id: number,
-  updates: ClassUpdate
+  updates: ClassUpdate,
+  updateExistingPrices: boolean = false
 ): Promise<ApiResponse<Class>> {
   try {
     const supabase = await createClient();
@@ -153,7 +155,25 @@ export async function updateClass(
       return errorResponse(handleSupabaseError(error));
     }
 
+    // If price changed and updateExistingPrices is true, update all active enrollments
+    if (updateExistingPrices && updates.price_monthly !== undefined) {
+      const { error: updateError } = await supabase
+        .from('member_classes')
+        .update({
+          price: updates.price_monthly,
+          custom_price: updates.price_monthly,
+        })
+        .eq('class_id', id)
+        .eq('active', true);
+
+      if (updateError) {
+        logError('updateClass - update enrollments', updateError);
+        // Don't fail the whole operation, just log
+      }
+    }
+
     revalidatePath('/classes');
+    revalidatePath('/members'); // Revalidate members too since prices might have changed
     return successResponse(data);
   } catch (error) {
     logError('updateClass', error);

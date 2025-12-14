@@ -205,10 +205,16 @@ export async function getPaymentSchedule(
         status = 'overdue';
       }
 
+      // CRITICAL: Use actual payment amount for paid periods (historical data)
+      // Use current price (custom_price or price) for unpaid/overdue periods
+      const amount = paidPayment
+        ? Number(paidPayment.amount) // Historical: actual paid amount
+        : Number(memberClass.custom_price ?? memberClass.price) || 0; // Current: expected amount
+
       schedule.push({
         periodMonth: periodStart,
         periodLabel: currentMonth.format('MMMM YYYY'),
-        amount: Number(memberClass.price) || 0,
+        amount: amount,
         status,
         paymentId: paidPayment?.id,
         paymentDate: paidPayment ? paidPayment.payment_date : undefined,

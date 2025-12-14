@@ -21,7 +21,7 @@ import { Payment } from '@/types';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { deletePayment } from '@/actions/payments';
 import { showSuccess, showError } from '@/utils/notifications';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatPaymentMethod } from '@/utils/formatters';
 import dayjs from 'dayjs';
 import Link from 'next/link';
 
@@ -80,7 +80,7 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
                   </Table.Td>
                   <Table.Td>{(payment as any).classes?.name || '-'}</Table.Td>
                   <Table.Td>
-                    <Badge variant="dot">{payment.payment_method}</Badge>
+                    <Badge variant="dot">{formatPaymentMethod(payment.payment_method)}</Badge>
                   </Table.Td>
                   <Table.Td>
                     {payment.period_start &&

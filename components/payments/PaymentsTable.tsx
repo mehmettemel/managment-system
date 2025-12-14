@@ -7,7 +7,7 @@ import { getFilteredPayments } from '@/actions/payments';
 import { useMembers } from '@/hooks/use-members';
 import { useClasses } from '@/hooks/use-classes';
 import { Payment } from '@/types';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatPaymentMethod } from '@/utils/formatters';
 import dayjs from 'dayjs';
 import { showError } from '@/utils/notifications';
 import { TruncatedTooltip } from '@/components/shared/TruncatedTooltip';
@@ -131,7 +131,7 @@ export function PaymentsTable() {
       label: 'Ödeme Yöntemi',
       render: (item) => (
         <Badge variant="light" color="gray">
-          {item.payment_method}
+          {formatPaymentMethod(item.payment_method)}
         </Badge>
       ),
     },

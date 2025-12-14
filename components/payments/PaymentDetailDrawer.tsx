@@ -21,7 +21,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { PaymentScheduleItem } from '@/types';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatPaymentMethod } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
 
 interface PaymentDetailDrawerProps {
@@ -127,7 +127,7 @@ export function PaymentDetailDrawer({
                   <Text size="sm">Ödeme Yöntemi</Text>
                 </Group>
                 <Text fw={500} size="sm">
-                  {item.paymentMethod || '-'}
+                  {formatPaymentMethod(item.paymentMethod)}
                 </Text>
               </Group>
             </>

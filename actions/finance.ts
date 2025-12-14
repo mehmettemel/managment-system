@@ -27,6 +27,7 @@ import { getServerNow } from '@/utils/server-date-helper';
 
 /**
  * Calculate and Process Instructor Commission for a Student Payment
+ * NEW: Uses class-based commission rate instead of dance_type-based
  */
 export async function processStudentPayment(
   paymentId: number,
@@ -37,10 +38,10 @@ export async function processStudentPayment(
   try {
     const supabase = await createClient();
 
-    // 1. Get Class & Instructor Info
+    // 1. Get Class & Instructor Info (including class-specific commission rate)
     const { data: classData, error: classError } = await supabase
       .from('classes')
-      .select('instructor_id, dance_type_id')
+      .select('instructor_id, instructor_commission_rate')
       .eq('id', classId)
       .single();
 
@@ -48,27 +49,16 @@ export async function processStudentPayment(
       return successResponse(true);
     }
 
-    const { instructor_id, dance_type_id } = classData;
+    const { instructor_id, instructor_commission_rate } = classData;
 
-    // 2. Get Commission Rate
+    // 2. Get Commission Rate (Class-Based Priority)
     let rate = 0;
 
-    // Check specific rate matrix
-    if (dance_type_id) {
-      const { data: rateData } = await supabase
-        .from('instructor_rates')
-        .select('rate')
-        .eq('instructor_id', instructor_id)
-        .eq('dance_type_id', dance_type_id)
-        .single();
-
-      if (rateData) {
-        rate = rateData.rate;
-      }
-    }
-
-    // If no specific rate, get default
-    if (rate === 0) {
+    // PRIORITY 1: Class-specific commission rate
+    if (instructor_commission_rate !== null && instructor_commission_rate !== undefined) {
+      rate = instructor_commission_rate;
+    } else {
+      // PRIORITY 2: Instructor's default commission rate
       const { data: instructor } = await supabase
         .from('instructors')
         .select('default_commission_rate')
@@ -123,6 +113,7 @@ export async function processStudentPayment(
 
 /**
  * Get Commission Rate helper
+ * NEW: Returns class-specific rate or instructor default
  */
 export async function getCommissionRate(
   instructorId: number,
@@ -130,30 +121,20 @@ export async function getCommissionRate(
 ): Promise<number> {
   const supabase = await createClient();
 
-  // Get Class Dance Type
+  // Get Class-specific commission rate
   const { data: classData } = await supabase
     .from('classes')
-    .select('dance_type_id')
+    .select('instructor_commission_rate')
     .eq('id', classId)
     .single();
 
-  if (!classData) return 0;
-
-  const danceTypeId = classData.dance_type_id;
-
-  // Check specific
-  if (danceTypeId) {
-    const { data: rateData } = await supabase
-      .from('instructor_rates')
-      .select('rate')
-      .eq('instructor_id', instructorId)
-      .eq('dance_type_id', danceTypeId)
-      .single();
-
-    if (rateData) return rateData.rate;
+  // PRIORITY 1: Class-specific rate
+  if (classData?.instructor_commission_rate !== null &&
+      classData?.instructor_commission_rate !== undefined) {
+    return classData.instructor_commission_rate;
   }
 
-  // Check default
+  // PRIORITY 2: Instructor default rate
   const { data: instructor } = await supabase
     .from('instructors')
     .select('default_commission_rate')

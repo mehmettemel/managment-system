@@ -34,3 +34,35 @@ export const formatPhone = (value: string | undefined | null) => {
 
   return value;
 };
+
+/**
+ * Format payment method from database value to Turkish display name
+ * Database values: 'cash', 'card', 'transfer', 'Nakit', 'Kredi Kartı', 'Havale/EFT'
+ */
+export const formatPaymentMethod = (
+  value: string | undefined | null
+): string => {
+  if (!value) return '-';
+
+  // Normalize to lowercase for comparison
+  const normalized = value.toLowerCase().trim();
+
+  switch (normalized) {
+    case 'cash':
+    case 'nakit':
+      return 'Nakit';
+    case 'card':
+    case 'credit card':
+    case 'kredi kartı':
+    case 'kredi karti':
+      return 'Kredi Kartı';
+    case 'transfer':
+    case 'havale':
+    case 'havale/eft':
+    case 'eft':
+      return 'Havale/EFT';
+    default:
+      // Return capitalized version if unknown
+      return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+};

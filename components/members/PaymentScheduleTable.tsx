@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Badge, Button, Text } from '@mantine/core';
 import { IconCheck, IconX, IconCreditCard } from '@tabler/icons-react';
 import { PaymentScheduleItem } from '@/types';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatPaymentMethod } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
 import { processClassPayment, deletePayment } from '@/actions/payments';
 import { showSuccess, showError } from '@/utils/notifications';
@@ -155,7 +155,7 @@ export function PaymentScheduleTable({
     {
       key: 'paymentMethod',
       label: 'Yöntem',
-      render: (item) => item.paymentMethod || '-',
+      render: (item) => formatPaymentMethod(item.paymentMethod),
     },
     {
       key: 'actions',

@@ -197,7 +197,7 @@ export function PaymentConfirmModal({
             </Paper>
           </Stack>
 
-          <Paper withBorder p="sm" radius="md" bg="gray.0">
+          <Paper withBorder p="sm" radius="md">
             <Stack gap="xs">
               <NumberInput
                 label="Tutar"

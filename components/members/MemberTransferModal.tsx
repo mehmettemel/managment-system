@@ -66,7 +66,7 @@ export function MemberTransferModal({
             <Stack
               gap="xs"
               p="sm"
-              bg="var(--mantine-color-gray-1)"
+              bg="var(--mantine-color-default-hover)"
               style={{ borderRadius: 'var(--mantine-radius-sm)' }}
             >
               <Text size="sm" fw={600} c="dimmed">

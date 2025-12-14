@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Button,
   Group,
@@ -45,6 +46,7 @@ export function ClassesContent({
   instructors,
   danceTypes,
 }: ClassesContentProps) {
+  const router = useRouter();
   const [opened, { open, close }] = useDisclosure(false);
   const [membersDrawerOpen, { open: openMembers, close: closeMembers }] =
     useDisclosure(false);
@@ -53,6 +55,10 @@ export function ClassesContent({
 
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleSuccess = () => {
+    router.refresh();
+  };
 
   const handleEdit = (item: Class) => {
     setSelectedClass(item);
@@ -217,6 +223,7 @@ export function ClassesContent({
         classItem={selectedClass}
         instructors={instructors}
         danceTypes={danceTypes}
+        onSuccess={handleSuccess}
       />
 
       <ClassMembersDrawer

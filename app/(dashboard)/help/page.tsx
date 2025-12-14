@@ -105,27 +105,35 @@ export default function HelpPage() {
               <IconChartBar size={20} color="var(--mantine-color-blue-6)" />
             }
           >
-            <Text fw={600}>Dashboard (Ana Panel) Nedir?</Text>
+            <Text fw={600}>Dashboard ve Raporlama (Senaryo 5)</Text>
           </Accordion.Control>
           <Accordion.Panel>
             <Text mb="sm">
-              Dashboard, uygulamanın ana kontrol merkezidir. Burada şunları
-              görebilirsiniz:
+              Dashboard, okulunuzun finansal kokpitidir. Buradan anlık
+              durumunuzu takip edebilirsiniz:
             </Text>
             <List spacing="xs" size="sm" mb="md">
               <List.Item>
-                <b>Toplam Ciro:</b> Okulun açılışından itibaren toplam gelir.
+                <b>Toplam Ciro:</b> Okulun açılışından itibaren kasaya giren
+                toplam para.
               </List.Item>
               <List.Item>
-                <b>Bu Ay:</b> İçinde bulunulan aydaki toplam tahsilat.
+                <b>Bu Ay:</b> Sadece içinde bulunulan aydaki tahsilatlar. Okulun
+                büyüme trendini buradan izleyebilirsiniz.
               </List.Item>
               <List.Item>
-                <b>Aktif Üyeler:</b> Şu an kaydı devam eden öğrenci sayısı.
+                <b>Aktif Üyeler:</b> Şu an kaydı devam eden (bırakmamış) öğrenci
+                sayısı.
               </List.Item>
               <List.Item>
                 <b>Gelir Grafiği:</b> Son 6 ayın performans karşılaştırması.
               </List.Item>
             </List>
+            <Alert variant="light" color="blue" title="Raporlama İpucu">
+              Detaylı gelir raporu için <b>Ödemeler</b> sayfasına gidip tarih
+              filtresi kullanabilir, Sınıf Geliri ve Özel Ders geliri dağılımını
+              görebilirsiniz.
+            </Alert>
           </Accordion.Panel>
         </Accordion.Item>
 
@@ -136,11 +144,11 @@ export default function HelpPage() {
               <IconUserPlus size={20} color="var(--mantine-color-teal-6)" />
             }
           >
-            <Text fw={600}>Üye İşlemleri (Kayıt, Ders Ekleme)</Text>
+            <Text fw={600}>Üye Kaydı ve Ders Atama (Senaryo 1)</Text>
           </Accordion.Control>
           <Accordion.Panel>
             <Text fw={700} mb="xs">
-              1. Yeni Üye Kaydetme
+              1. Hızlı Kayıt
             </Text>
             <List type="ordered" spacing="xs" size="sm" mb="lg">
               <List.Item>
@@ -150,7 +158,8 @@ export default function HelpPage() {
                 Sağ üstteki <b>Yeni Üye</b> butonuna tıklayın.
               </List.Item>
               <List.Item>
-                Ad, Soyad ve Telefon girerek <b>Kaydet</b>'e basın.
+                Sadece <b>Ad, Soyad ve Telefon</b> girerek kaydı oluşturun. Uzun
+                formlarla vakit kaybetmeyin.
               </List.Item>
             </List>
 
@@ -160,15 +169,24 @@ export default function HelpPage() {
               2. Derse Kaydetme (Enrollment)
             </Text>
             <Text size="sm" mb="xs">
-              Üyeyi oluşturduktan sonra bir sınıfa eklemelisiniz:
+              Üyeyi oluşturmak yetmez, onu bir sınıfa eklemelisiniz:
             </Text>
             <List type="ordered" spacing="xs" size="sm">
               <List.Item>
                 Üye detay sayfasında <b>Ders Ekle</b> butonuna tıklayın.
               </List.Item>
-              <List.Item>Listeden dersi seçin (Örn: Salsa 101).</List.Item>
               <List.Item>
-                Gerekirse fiyatı düzenleyin ve <b>Kaydet</b> deyin.
+                Listeden bir veya birden fazla ders seçin (Örn: Salsa 101,
+                Bachata).
+              </List.Item>
+              <List.Item>
+                <b>Fiyatlandırma:</b> Sistem dersin varsayılan fiyatını getirir.
+                Öğrenciye özel indirim yapacaksanız fiyatı buradan
+                değiştirebilirsiniz.
+              </List.Item>
+              <List.Item>
+                <b>Kayıt:</b> Kaydet dediğinizde üyenin borç takvimi işlemeye
+                başlar.
               </List.Item>
             </List>
           </Accordion.Panel>
@@ -181,34 +199,49 @@ export default function HelpPage() {
               <IconCreditCard size={20} color="var(--mantine-color-green-6)" />
             }
           >
-            <Text fw={600}>Ödeme Alma ve Takip</Text>
+            <Text fw={600}>
+              Ödeme Alma ve Eğitmen Hakedişleri (Senaryo 2 & 4)
+            </Text>
           </Accordion.Control>
           <Accordion.Panel>
-            <Alert
-              variant="light"
-              color="blue"
-              title="İpucu"
-              icon={<IconInfoCircle />}
-              mb="md"
-            >
-              Ödemesi geciken öğrencilerin yanında kırmızı ünlem (!) işareti
-              görünür.
-            </Alert>
+            <Text fw={700} mb="xs">
+              Öğrenciden Ödeme Alma:
+            </Text>
+            <List spacing="xs" size="sm" mb="md">
+              <List.Item>
+                <b>Borç Takibi:</b> Üye listesinde isminin yanında kırmızı ünlem
+                (!) olanlar ödemesi gecikenlerdir.
+              </List.Item>
+              <List.Item>
+                <b>Tahsilat:</b> Üye profilinde <b>Ödeme Al</b> butonuna basın.
+                Sistem ödenmemiş ayları listeler.
+              </List.Item>
+              <List.Item>
+                <b>Esnek Ödeme:</b> Öğrenci 3 aylık peşin ödemek isterse,
+                listeden ilgili ayları seçip tek işlemde tahsilat
+                yapabilirsiniz.
+              </List.Item>
+            </List>
+
+            <Divider my="sm" />
 
             <Text fw={700} mb="xs">
-              Ödeme Alma Adımları:
+              Eğitmen Ödemeleri:
             </Text>
-            <List type="ordered" spacing="xs" size="sm">
-              <List.Item>Üyenin profiline gidin.</List.Item>
+            <Text size="sm" mb="xs">
+              Sistem eğitmen maaş/prim hesabını otomatik tutar.
+            </Text>
+            <List spacing="xs" size="sm">
               <List.Item>
-                Ders kartındaki veya üst menüdeki <b>Ödeme Al</b> butonuna
-                tıklayın.
+                Her öğrenci ödemesinden eğitmenin payı (Örn: %40) otomatik
+                olarak eğitmen bakiyesine eklenir.
               </List.Item>
               <List.Item>
-                Sistem ödenmemiş ayları listeler. Ödenecek ayları seçin.
+                <b>Eğitmenler</b> sayfasında biriken bakiyeyi görebilirsiniz.
               </List.Item>
               <List.Item>
-                Ödeme yöntemini (Nakit/Kart) seçip <b>Kaydet</b>'e basın.
+                Ödeme yaptığınızda <b>Ödeme Yap</b> butonunu kullanarak bakiyeyi
+                sıfırlayın.
               </List.Item>
             </List>
           </Accordion.Panel>
@@ -221,69 +254,105 @@ export default function HelpPage() {
               <IconSnowflake size={20} color="var(--mantine-color-cyan-6)" />
             }
           >
-            <Text fw={600}>Üyelik Dondurma (Freeze)</Text>
+            <Text fw={600}>Üyelik Dondurma (Senaryo 3)</Text>
           </Accordion.Control>
           <Accordion.Panel>
             <Text size="sm" mb="md">
-              Öğrenciler tatile gittiğinde veya ara vermek istediğinde,
-              üyeliklerini silmek yerine dondurabilirsiniz. Bu sayede ödeme
-              takvimi otomatik olarak kayar ve üye hak kaybına uğramaz.
+              Bir öğrenci tatile gideceği veya sakatlandığı için ara vermek
+              isteyebilir. Üyeliği silmek yerine <b>Dondurun</b>.
             </Text>
             <List type="ordered" spacing="xs" size="sm">
               <List.Item>
-                Üye profilinde sağ üstteki menüden <b>Dondur</b>'u seçin.
+                Üye profilinde sağ üstteki menüden <b>Dondur</b> seçeneğini
+                kullanın.
               </List.Item>
-              <List.Item>Başlangıç tarihini seçin.</List.Item>
               <List.Item>
-                Bitiş tarihi belliyse girin, değilse boş bırakın (Süresiz
-                Dondurma).
+                <b>Başlangıç Tarihi:</b> Dondurmanın başlayacağı gün.
+              </List.Item>
+              <List.Item>
+                <b>Bitiş Tarihi:</b> Dönüş tarihi belliyse girin, belli değilse
+                boş bırakın (Süresiz Dondurma).
+              </List.Item>
+              <List.Item>
+                <b>Otomatik Hesaplama:</b> Sistem ödeme takvimini otomatik
+                kaydırır. Dondurulan süre için borç çıkmaz, üyelik süresi uzar.
               </List.Item>
             </List>
           </Accordion.Panel>
         </Accordion.Item>
 
-        {/* Instructors */}
-        <Accordion.Item value="instructors">
+        {/* Class Management */}
+        <Accordion.Item value="classes">
           <Accordion.Control
             icon={
               <IconSchool size={20} color="var(--mantine-color-orange-6)" />
             }
           >
-            <Text fw={600}>Eğitmen ve Sınıf Yönetimi</Text>
+            <Text fw={600}>Sınıf Yönetimi ve Yoklama (Senaryo 6)</Text>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Text size="sm" mb="md">
+              Hangi sınıfta kaç kişi var, kimler aktif görmek istiyorsunuz:
+            </Text>
+            <List spacing="xs" size="sm">
+              <List.Item>
+                <b>Yeni Sınıf:</b> <b>Dersler</b> sayfasından yeni bir sınıf
+                (Örn: Tango 2. Seviye) oluşturun, eğitmenini ve fiyatını
+                belirleyin.
+              </List.Item>
+              <List.Item>
+                <b>Sınıf Listesi:</b> Dersler sayfasında bir derse
+                tıkladığınızda o sınıfa kayıtlı tüm öğrencileri görürsünüz.
+              </List.Item>
+              <List.Item>
+                <b>Aktif/Pasif:</b> Listede kimlerin aktif ödeme yapan öğrenci,
+                kimlerin dondurulmuş veya bırakmış olduğunu ayırt edebilirsiniz.
+              </List.Item>
+            </List>
+          </Accordion.Panel>
+        </Accordion.Item>
+
+        {/* Admin Operations */}
+        <Accordion.Item value="admin">
+          <Accordion.Control
+            icon={<IconBook size={20} color="var(--mantine-color-grape-6)" />}
+          >
+            <Text fw={600}>Yönetici İşlemleri ve Simülasyon (Senaryo 7)</Text>
           </Accordion.Control>
           <Accordion.Panel>
             <Text fw={700} mb="xs">
-              Yeni Sınıf Açma:
+              Geçmişe Dönük Düzenleme
             </Text>
-            <List spacing="xs" size="sm" mb="lg">
-              <List.Item>
-                <b>Dersler</b> sayfasına gidin ve <b>Yeni Ders</b> deyin.
-              </List.Item>
-              <List.Item>Ders adı ve varsayılan ücreti belirleyin.</List.Item>
-              <List.Item>Dersi verecek eğitmeni seçin.</List.Item>
-            </List>
+            <Text size="sm" mb="md">
+              Yanlış girilen bir ödemeyi veya kaydı düzeltebilirsiniz.
+              Yöneticiler geçmiş tarihli ödemeleri silebilir veya tutarlarını
+              güncelleyebilir.
+            </Text>
 
             <Divider my="sm" />
 
             <Text fw={700} mb="xs">
-              Eğitmen Ödemeleri:
+              Zaman Simülatörü (Test Amaçlı)
             </Text>
-            <Text size="sm">
-              Sistem, öğrencilerden alınan ödemelerden eğitmen payını (komisyon)
-              otomatik hesaplar.
-              <b>Eğitmenler</b> sayfasında biriken bakiyeyi görebilir ve{' '}
-              <b>Ödeme Yap</b> butonu ile ödemeyi sıfırlayabilirsiniz.
+            <Text size="sm" mb="xs">
+              Gelecek senaryolarını test etmek için <b>Admin &gt; Simülatör</b>
+              sayfasını kullanın.
             </Text>
+            <List spacing="xs" size="sm">
+              <List.Item>
+                Sistemi sanki "3 ay sonrasındaymış" gibi çalıştırıp, kimlerin
+                borcunun gecikeceğini görebilirsiniz.
+              </List.Item>
+              <List.Item>
+                <b>Uyarı:</b> Bu özellik sadece test amaçlıdır. Günlük
+                kullanımda simülasyon kapalı olmalıdır.
+              </List.Item>
+            </List>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
 
-      <Box
-        mt={40}
-        p="xl"
-        className="bg-gray-100 dark:bg-zinc-800/50"
-        style={{ borderRadius: 8 }}
-      >
+      <Card mt={40} p="xl" radius="md" withBorder>
         <Title order={4} mb="md">
           Sıkça Sorulan Sorular
         </Title>
@@ -316,7 +385,7 @@ export default function HelpPage() {
             </Text>
           </div>
         </Group>
-      </Box>
+      </Card>
     </Container>
   );
 }
