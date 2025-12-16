@@ -39,11 +39,34 @@ dayjs.locale('tr');
  * Get all payments for a member (with class info)
  */
 export async function getMemberPayments(
-  memberId: number
-): Promise<ApiListResponse<Payment>> {
+  memberId: number,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<
+  ApiResponse<{
+    data: Payment[];
+    meta: { total: number; page: number; pageSize: number };
+  }>
+> {
   try {
     const supabase = await createClient();
 
+    // Get total count for pagination
+    const { count, error: countError } = await supabase
+      .from('payments')
+      .select('*', { count: 'exact', head: true })
+      .eq('member_id', memberId);
+
+    if (countError) {
+      logError('getMemberPayments - count', countError);
+      return errorResponse(handleSupabaseError(countError));
+    }
+
+    // Calculate pagination range
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    // Fetch paginated data
     const { data, error } = await supabase
       .from('payments')
       .select(
@@ -59,17 +82,25 @@ export async function getMemberPayments(
       `
       )
       .eq('member_id', memberId)
-      .order('payment_date', { ascending: false });
+      .order('payment_date', { ascending: false })
+      .range(from, to);
 
     if (error) {
       logError('getMemberPayments', error);
-      return errorListResponse(handleSupabaseError(error));
+      return errorResponse(handleSupabaseError(error));
     }
 
-    return successListResponse(data || []);
+    return successResponse({
+      data: data || [],
+      meta: {
+        total: count || 0,
+        page,
+        pageSize,
+      },
+    });
   } catch (error) {
     logError('getMemberPayments', error);
-    return errorListResponse(handleSupabaseError(error));
+    return errorResponse(handleSupabaseError(error));
   }
 }
 
@@ -393,21 +424,52 @@ export async function processClassPayment(
       .select('period_start')
       .eq('member_class_id', memberClass.id);
 
-    // Start checking from enrollment date
-    let checkDate = dayjs(memberClass.created_at || todayStr);
+    // Fetch frozen periods for this enrollment
+    const { data: frozenLogs } = await supabase
+      .from('frozen_logs')
+      .select('start_date, end_date')
+      .eq('member_class_id', memberClass.id);
 
-    // Use set of paid months for O(1) lookup
+    // Helper function to check if a month is frozen
+    const isMonthFrozen = (month: dayjs.Dayjs): boolean => {
+      if (!frozenLogs || frozenLogs.length === 0) return false;
+
+      return frozenLogs.some((log) => {
+        const freezeStart = dayjs(log.start_date).startOf('month');
+        const freezeEnd = log.end_date
+          ? dayjs(log.end_date).endOf('month')
+          : dayjs('2099-12-31'); // Indefinite freeze
+
+        return (
+          month.isSameOrAfter(freezeStart, 'month') &&
+          month.isSameOrBefore(freezeEnd, 'month')
+        );
+      });
+    };
+
+    // Start checking from enrollment date (NORMALIZE to start of month)
+    let checkDate = dayjs(memberClass.created_at || todayStr).startOf('month');
+
+    // Use set of paid months for O(1) lookup (NORMALIZE all dates)
     const paidMonths = new Set(
-      (allPayments || []).map((p) => dayjs(p.period_start).format('YYYY-MM'))
+      (allPayments || []).map((p) =>
+        dayjs(p.period_start).startOf('month').format('YYYY-MM')
+      )
     );
 
     // Also add the newly created payments to this set
     paymentsCreated.forEach((p) => {
-      paidMonths.add(dayjs(p.period_start).format('YYYY-MM'));
+      paidMonths.add(dayjs(p.period_start).startOf('month').format('YYYY-MM'));
     });
 
-    // Iterate forward to find first gap
+    // Iterate forward to find first gap (skip frozen months)
     for (let i = 0; i < 120; i++) {
+      // Skip frozen months
+      if (isMonthFrozen(checkDate)) {
+        checkDate = checkDate.add(1, 'month');
+        continue;
+      }
+
       const key = checkDate.format('YYYY-MM');
       if (paidMonths.has(key)) {
         checkDate = checkDate.add(1, 'month');
@@ -427,7 +489,9 @@ export async function processClassPayment(
       logError('processClassPayment - update date', updateError);
     }
 
+    // Revalidate both detail and list pages
     revalidatePath(`/members/${memberId}`);
+    revalidatePath('/members');
     return successResponse(paymentsCreated[0]);
   } catch (error) {
     logError('processClassPayment', error);
@@ -522,6 +586,13 @@ export async function deletePayment(id: number): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
 
+    // Get member_id for revalidation
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('member_id')
+      .eq('id', id)
+      .single();
+
     // SECURITY: Check if there are already-paid commissions
     const { data: ledgerEntries, error: checkError } = await supabase
       .from('instructor_ledger')
@@ -559,6 +630,9 @@ export async function deletePayment(id: number): Promise<ApiResponse<boolean>> {
     }
 
     // Must revalidate related paths to update schedule status
+    if (payment?.member_id) {
+      revalidatePath(`/members/${payment.member_id}`);
+    }
     revalidatePath('/members');
     return successResponse(true);
   } catch (error) {

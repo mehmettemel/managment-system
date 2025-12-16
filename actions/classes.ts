@@ -94,7 +94,7 @@ export async function getClassById(
  * Create a new class
  */
 export async function createClass(
-  classData: ClassInsert
+  classData: any // Using any temporarily until database types are regenerated
 ): Promise<ApiResponse<Class>> {
   try {
     // Validate required fields
@@ -136,7 +136,7 @@ export async function createClass(
  */
 export async function updateClass(
   id: number,
-  updates: ClassUpdate,
+  updates: any, // Using any temporarily until database types are regenerated
   updateExistingPrices: boolean = false
 ): Promise<ApiResponse<Class>> {
   try {

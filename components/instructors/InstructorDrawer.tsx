@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Drawer, Button, TextInput, Stack, Group, Text } from '@mantine/core';
+import { Drawer, Button, TextInput, Stack, Group, Text, NumberInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { createInstructor, updateInstructor } from '@/actions/instructors';
 import { getInstructorRates } from '@/actions/finance';
@@ -30,19 +30,22 @@ export function InstructorDrawer({
 }: InstructorDrawerProps) {
   const [loading, setLoading] = useState(false);
 
-  const form = useForm<InstructorFormData>({
+  const form = useForm({
     initialValues: {
       first_name: '',
       last_name: '',
       specialty: '', // Legacy support or optional
       phone: '',
       rates: [],
+      default_commission_rate: 30, // Default 30%
     },
     validate: {
       first_name: (value) =>
         value.trim().length < 2 ? 'Ad en az 2 karakter olmalı' : null,
       last_name: (value) =>
         value.trim().length < 2 ? 'Soyad en az 2 karakter olmalı' : null,
+      default_commission_rate: (value) =>
+        value < 0 || value > 100 ? 'Komisyon 0-100 arasında olmalı' : null,
     },
   });
 
@@ -50,12 +53,14 @@ export function InstructorDrawer({
     const loadInstructorData = async () => {
       if (instructor) {
         // Load base data
+        const instructorAny = instructor as any;
         const baseValues = {
           first_name: instructor.first_name,
           last_name: instructor.last_name,
           specialty: instructor.specialty || '',
           phone: instructor.phone || '',
           rates: [] as { dance_type_id: number; rate: number }[],
+          default_commission_rate: instructorAny.default_commission_rate ?? 30,
         };
 
         // Fetch Rates
@@ -143,13 +148,24 @@ export function InstructorDrawer({
             {...form.getInputProps('last_name')}
           />
 
+          <MaskedPhoneInput label="Telefon" {...form.getInputProps('phone')} />
+
+          <NumberInput
+            label="Varsayılan Komisyon Oranı (%)"
+            description="Eğitmenin derslerde kullanılacak varsayılan komisyon oranı. Her ders için özel oran belirlenebilir."
+            min={0}
+            max={100}
+            step={5}
+            leftSection="%"
+            placeholder="Örn: 30"
+            {...form.getInputProps('default_commission_rate')}
+          />
+
           {/* Removed simple specialty input, replaced with complex one */}
           <InstructorSpecialtiesInput
             value={form.values.rates || []}
             onChange={(val) => form.setFieldValue('rates', val)}
           />
-
-          <MaskedPhoneInput label="Telefon" {...form.getInputProps('phone')} />
 
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose}>

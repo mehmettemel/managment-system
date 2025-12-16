@@ -18,6 +18,7 @@ import {
   Button,
   Grid,
   Modal,
+  Alert,
 } from '@mantine/core';
 import {
   IconArrowLeft,
@@ -25,6 +26,7 @@ import {
   IconCalendar,
   IconHistory,
   IconPlus,
+  IconAlertCircle,
 } from '@tabler/icons-react';
 import {
   getMemberById,
@@ -82,9 +84,15 @@ export function MemberDetailView({
   const [activeEnrollments, setActiveEnrollments] = useState<
     MemberClassWithDetails[]
   >([]);
-  const [paymentHistory, setPaymentHistory] = useState<PaymentWithClass[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentWithClass[]>([]); // Paginated for display
+  const [allPaymentHistory, setAllPaymentHistory] = useState<PaymentWithClass[]>([]); // All payments for calculations
   const [allClasses, setAllClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination state for payment history
+  const [paymentPage, setPaymentPage] = useState(1);
+  const [paymentPageSize] = useState(10);
+  const [paymentTotalRecords, setPaymentTotalRecords] = useState(0);
 
   // Modals state
   const [payModal, setPayModal] = useState<{
@@ -122,11 +130,13 @@ export function MemberDetailView({
 
   const fetchData = useCallback(async () => {
     try {
-      const [memberRes, paymentsRes, classesRes] = await Promise.all([
-        getMemberById(memberId),
-        getMemberPayments(memberId),
-        getClasses(),
-      ]);
+      const [memberRes, paginatedPaymentsRes, allPaymentsRes, classesRes] =
+        await Promise.all([
+          getMemberById(memberId),
+          getMemberPayments(memberId, paymentPage, paymentPageSize), // Paginated for display
+          getMemberPayments(memberId, 1, 9999), // All payments for calculations
+          getClasses(),
+        ]);
 
       if (memberRes.data) {
         setMember(memberRes.data);
@@ -136,8 +146,13 @@ export function MemberDetailView({
         );
       }
 
-      if (paymentsRes.data) {
-        setPaymentHistory(paymentsRes.data);
+      if (paginatedPaymentsRes.data) {
+        setPaymentHistory(paginatedPaymentsRes.data.data);
+        setPaymentTotalRecords(paginatedPaymentsRes.data.meta.total);
+      }
+
+      if (allPaymentsRes.data) {
+        setAllPaymentHistory(allPaymentsRes.data.data);
       }
 
       if (classesRes.data) {
@@ -149,11 +164,37 @@ export function MemberDetailView({
     } finally {
       setLoading(false);
     }
-  }, [memberId]);
+  }, [memberId, paymentPage, paymentPageSize]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Separate effect for payment page changes to avoid full data refetch
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const paymentsRes = await getMemberPayments(
+          memberId,
+          paymentPage,
+          paymentPageSize
+        );
+
+        if (paymentsRes.data) {
+          setPaymentHistory(paymentsRes.data.data);
+          setPaymentTotalRecords(paymentsRes.data.meta.total);
+        }
+      } catch (error) {
+        console.error(error);
+        showError('Ödeme geçmişi yüklenirken hata oluştu');
+      }
+    };
+
+    // Only fetch payments when page changes (not on initial load, fetchData handles that)
+    if (paymentPage > 1) {
+      fetchPayments();
+    }
+  }, [memberId, paymentPage, paymentPageSize]);
 
   const handleEditPriceClick = (enrollment: MemberClassWithDetails) => {
     setEditModal({ open: true, enrollment });
@@ -181,47 +222,51 @@ export function MemberDetailView({
     } else {
       showSuccess('Ders planı güncellendi');
       setEditModal({ open: false, enrollment: null });
+      setPaymentPage(1); // Reset to first page
       fetchData();
     }
     setActionLoading(false);
   };
 
+  // Helper to check if a month is frozen for an enrollment
+  const isMonthFrozen = (
+    enrollment: MemberClassWithDetails,
+    month: dayjs.Dayjs
+  ): boolean => {
+    const enrollmentFrozenLogs =
+      member?.frozen_logs?.filter(
+        (log) => log.member_class_id === enrollment.id
+      ) || [];
+
+    return enrollmentFrozenLogs.some((log) => {
+      const freezeStart = dayjs(log.start_date).startOf('month');
+      const freezeEnd = log.end_date
+        ? dayjs(log.end_date).endOf('month')
+        : dayjs('2099-12-31'); // Indefinite freeze
+
+      return (
+        month.isSameOrAfter(freezeStart, 'month') &&
+        month.isSameOrBefore(freezeEnd, 'month')
+      );
+    });
+  };
+
   // Helper to calculate effective next payment date client-side
   const getComputedNextDate = (enrollment: MemberClassWithDetails): string => {
-    const classPayments = paymentHistory.filter(
+    const classPayments = allPaymentHistory.filter(
       (p) => p.class_id === enrollment.class_id
     );
     const paidMonths = new Set(
-      classPayments.map((p) => dayjs(p.period_start).format('YYYY-MM'))
+      classPayments.map((p) => dayjs(p.period_start).startOf('month').format('YYYY-MM'))
     );
 
-    // Get frozen logs for this enrollment
-    const enrollmentFrozenLogs = member?.frozen_logs?.filter(
-      (log) => log.member_class_id === enrollment.id
-    ) || [];
-
-    // Helper to check if a month is frozen
-    const isMonthFrozen = (month: dayjs.Dayjs): boolean => {
-      return enrollmentFrozenLogs.some((log) => {
-        const freezeStart = dayjs(log.start_date).startOf('month');
-        const freezeEnd = log.end_date
-          ? dayjs(log.end_date).endOf('month')
-          : dayjs('2099-12-31'); // Indefinite freeze
-
-        return (
-          month.isSameOrAfter(freezeStart, 'month') &&
-          month.isSameOrBefore(freezeEnd, 'month')
-        );
-      });
-    };
-
-    let start = dayjs(enrollment.created_at || new Date());
+    let start = dayjs(enrollment.created_at || new Date()).startOf('month');
     if (classPayments.length > 0) {
       const sorted = [...classPayments].sort(
         (a, b) =>
           dayjs(a.period_start).valueOf() - dayjs(b.period_start).valueOf()
       );
-      const firstPay = dayjs(sorted[0].period_start);
+      const firstPay = dayjs(sorted[0].period_start).startOf('month');
       if (firstPay.isBefore(start)) {
         start = firstPay;
       }
@@ -230,7 +275,7 @@ export function MemberDetailView({
     let check = start;
     for (let i = 0; i < 120; i++) {
       // Skip frozen months
-      if (isMonthFrozen(check)) {
+      if (isMonthFrozen(enrollment, check)) {
         check = check.add(1, 'month');
         continue;
       }
@@ -239,16 +284,77 @@ export function MemberDetailView({
       if (paidMonths.has(check.format('YYYY-MM'))) {
         check = check.add(1, 'month');
       } else {
+        // Return the first day of the unpaid month
         return check.format('YYYY-MM-DD');
       }
     }
     return check.format('YYYY-MM-DD');
   };
 
+  // Calculate overdue months count for an enrollment
+  const getOverdueMonthsCount = (
+    enrollment: MemberClassWithDetails
+  ): number => {
+    const classPayments = allPaymentHistory.filter(
+      (p) => p.class_id === enrollment.class_id
+    );
+    const paidMonths = new Set(
+      classPayments.map((p) => dayjs(p.period_start).startOf('month').format('YYYY-MM'))
+    );
+
+    let start = dayjs(enrollment.created_at || new Date()).startOf('month');
+    if (classPayments.length > 0) {
+      const sorted = [...classPayments].sort(
+        (a, b) =>
+          dayjs(a.period_start).valueOf() - dayjs(b.period_start).valueOf()
+      );
+      const firstPay = dayjs(sorted[0].period_start).startOf('month');
+      if (firstPay.isBefore(start)) {
+        start = firstPay;
+      }
+    }
+
+    const today = dayjs(effectiveDate).startOf('month');
+    let overdueCount = 0;
+    let check = start;
+
+    // Iterate through all months from start until (but not including) current month
+    for (let i = 0; i < 120; i++) {
+      // Stop if we've reached current month (current month is not yet overdue)
+      if (check.isSameOrAfter(today, 'month')) {
+        break;
+      }
+
+      // Skip frozen months
+      if (isMonthFrozen(enrollment, check)) {
+        check = check.add(1, 'month');
+        continue;
+      }
+
+      // If not paid and before current month, it's overdue
+      if (!paidMonths.has(check.format('YYYY-MM'))) {
+        overdueCount++;
+      }
+
+      check = check.add(1, 'month');
+    }
+
+    return overdueCount;
+  };
+
   const computedEnrollments = activeEnrollments.map((e) => ({
     ...e,
     next_payment_date: getComputedNextDate(e),
+    overdueMonthsCount: getOverdueMonthsCount(e),
   }));
+
+  // Check for overdue payments
+  const overdueEnrollments = computedEnrollments.filter((e) => {
+    const activeFreezeLog = member?.frozen_logs?.find(
+      (log) => log.member_class_id === e.id && !log.end_date
+    );
+    return !activeFreezeLog && e.overdueMonthsCount > 0;
+  });
 
   // Handlers
   const handlePayClick = (enrollment: MemberClassWithDetails) => {
@@ -340,6 +446,7 @@ export function MemberDetailView({
     } else {
       showSuccess('Ders sonlandırma işlemi başarılı');
       setDropModal({ open: false, enrollment: null });
+      setPaymentPage(1); // Reset to first page
       fetchData();
     }
     setActionLoading(false);
@@ -382,6 +489,7 @@ export function MemberDetailView({
     } else {
       showSuccess('Ödeme alındı');
       setPayModal({ open: false, enrollment: null });
+      setPaymentPage(1); // Reset to first page
       fetchData();
     }
     setActionLoading(false);
@@ -535,6 +643,57 @@ export function MemberDetailView({
           />
         )}
 
+        {/* Overdue Payments Alert */}
+        {overdueEnrollments.length > 0 && (() => {
+          const totalOverdueMonths = overdueEnrollments.reduce(
+            (sum, e) => sum + (e.overdueMonthsCount || 0),
+            0
+          );
+
+          // Only show alert if there are actual overdue months
+          if (totalOverdueMonths === 0) return null;
+
+          return (
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Gecikmiş Ödemeler"
+              color="red"
+              variant="light"
+            >
+              <Stack gap="xs">
+                <Text size="sm">
+                  Bu üyenin <strong>{overdueEnrollments.length}</strong> dersinde
+                  toplam{' '}
+                  <strong>
+                    {totalOverdueMonths}{' '}
+                    {totalOverdueMonths === 1 ? 'aylık' : 'aylık'}
+                  </strong>{' '}
+                  gecikmiş ödeme bulunmaktadır:
+                </Text>
+                {overdueEnrollments.map((e) => {
+                  if (!e.overdueMonthsCount || e.overdueMonthsCount === 0) return null;
+
+                  return (
+                    <Group key={e.id} gap="xs">
+                      <Text size="sm" fw={500}>
+                        • {e.classes?.name}:
+                      </Text>
+                      <Text size="sm" c="red">
+                        {e.overdueMonthsCount === 1
+                          ? '1 ay gecikmiş'
+                          : `${e.overdueMonthsCount} ay gecikmiş`}
+                      </Text>
+                      <Text size="sm" c="dimmed">
+                        (İlk gecikme: {formatDate(e.next_payment_date!)})
+                      </Text>
+                    </Group>
+                  );
+                })}
+              </Stack>
+            </Alert>
+          );
+        })()}
+
         {/* Active Enrollments */}
         <Group justify="space-between" align="center">
           <Title order={4}>Kayıtlı Dersler</Title>
@@ -605,8 +764,11 @@ export function MemberDetailView({
               <DataTable
                 data={paymentHistory}
                 columns={historyColumns}
-                pageSize={10}
+                pageSize={paymentPageSize}
                 emptyText="Ödeme geçmişi bulunamadı."
+                totalRecords={paymentTotalRecords}
+                page={paymentPage}
+                onPageChange={setPaymentPage}
               />
             </Tabs.Panel>
           </Tabs>

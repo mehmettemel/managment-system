@@ -44,8 +44,10 @@ export function ClassDrawer({
 }: ClassDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [updateExistingPrices, setUpdateExistingPrices] = useState(false);
+  const [previousInstructorId, setPreviousInstructorId] = useState<number | null>(null);
+  const [instructorChangeDetected, setInstructorChangeDetected] = useState(false);
 
-  const form = useForm<ClassInsert>({
+  const form = useForm({
     initialValues: {
       name: '',
       instructor_id: null,
@@ -78,6 +80,8 @@ export function ClassDrawer({
           price_monthly: item.price_monthly || 0,
           instructor_commission_rate: item.instructor_commission_rate || null,
         });
+        // Remember the original instructor
+        setPreviousInstructorId(item.instructor_id);
       } else {
         // Creating new class - reset to initial values
         form.setValues({
@@ -90,18 +94,36 @@ export function ClassDrawer({
           price_monthly: 0,
           instructor_commission_rate: null,
         });
+        setPreviousInstructorId(null);
       }
+      setInstructorChangeDetected(false);
     }
   }, [opened, classItem]);
 
-  const handleSubmit = async (values: ClassInsert) => {
+  // Detect instructor change and show smart suggestions
+  useEffect(() => {
+    if (!classItem || !previousInstructorId) return;
+
+    const currentInstructorId = form.values.instructor_id;
+
+    // Instructor changed
+    if (currentInstructorId && currentInstructorId !== previousInstructorId) {
+      setInstructorChangeDetected(true);
+    } else {
+      setInstructorChangeDetected(false);
+    }
+  }, [form.values.instructor_id, previousInstructorId, classItem]);
+
+  const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
     try {
       // Ensure specific types for numbers
-      const payload = {
-        ...values,
-        instructor_id: Number(values.instructor_id),
-        dance_type_id: Number(values.dance_type_id),
+      const payload: any = {
+        name: values.name,
+        instructor_id: values.instructor_id ? Number(values.instructor_id) : null,
+        dance_type_id: values.dance_type_id ? Number(values.dance_type_id) : null,
+        day_of_week: values.day_of_week,
+        start_time: values.start_time,
         duration_minutes: Number(values.duration_minutes),
         price_monthly: Number(values.price_monthly),
         instructor_commission_rate: values.instructor_commission_rate
@@ -120,6 +142,8 @@ export function ClassDrawer({
               : 'Ders güncellendi'
           );
           setUpdateExistingPrices(false);
+          setInstructorChangeDetected(false);
+          setPreviousInstructorId(null);
           onSuccess?.();
           onClose();
         }
@@ -131,6 +155,8 @@ export function ClassDrawer({
           showSuccess('Ders eklendi');
           form.reset();
           setUpdateExistingPrices(false);
+          setInstructorChangeDetected(false);
+          setPreviousInstructorId(null);
           onSuccess?.();
           onClose();
         }
@@ -147,6 +173,28 @@ export function ClassDrawer({
     label: `${inst.first_name} ${inst.last_name}`,
   }));
 
+  // Get instructor details for commission info
+  const getPreviousInstructor = () =>
+    instructors.find((i) => i.id === previousInstructorId);
+  const getCurrentInstructor = () =>
+    instructors.find((i) => i.id === form.values.instructor_id);
+
+  const handleUseNewInstructorDefault = () => {
+    const newInstructor = getCurrentInstructor();
+    if (newInstructor) {
+      form.setFieldValue(
+        'instructor_commission_rate',
+        newInstructor.default_commission_rate || null
+      );
+      setInstructorChangeDetected(false);
+    }
+  };
+
+  const handleKeepCurrentRate = () => {
+    // Keep the current rate as is
+    setInstructorChangeDetected(false);
+  };
+
   const days = [
     'Pazartesi',
     'Salı',
@@ -162,6 +210,8 @@ export function ClassDrawer({
       opened={opened}
       onClose={() => {
         setUpdateExistingPrices(false);
+        setInstructorChangeDetected(false);
+        setPreviousInstructorId(null);
         onClose();
       }}
       title={
@@ -197,6 +247,62 @@ export function ClassDrawer({
               form.setFieldValue('instructor_id', val ? Number(val) : null)
             }
           />
+
+          {instructorChangeDetected && (() => {
+            const prevInstructor = getPreviousInstructor();
+            const newInstructor = getCurrentInstructor();
+            const currentRate = (classItem as any)?.instructor_commission_rate;
+            const newDefaultRate = newInstructor?.default_commission_rate;
+
+            return (
+              <Alert
+                icon={<IconAlertCircle size={16} />}
+                title="Eğitmen Değişikliği Tespit Edildi"
+                color="blue"
+              >
+                <Stack gap="xs">
+                  <Text size="sm">
+                    <strong>Eski Eğitmen:</strong> {prevInstructor?.first_name}{' '}
+                    {prevInstructor?.last_name}
+                    <br />
+                    {currentRate !== null && currentRate !== undefined && (
+                      <>Bu derste özel komisyon: %{currentRate}</>
+                    )}
+                  </Text>
+                  <Text size="sm">
+                    <strong>Yeni Eğitmen:</strong> {newInstructor?.first_name}{' '}
+                    {newInstructor?.last_name}
+                    <br />
+                    Varsayılan komisyon: %
+                    {newDefaultRate ?? 0}
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    Komisyon oranını nasıl güncellemek istersiniz?
+                  </Text>
+                  <Group gap="xs">
+                    <Button
+                      size="xs"
+                      variant="light"
+                      onClick={handleUseNewInstructorDefault}
+                    >
+                      Yeni varsayılanı kullan (%{newDefaultRate ?? 0})
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="gray"
+                      onClick={handleKeepCurrentRate}
+                    >
+                      Mevcut oranı koru
+                      {currentRate !== null && currentRate !== undefined
+                        ? ` (%${currentRate})`
+                        : ''}
+                    </Button>
+                  </Group>
+                </Stack>
+              </Alert>
+            );
+          })()}
 
           <Select
             label="Dans Türü"

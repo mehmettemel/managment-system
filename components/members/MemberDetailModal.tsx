@@ -58,11 +58,11 @@ export function MemberDetailModal({
     setLoading(true);
     const [memberRes, paymentsRes] = await Promise.all([
       getMemberById(memberId),
-      getMemberPayments(memberId),
+      getMemberPayments(memberId, 1, 1000), // Fetch first 1000 payments (no pagination in modal)
     ]);
 
     if (memberRes.data) setMember(memberRes.data);
-    if (paymentsRes.data) setPayments(paymentsRes.data as PaymentWithClass[]);
+    if (paymentsRes.data) setPayments(paymentsRes.data.data as PaymentWithClass[]);
     setLoading(false);
   };
 

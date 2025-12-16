@@ -287,61 +287,83 @@ export async function getPayableLedger(): Promise<
  */
 export async function processPayout(
   instructorId: number,
-  amount: number
+  amount: number,
+  ledgerEntryIds?: number[] // NEW: Optional array of specific entry IDs
 ): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
     const today = (await getServerNow()).format('YYYY-MM-DD');
 
-    // 0. Safety Check: Verify there is pending amount
-    // Ideally we re-calculate valid amount here to match 'amount' passed
-    const { data: pendingEntries, error: pendingError } = await supabase
-      .from('instructor_ledger')
-      .select('amount')
-      .eq('instructor_id', instructorId)
-      .lte('due_date', today)
-      .in('status', ['pending', 'payable']);
+    // 1. Determine which entries to pay
+    let entriesToPay;
 
-    if (pendingError) return errorResponse(handleSupabaseError(pendingError));
+    if (ledgerEntryIds && ledgerEntryIds.length > 0) {
+      // NEW PATH: Pay only selected entries
+      const { data: selectedEntries, error: selectError } = await supabase
+        .from('instructor_ledger')
+        .select('*')
+        .in('id', ledgerEntryIds)
+        .eq('instructor_id', instructorId) // Security check
+        .in('status', ['pending', 'payable']);
 
-    const pendingTotal =
-      pendingEntries?.reduce((sum, item) => sum + item.amount, 0) || 0;
+      if (selectError)
+        return errorResponse(handleSupabaseError(selectError));
+      entriesToPay = selectedEntries || [];
+    } else {
+      // EXISTING PATH: Pay all pending (backwards compatible)
+      const { data: pendingEntries, error: pendingError } = await supabase
+        .from('instructor_ledger')
+        .select('*')
+        .eq('instructor_id', instructorId)
+        .lte('due_date', today)
+        .in('status', ['pending', 'payable']);
 
-    if (pendingTotal <= 0) {
+      if (pendingError)
+        return errorResponse(handleSupabaseError(pendingError));
+      entriesToPay = pendingEntries || [];
+    }
+
+    // Validate amount matches selected entries
+    const calculatedTotal =
+      entriesToPay.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+
+    if (calculatedTotal <= 0) {
       return errorResponse(
         'Ödenecek bakiye bulunamadı (Zaten ödenmiş olabilir).'
       );
     }
 
-    // 1. Create Payout Record
+    if (Math.abs(calculatedTotal - amount) > 0.01) {
+      return errorResponse('Ödeme tutarı uyuşmuyor');
+    }
+
+    // 2. Create payout record
     const { data: payout, error: payoutError } = await supabase
       .from('instructor_payouts')
       .insert({
         instructor_id: instructorId,
-        amount: amount, // Trusting frontend amount or pendingTotal? Should match.
+        amount: amount,
         payment_date: today,
-        note: 'Otomatik hakediş ödemesi',
+        note: ledgerEntryIds
+          ? `${entriesToPay.length} aylık hakediş ödemesi`
+          : 'Otomatik hakediş ödemesi',
       })
       .select()
       .single();
 
     if (payoutError) return errorResponse(handleSupabaseError(payoutError));
 
-    // 2. Update Ledger Entries with Payout ID
-    // Mark all due pending entries as paid and link to this payout
+    // 3. Update ONLY selected entries
+    const entryIds = entriesToPay.map((e) => e.id);
     const { error: updateError } = await supabase
       .from('instructor_ledger')
       .update({
         status: 'paid',
         payout_id: payout.id,
-      } as any) // Type assertion until types are regenerated
-      .eq('instructor_id', instructorId)
-      .lte('due_date', today)
-      .in('status', ['pending', 'payable']);
+      } as any)
+      .in('id', entryIds); // CHANGED: Update by IDs instead of instructor_id
 
     if (updateError) {
-      // Critical: Payout created but ledger not updated. "Ghost Payout".
-      // We should probably delete the payout if this fails, or log heavily.
       logError('processPayout - ledger update failed', updateError);
       return errorResponse(
         'Ödeme kaydı oluştu ancak bakiye düşülemedi. Lütfen sistem yöneticisine bildirin.'
@@ -475,5 +497,72 @@ export async function getFilteredInstructorPayouts(
   } catch (error) {
     logError('getFilteredInstructorPayouts', error);
     return errorResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Get detailed ledger entries with student and class info
+ * Shows which student paid what commission amount
+ */
+export async function getInstructorLedgerDetails(
+  instructorId?: number,
+  status?: 'pending' | 'paid' | 'all'
+): Promise<ApiListResponse<any>> {
+  try {
+    const supabase = await createClient();
+
+    let query = supabase
+      .from('instructor_ledger')
+      .select(
+        `
+        *,
+        payments (
+          id,
+          amount,
+          payment_date,
+          member_id,
+          class_id,
+          members (
+            first_name,
+            last_name
+          ),
+          classes (
+            name
+          )
+        ),
+        instructors (
+          first_name,
+          last_name
+        )
+      `
+      )
+      .order('due_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    // Filter by instructor if provided
+    if (instructorId) {
+      query = query.eq('instructor_id', instructorId);
+    }
+
+    // Filter by status if provided
+    if (status && status !== 'all') {
+      if (status === 'pending') {
+        query = query.in('status', ['pending', 'payable']);
+      } else {
+        query = query.eq('status', status);
+      }
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      logError('getInstructorLedgerDetails', error);
+      return errorListResponse(handleSupabaseError(error));
+    }
+
+    return successListResponse(data || []);
+  } catch (error) {
+    logError('getInstructorLedgerDetails', error);
+    return errorListResponse(handleSupabaseError(error));
   }
 }

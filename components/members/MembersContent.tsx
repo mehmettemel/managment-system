@@ -43,6 +43,7 @@ import { formatDate, isPaymentOverdue } from '@/utils/date-helpers';
 import { formatPhone } from '@/utils/formatters';
 import type { DataTableColumn } from '@/components/shared/DataTable';
 import type { Member, MemberWithClasses, MemberStatus } from '@/types';
+import dayjs from 'dayjs';
 
 interface MembersContentProps {
   effectiveDate: string;
@@ -261,10 +262,13 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
       sortable: true,
       searchable: true,
       render: (member) => {
-        // Check for overdue payments using simulated effectiveDate
-        const overdue = member.member_classes?.some((mc) => {
+        // Check if any active enrollment has overdue payment
+        const hasOverdue = member.member_classes?.some((mc) => {
           if (!mc.active || !mc.next_payment_date) return false;
-          return isPaymentOverdue(mc.next_payment_date, effectiveDate);
+          // Check if next payment date is before today
+          const nextPayment = dayjs(mc.next_payment_date).startOf('day');
+          const today = dayjs(effectiveDate).startOf('day');
+          return nextPayment.isBefore(today);
         });
 
         return (
@@ -272,7 +276,7 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
             <Text fw={500}>
               {member.first_name} {member.last_name}
             </Text>
-            {overdue && (
+            {hasOverdue && (
               <Tooltip label="Gecikmiş Ödeme" withArrow>
                 <IconAlertCircle size={18} color="var(--mantine-color-red-6)" />
               </Tooltip>

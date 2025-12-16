@@ -9,17 +9,24 @@ import {
   Paper,
   Tabs,
   MultiSelect,
+  Select,
+  Stack,
 } from '@mantine/core';
-import { processPayout, getFilteredInstructorPayouts } from '@/actions/finance';
+import {
+  processPayout,
+  getFilteredInstructorPayouts,
+  getInstructorLedgerDetails,
+} from '@/actions/finance';
 import { showSuccess, showError } from '@/utils/notifications';
 import { modals } from '@mantine/modals';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Instructor, InstructorPayoutWithDetails } from '@/types';
-import { IconCash, IconHistory, IconListCheck } from '@tabler/icons-react';
+import { IconCash, IconHistory, IconListCheck, IconReceipt } from '@tabler/icons-react';
 import { formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
 import { DataTable, DataTableColumn } from '@/components/shared/DataTable';
+import { InstructorPaymentModal } from './InstructorPaymentModal';
 
 interface PayableItem {
   instructor: Instructor;
@@ -40,6 +47,19 @@ export function InstructorPaymentsTable({
   const [activeTab, setActiveTab] = useState<string | null>('payable');
   const [loadingMap, setLoadingMap] = useState<Record<number, boolean>>({});
 
+  // Payment Modal State
+  const [paymentModal, setPaymentModal] = useState<{
+    opened: boolean;
+    instructor: Instructor | null;
+    totalAmount: number;
+    entryCount: number;
+  }>({
+    opened: false,
+    instructor: null,
+    totalAmount: 0,
+    entryCount: 0,
+  });
+
   // History State
   const [historyData, setHistoryData] = useState<InstructorPayoutWithDetails[]>(
     []
@@ -51,6 +71,12 @@ export function InstructorPaymentsTable({
   const [sortField, setSortField] = useState<string>('payment_date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedInstructors, setSelectedInstructors] = useState<string[]>([]);
+
+  // Ledger Details State
+  const [ledgerData, setLedgerData] = useState<any[]>([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerInstructorFilter, setLedgerInstructorFilter] = useState<string | null>(null);
+  const [ledgerStatusFilter, setLedgerStatusFilter] = useState<'pending' | 'paid' | 'all'>('all');
 
   // Create options for filter from the payable data (active instructors)
   // Ideally we should have a useInstructors hook or pass all instructors.
@@ -97,9 +123,32 @@ export function InstructorPaymentsTable({
     }
   };
 
+  const fetchLedgerDetails = async () => {
+    setLedgerLoading(true);
+    try {
+      const response = await getInstructorLedgerDetails(
+        ledgerInstructorFilter ? Number(ledgerInstructorFilter) : undefined,
+        ledgerStatusFilter
+      );
+
+      if (response.error) {
+        showError(response.error);
+        setLedgerData([]);
+      } else if (response.data) {
+        setLedgerData(response.data);
+      }
+    } catch (error) {
+      showError('Komisyon detayları yüklenirken hata oluştu');
+    } finally {
+      setLedgerLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'history') {
       fetchHistory();
+    } else if (activeTab === 'details') {
+      fetchLedgerDetails();
     }
   }, [
     activeTab,
@@ -108,6 +157,8 @@ export function InstructorPaymentsTable({
     selectedInstructors,
     sortField,
     sortDirection,
+    ledgerInstructorFilter,
+    ledgerStatusFilter,
   ]);
 
   // Handle Sort Change
@@ -118,37 +169,11 @@ export function InstructorPaymentsTable({
   };
 
   const handlePay = (item: PayableItem) => {
-    modals.openConfirmModal({
-      title: 'Ödeme Onayı',
-      children: (
-        <Text size="sm">
-          {item.instructor.first_name} {item.instructor.last_name} için{' '}
-          <Text span fw={700}>
-            {formatCurrency(item.totalAmount)}
-          </Text>{' '}
-          tutarındaki hakediş ödemesini onaylıyor musunuz?
-        </Text>
-      ),
-      labels: { confirm: 'Ödeme Yap', cancel: 'İptal' },
-      confirmProps: { color: 'green' },
-      onConfirm: async () => {
-        setLoadingMap((prev) => ({ ...prev, [item.instructor.id]: true }));
-        try {
-          const res = await processPayout(item.instructor.id, item.totalAmount);
-          if (res.error) {
-            showError(res.error);
-          } else {
-            showSuccess('Ödeme Başarılı');
-            router.refresh();
-            // Refresh history if active
-            if (activeTab === 'history') fetchHistory();
-          }
-        } catch (err) {
-          showError('Hata oluştu');
-        } finally {
-          setLoadingMap((prev) => ({ ...prev, [item.instructor.id]: false }));
-        }
-      },
+    setPaymentModal({
+      opened: true,
+      instructor: item.instructor,
+      totalAmount: item.totalAmount,
+      entryCount: item.entryCount,
     });
   };
 
@@ -183,12 +208,46 @@ export function InstructorPaymentsTable({
     },
   ];
 
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'green';
+      case 'pending':
+      case 'payable':
+        return 'orange';
+      case 'cancelled':
+        return 'red';
+      default:
+        return 'gray';
+    }
+  };
+
+  // Get status label
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'Ödendi';
+      case 'pending':
+        return 'Beklemede';
+      case 'payable':
+        return 'Ödenebilir';
+      case 'cancelled':
+        return 'İptal';
+      default:
+        return status;
+    }
+  };
+
   return (
     <Paper withBorder radius="md">
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
           <Tabs.Tab value="payable" leftSection={<IconListCheck size={16} />}>
             Ödenecekler
+          </Tabs.Tab>
+          <Tabs.Tab value="details" leftSection={<IconReceipt size={16} />}>
+            Komisyon Detayları
           </Tabs.Tab>
           <Tabs.Tab value="history" leftSection={<IconHistory size={16} />}>
             Ödeme Geçmişi
@@ -241,6 +300,139 @@ export function InstructorPaymentsTable({
           )}
         </Tabs.Panel>
 
+        <Tabs.Panel value="details" p="md">
+          <Stack gap="md">
+            <Group justify="space-between" align="flex-start">
+              <Group>
+                <Select
+                  placeholder="Tüm Eğitmenler"
+                  data={[
+                    { value: 'all', label: 'Tüm Eğitmenler' },
+                    ...instructorOptions,
+                  ]}
+                  value={ledgerInstructorFilter || 'all'}
+                  onChange={(val) =>
+                    setLedgerInstructorFilter(val === 'all' ? null : val)
+                  }
+                  clearable
+                  searchable
+                  style={{ width: 250 }}
+                />
+                <Select
+                  placeholder="Durum"
+                  data={[
+                    { value: 'all', label: 'Tümü' },
+                    { value: 'pending', label: 'Bekleyen' },
+                    { value: 'paid', label: 'Ödenen' },
+                  ]}
+                  value={ledgerStatusFilter}
+                  onChange={(val) =>
+                    setLedgerStatusFilter((val as any) || 'all')
+                  }
+                  style={{ width: 150 }}
+                />
+              </Group>
+              {ledgerData.length > 0 && (
+                <Group gap="xl">
+                  <div>
+                    <Text size="xs" c="dimmed">
+                      Toplam Kayıt
+                    </Text>
+                    <Text fw={700} size="lg">
+                      {ledgerData.length}
+                    </Text>
+                  </div>
+                  <div>
+                    <Text size="xs" c="dimmed">
+                      Toplam Komisyon
+                    </Text>
+                    <Text fw={700} size="lg" c="blue">
+                      {formatCurrency(
+                        ledgerData.reduce((sum, entry) => sum + Number(entry.amount), 0)
+                      )}
+                    </Text>
+                  </div>
+                </Group>
+              )}
+            </Group>
+
+            {ledgerLoading ? (
+              <Text ta="center" c="dimmed" py="xl">
+                Yükleniyor...
+              </Text>
+            ) : ledgerData.length === 0 ? (
+              <Text ta="center" c="dimmed" py="xl">
+                Komisyon kaydı bulunamadı.
+              </Text>
+            ) : (
+              <Table highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Eğitmen</Table.Th>
+                    <Table.Th>Öğrenci</Table.Th>
+                    <Table.Th>Ders</Table.Th>
+                    <Table.Th>Ödeme Tutarı</Table.Th>
+                    <Table.Th>Komisyon</Table.Th>
+                    <Table.Th>Ödeme Tarihi</Table.Th>
+                    <Table.Th>Vade Tarihi</Table.Th>
+                    <Table.Th>Durum</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {ledgerData.map((entry) => {
+                    const payment = entry.payments as any;
+                    const member = payment?.members;
+                    const classData = payment?.classes;
+                    const instructor = entry.instructors;
+
+                    return (
+                      <Table.Tr key={entry.id}>
+                        <Table.Td>
+                          {instructor
+                            ? `${instructor.first_name} ${instructor.last_name}`
+                            : '-'}
+                        </Table.Td>
+                        <Table.Td>
+                          {member
+                            ? `${member.first_name} ${member.last_name}`
+                            : '-'}
+                        </Table.Td>
+                        <Table.Td>{classData?.name || '-'}</Table.Td>
+                        <Table.Td>
+                          <Text fw={500}>
+                            {payment?.amount
+                              ? formatCurrency(payment.amount)
+                              : '-'}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text fw={700} c="blue">
+                            {formatCurrency(entry.amount)}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          {payment?.payment_date
+                            ? formatDate(payment.payment_date)
+                            : '-'}
+                        </Table.Td>
+                        <Table.Td>{formatDate(entry.due_date)}</Table.Td>
+                        <Table.Td>
+                          <Badge
+                            color={getStatusBadgeColor(entry.status)}
+                            variant="light"
+                          >
+                            {getStatusLabel(entry.status)}
+                          </Badge>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
+                </Table.Tbody>
+              </Table>
+            )}
+          </Stack>
+        </Tabs.Panel>
+
         <Tabs.Panel value="history" p="md">
           <Group mb="md">
             <MultiSelect
@@ -268,6 +460,27 @@ export function InstructorPaymentsTable({
           />
         </Tabs.Panel>
       </Tabs>
+
+      {/* Month-by-Month Payment Modal */}
+      <InstructorPaymentModal
+        opened={paymentModal.opened}
+        onClose={() =>
+          setPaymentModal({
+            opened: false,
+            instructor: null,
+            totalAmount: 0,
+            entryCount: 0,
+          })
+        }
+        instructor={paymentModal.instructor}
+        totalPending={paymentModal.totalAmount}
+        entryCount={paymentModal.entryCount}
+        onSuccess={() => {
+          router.refresh();
+          if (activeTab === 'history') fetchHistory();
+          if (activeTab === 'details') fetchLedgerDetails();
+        }}
+      />
     </Paper>
   );
 }

@@ -365,6 +365,7 @@ export async function updateMemberClassDetails(
     }
 
     revalidatePath(`/members/${memberId}`);
+    revalidatePath('/members');
     return successResponse(true);
   } catch (error) {
     logError('updateMemberClassDetails', error);
@@ -421,6 +422,7 @@ export async function changeMembershipInterval(
     if (updateError) throw updateError;
 
     revalidatePath(`/members/${memberId}`);
+    revalidatePath('/members');
 
     return successResponse({
       refundAmount,
@@ -477,6 +479,7 @@ export async function addMemberToClasses(
     }
 
     revalidatePath(`/members/${memberId}`);
+    revalidatePath('/members');
     return successResponse(true);
   } catch (error) {
     logError('addMemberToClasses', error);
@@ -561,6 +564,7 @@ export async function transferMember(
     }
 
     revalidatePath(`/members/${memberId}`);
+    revalidatePath('/members');
     return successResponse(true);
   } catch (error) {
     logError('transferMember', error);
@@ -668,6 +672,17 @@ export async function terminateEnrollment(
     const { terminationDate, financialAction, refundAmount } = options;
     const termDateStr = dayjs(terminationDate).format('YYYY-MM-DD');
 
+    // Get member_id for revalidation
+    const { data: enrollment } = await supabase
+      .from('member_classes')
+      .select('member_id, class_id')
+      .eq('id', id)
+      .single();
+
+    if (!enrollment) {
+      return errorResponse('Enrollment not found');
+    }
+
     // 1. Deactivate enrollment
     const { error: updateError } = await supabase
       .from('member_classes')
@@ -732,27 +747,19 @@ export async function terminateEnrollment(
       // Or just log it.
       // User said "Tutar kasadan düşer".
       // Let's insert a payment record with negative amount for tracking.
-      const { data: enrollment } = await supabase
-        .from('member_classes')
-        .select('member_id, class_id')
-        .eq('id', id)
-        .single();
-      if (enrollment) {
-        if (enrollment) {
-          await supabase.from('payments').insert({
-            member_id: enrollment.member_id,
-            class_id: enrollment.class_id,
-            member_class_id: id,
-            amount: -refundAmount,
-            payment_date: termDateStr,
-            payment_method: 'cash', // Default to cash refund?
-            description: 'Ders İptali - Para İadesi',
-            payment_type: 'refund',
-          } as any);
-        }
-      }
+      await supabase.from('payments').insert({
+        member_id: enrollment.member_id,
+        class_id: enrollment.class_id,
+        member_class_id: id,
+        amount: -refundAmount,
+        payment_date: termDateStr,
+        payment_method: 'cash', // Default to cash refund?
+        description: 'Ders İptali - Para İadesi',
+        payment_type: 'refund',
+      } as any);
     }
 
+    revalidatePath(`/members/${enrollment.member_id}`);
     revalidatePath('/members');
     return successResponse(true);
   } catch (error) {

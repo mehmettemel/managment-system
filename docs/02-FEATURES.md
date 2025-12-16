@@ -85,7 +85,7 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
 
 ### 1.3 Üye Detay Görünümü (Member Detail View)
 
-**Dosya:** `components/members/MemberDetailView.tsx` (550+ satır)
+**Dosya:** `components/members/MemberDetailView.tsx` (690+ satır)
 
 **Bilgiler:**
 - Kişisel bilgiler (Ad, soyad, telefon, kayıt tarihi)
@@ -104,6 +104,107 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
 - Dondur/Çöz (FreezeMemberDrawer)
 - Ödeme al (PaymentConfirmModal)
 - Ödeme geçmişi görüntüleme
+
+### 1.4 Gecikmiş Ödeme Sistemi (Overdue Payment System) ⭐ YENİ
+
+**Dosya:** `components/members/MemberDetailView.tsx`, `components/members/EnrollmentCard.tsx`
+
+#### Çoklu Gecikmiş Ay Desteği
+
+**Problem:** Eski sistemde sadece bir sonraki gecikmiş ay gösteriliyordu. Örneğin 3 ay gecikmiş olsa bile sadece ilk ay görünüyordu.
+
+**Çözüm:** `getOverdueMonthsCount()` fonksiyonu ile tüm gecikmiş aylar hesaplanıyor.
+
+**Algoritma:**
+```typescript
+getOverdueMonthsCount(enrollment) {
+  // 1. Kayıt tarihinden bugüne kadar tüm ayları kontrol et
+  // 2. Ödenen ayları çıkar (payment history'den)
+  // 3. Dondurulmuş ayları atla (frozen_logs'dan)
+  // 4. Bugünden önceki tüm ödenmemiş ayları say
+  return overdueCount;
+}
+```
+
+**Özellikler:**
+- ✅ Tüm gecikmiş aylar hesaplanıyor (1, 2, 3... ay)
+- ✅ Dondurulmuş aylar atlanıyor
+- ✅ Ödenen aylar doğru şekilde işaretleniyor
+- ✅ Bugünün ayı "gecikmiş" sayılmıyor
+
+#### Üye Detay Sayfası Göstergeleri
+
+**Kırmızı Alert Card (Üst Kısım):**
+```
+⚠️ Gecikmiş Ödemeler
+
+Bu üyenin 2 dersinde toplam 7 aylık gecikmiş ödeme bulunmaktadır:
+
+• Salsa: 4 ay gecikmiş (İlk gecikme: 1 Ocak 2024)
+• Bachata: 3 ay gecikmiş (İlk gecikme: 1 Şubat 2024)
+```
+
+**EnrollmentCard Göstergeleri:**
+- 🔴 **İkon**: Kırmızı uyarı ikonu (IconAlertCircle) + tooltip
+- 🔴 **Badge**: "3 Ay Gecikmiş" yazısı
+- 🔴 **Sonraki Ödeme**: Kırmızı vurgulu tarih + "3 ay gecikmiş" altyazı
+- 🔴 **ThemeIcon**: Sonraki ödeme ikonunun rengi kırmızıya döner
+
+**Tooltip Metinleri:**
+- 1 ay: "Gecikmiş Ödeme" / "1 Aylık Gecikmiş Ödeme"
+- 2+ ay: "3 Aylık Gecikmiş Ödeme" / "5 Aylık Gecikmiş Ödeme"
+
+#### Üye Listesi Göstergeleri
+
+**Dosya:** `components/members/MembersContent.tsx`
+
+- 🔴 **İkon**: Ad soyad yanında kırmızı uyarı ikonu
+- 🔴 **Tooltip**: "Gecikmiş Ödeme"
+- ✅ **Sadeleştirilmiş**: Detaylar üye detay sayfasında
+
+#### Teknik Detaylar
+
+**Helper Functions:**
+```typescript
+// Bir ayın dondurulmuş olup olmadığını kontrol eder
+isMonthFrozen(enrollment, month: Dayjs): boolean
+
+// Sonraki ödeme tarihini hesaplar (dondurma-aware)
+getComputedNextDate(enrollment): string
+
+// Gecikmiş ay sayısını hesaplar
+getOverdueMonthsCount(enrollment): number
+```
+
+**Type Extensions:**
+```typescript
+interface EnrollmentCardProps {
+  enrollment: MemberClassWithDetails & {
+    overdueMonthsCount?: number
+  };
+  // ...
+}
+```
+
+**Kontroller:**
+```typescript
+// Sıkı null/undefined kontrolü
+{isOverdue &&
+ typeof enrollment.overdueMonthsCount === 'number' &&
+ enrollment.overdueMonthsCount > 0 && (
+  <Badge>
+    {enrollment.overdueMonthsCount === 1
+      ? '1 Ay Gecikmiş'
+      : `${enrollment.overdueMonthsCount} Ay Gecikmiş`}
+  </Badge>
+)}
+```
+
+**Bug Fixes:**
+- ✅ "0 ay gecikmiş" gösterilmesi önlendi
+- ✅ Ödeme yapıldığında gecikmiş göstergesi hemen kayboluyor
+- ✅ `.startOf('month')` ile tarih tutarlılığı sağlandı
+- ✅ Bugünün ayı "gecikmiş" sayılmıyor
 
 **Smart Features:**
 - **Computed Next Date**: Frozen period'ları atlayan sonraki ödeme tarihi hesaplama
@@ -419,11 +520,33 @@ const getComputedNextDate = (enrollment) => {
 - `instructor_ledger` tablosuna `pending` statüsünde kaydedilir
 - Vade tarihinde `payable` olur
 
+#### Ders Bazlı Komisyon Sistemi (Class-Based Commission) ⭐ YENİ
+
+**Migration:** `supabase/migrations/017_class_based_commission.sql`
+
+**Komisyon Öncelik Sırası:**
+1. **Ders Özel Oranı**: `classes.instructor_commission_rate` (Her ders için özel)
+2. **Eğitmen Varsayılan Oranı**: `instructors.default_commission_rate` (Eğitmenin genel oranı)
+3. **Fallback**: 0 (Komisyon yok)
+
 **Commission Calculation:**
 ```typescript
-// Eğitmen komisyonu = Ödeme tutarı * Komisyon oranı
-commission = payment.amount * (instructor.commission_rate / 100)
+// Ders özel oranı öncelikli
+let rate = 0;
+if (classData.instructor_commission_rate !== null) {
+  rate = classData.instructor_commission_rate; // ÖNCE ders bazlı
+} else if (instructor.default_commission_rate) {
+  rate = instructor.default_commission_rate; // SONRA eğitmen varsayılanı
+}
+
+// Komisyon hesaplama
+commission = (payment.amount * rate) / 100;
 ```
+
+**Avantajlar:**
+- Her ders için farklı komisyon oranı belirlenebilir
+- Özel dersler için özel oranlar
+- Eğitmen değiştiğinde otomatik oran önerisi
 
 **Ledger Entry:**
 ```typescript
@@ -463,6 +586,81 @@ commission = payment.amount * (instructor.commission_rate / 100)
   notes?: string
 }
 ```
+
+### 4.3 Komisyon Detayları (Commission Details) ⭐ YENİ
+
+**Dosya:** `components/payments/InstructorPaymentsTable.tsx`
+
+**Özellikler:**
+- **Yeni Sekme**: "Komisyon Detayları" sekmesi eklendi
+- **Detaylı Görünüm**: Hangi öğrenciden ne kadar komisyon alındığı görünüyor
+
+**Gösterilen Bilgiler:**
+- Eğitmen adı
+- Öğrenci adı (Hangi üyeden komisyon alındı)
+- Ders adı (Hangi dersten komisyon alındı)
+- Ödeme tutarı (Öğrencinin ödediği toplam)
+- Komisyon tutarı (Eğitmenin kazandığı)
+- Ödeme tarihi (Öğrenci ne zaman ödedi)
+- Vade tarihi (Komisyon ne zaman ödenecek)
+- Durum (Beklemede/Ödendi/İptal)
+
+**Filtreleme Özellikleri:**
+- Eğitmene göre filtreleme
+- Duruma göre filtreleme (Tümü/Bekleyen/Ödenen)
+- Toplam kayıt sayısı
+- Toplam komisyon tutarı özeti
+
+**Server Action:**
+```typescript
+getInstructorLedgerDetails(
+  instructorId?: number,
+  status?: 'pending' | 'paid' | 'all'
+): Promise<ApiListResponse<LedgerWithDetails>>
+
+// Relations dahil ediliyor:
+// - payments (öğrenci ödemesi)
+// - members (öğrenci bilgileri)
+// - classes (ders bilgileri)
+// - instructors (eğitmen bilgileri)
+```
+
+**Kullanım Senaryoları:**
+1. "Bu ayın komisyonlarını kim ödedi?" → Eğitmen filtreleyip bekleyen kayıtlara bak
+2. "X eğitmeninin Y öğrencisinden ne kadar komisyonu var?" → Detaylı listeleme
+3. "Hangi dersten en çok komisyon alınıyor?" → Ders bazında analiz
+
+### 4.4 Akıllı Eğitmen Değişikliği (Smart Instructor Change) ⭐ YENİ
+
+**Dosya:** `components/classes/ClassDrawer.tsx`
+
+**Senaryo:** Bir dersin eğitmeni değiştirildiğinde komisyon oranı ne olmalı?
+
+**Sistem Davranışı:**
+1. **Tespit**: Eğitmen dropdown'ında değişiklik algılanır
+2. **Alert Gösterimi**: Kırmızı bilgilendirme kutusu görünür
+3. **İki Seçenek Sunulur**:
+   - "Yeni varsayılanı kullan (%X)" → Yeni eğitmenin default_commission_rate'i
+   - "Mevcut oranı koru (%Y)" → Eski dersin instructor_commission_rate'i
+
+**Alert İçeriği:**
+```
+🔵 Eğitmen Değişikliği Tespit Edildi
+
+Eski Eğitmen: Ahmet Yılmaz
+Bu derste özel komisyon: %35
+
+Yeni Eğitmen: Mehmet Demir
+Varsayılan komisyon: %30
+
+Komisyon oranını nasıl güncellemek istersiniz?
+[Yeni varsayılanı kullan (%30)] [Mevcut oranı koru (%35)]
+```
+
+**Avantajlar:**
+- Eğitmen değişikliğinde komisyon unutulması önlenir
+- Kullanıcı kontrolü sağlar
+- Veri kaybı riski minimize edilir
 
 ---
 

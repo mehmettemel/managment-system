@@ -2,6 +2,111 @@
 
 Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 
+## [1.3.0] - 2025-12-15
+
+### 🚀 Major Features
+
+#### Komisyon Sistemi İyileştirmeleri
+
+- ✅ **Ders Bazlı Komisyon**: Dans türü yerine ders bazında komisyon sistemi
+  - Her ders için özel komisyon oranı belirlenebilir (`instructor_commission_rate`)
+  - Eğitmenlere varsayılan komisyon oranı (`default_commission_rate`)
+  - Class-based priority: Ders özel oranı > Eğitmen varsayılan oranı
+
+- ✅ **Eğitmen Komisyon Detayları**: Yeni "Komisyon Detayları" sekmesi
+  - Hangi öğrenciden ne kadar komisyon alındığı görülebiliyor
+  - Ders bazında detaylı komisyon dökümü
+  - Durum filtreleme (Bekleyen/Ödenen)
+  - Eğitmen bazında filtreleme
+  - Toplam komisyon özeti
+  - `getInstructorLedgerDetails()` server action
+
+- ✅ **Akıllı Eğitmen Değişikliği**: Derste eğitmen değiştiğinde
+  - Otomatik tespit sistemi
+  - Yeni eğitmenin varsayılan oranını kullan / Mevcut oranı koru seçenekleri
+  - Alert ile görsel bilgilendirme
+
+#### Gecikmiş Ödeme Sistemi
+
+- ✅ **Çoklu Gecikmiş Ay Desteği**: Sadece sonraki ay değil tüm gecikmiş aylar gösteriliyor
+  - `getOverdueMonthsCount()` fonksiyonu: Tüm gecikmiş ayları hesaplıyor
+  - Dondurulmuş aylar atlanıyor
+  - Ödenen aylar doğru şekilde işaretleniyor
+
+- ✅ **Üye Detay Sayfası Gecikmiş Göstergeleri**:
+  - Üst kısımda kırmızı Alert card ile genel özet
+  - Toplam gecikmiş ay sayısı
+  - Ders bazında gecikmiş ay sayısı ve ilk gecikme tarihi
+  - EnrollmentCard'da kırmızı uyarı ikonu + tooltip
+  - "X Ay Gecikmiş" badge'i
+  - Kırmızı vurgulu sonraki ödeme tarihi
+
+- ✅ **Üye Listesi Gecikmiş Göstergeleri**:
+  - Kırmızı uyarı ikonu + tooltip
+  - Gecikmiş ödemesi olan üyeleri anında tespit
+
+#### Dark Mode İyileştirmeleri
+
+- ✅ **Payment Modal Dark Mode Uyumu**: Hardcoded `bg="gray.0"` kaldırıldı
+- ✅ **Tüm Formlar Dark Mode Uyumlu**: Mantine theme-aware varsayılanlar kullanılıyor
+
+#### Ödeme Yöntemi Çevirisi
+
+- ✅ **Çoklu Dil Desteği**:
+  - `formatPaymentMethod()` utility fonksiyonu
+  - İngilizce/Türkçe otomatik çeviri (cash → Nakit, card → Kredi Kartı)
+
+### 🐛 Critical Bug Fixes
+
+- ✅ **Gecikmiş Ödeme Hesaplama Hataları**:
+  - Ödeme yapıldığında gecikmiş göstergesi hemen kayboluyor
+  - `period_start` tarihlerinde `.startOf('month')` eklendi
+  - Paid months Set'i doğru şekilde oluşturuluyor
+
+- ✅ **"0 Ay Gecikmiş" Sorunu**:
+  - Tüm göstergelerde `typeof === 'number' && > 0` kontrolü
+  - "0 ay gecikmiş" yerine hiçbir şey gösterilmiyor
+  - `overdueMonthsCount === 1` için "1 ay gecikmiş" yazısı
+
+- ✅ **Gecikmiş Ay Sayımı Hataları**:
+  - Bugünün ayı artık "gecikmiş" sayılmıyor
+  - `today.startOf('month')` ve `check.isSameOrAfter(today, 'month')` kontrolü
+  - Tüm tarih karşılaştırmaları tutarlı hale getirildi
+
+- ✅ **isOverdue Mantık Düzeltmeleri**:
+  - `overdueMonthsCount` öncelikli kontrol
+  - Freeze durumu doğru şekilde kontrol ediliyor
+  - Fallback mekanizması eklendi
+
+### 🔧 Technical Improvements
+
+- ✅ **Type Safety**:
+  - `MemberClassWithDetails & { overdueMonthsCount?: number }` interface genişletmesi
+  - Strict null checks (`typeof === 'number'`)
+
+- ✅ **Helper Functions**:
+  - `isMonthFrozen()`: Bir ayın dondurulmuş olup olmadığını kontrol eder
+  - `getComputedNextDate()`: Sonraki ödeme tarihini hesaplar
+  - `getOverdueMonthsCount()`: Gecikmiş ay sayısını hesaplar
+
+- ✅ **Date Handling**:
+  - Tüm tarih işlemlerinde `.startOf('month')` kullanımı
+  - `dayjs` ile tutarlı tarih karşılaştırmaları
+
+### 🗄️ Database Changes
+
+- ✅ **Migration 017**: `classes` tablosuna `instructor_commission_rate` kolonu
+- ✅ **Migration**: `instructors` tablosuna `default_commission_rate` kolonu
+- ✅ **Check Constraint**: Komisyon oranı 0-100 arası kontrolü
+
+### 📚 Documentation
+
+- ✅ CHANGELOG.md güncellendi (bu dosya)
+- ✅ Tüm yeni özellikler belgelendi
+- ✅ Bug fix'ler detaylı şekilde açıklandı
+
+---
+
 ## [1.2.0] - 2025-12-11
 
 ### 🚀 Major Features: Enrollment System & Finance

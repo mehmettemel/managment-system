@@ -153,6 +153,7 @@ export interface InstructorFormData {
   specialty?: string;
   phone?: string;
   rates?: { dance_type_id: number; rate: number }[];
+  default_commission_rate?: number;
 }
 
 // API Response types

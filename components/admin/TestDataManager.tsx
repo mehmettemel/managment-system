@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Card, Button, Text, Stack, Alert, Group } from '@mantine/core';
-import { IconDatabaseOff, IconRefresh } from '@tabler/icons-react';
+import { IconDatabaseOff, IconRefresh, IconTrash } from '@tabler/icons-react';
 import { seedDatabase } from '@/actions/seed';
+import { deleteAllData } from '@/actions/reset';
 import { showSuccess, showError } from '@/utils/notifications';
 
 export function TestDataManager() {
@@ -29,6 +30,26 @@ export function TestDataManager() {
     setLoading(false);
   };
 
+  const handleDeleteAll = async () => {
+    if (
+      !confirm(
+        'UYARI: Tüm veritabanı SİLİNECEK ve BOŞ bir sistem kalacak. Bu işlem geri alınamaz! Emin misiniz?'
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    const result = await deleteAllData();
+
+    if (result.error) {
+      showError(result.error);
+    } else {
+      showSuccess('Tüm veriler temizlendi.');
+    }
+    setLoading(false);
+  };
+
   return (
     <Card withBorder padding="xl" radius="md">
       <Stack gap="md">
@@ -40,20 +61,30 @@ export function TestDataManager() {
         </Group>
 
         <Alert variant="light" color="red" title="Dikkat">
-          Bu işlem mevcut tüm üyeleri, ödemeleri ve sınıfları siler. Yerine
-          önceden tanımlanmış 8 adet test senaryosu (Aktif, Gecikmiş, Donuk vb.)
-          yüklenir.
+          Bu işlem mevcut tüm üyeleri, ödemeleri ve sınıfları siler.
         </Alert>
 
-        <Button
-          color="red"
-          variant="light"
-          onClick={handleReset}
-          loading={loading}
-          leftSection={<IconRefresh size={16} />}
-        >
-          Veritabanını Sıfırla ve Test Verisi Yükle
-        </Button>
+        <Group grow>
+          <Button
+            color="blue"
+            variant="light"
+            onClick={handleReset}
+            loading={loading}
+            leftSection={<IconRefresh size={16} />}
+          >
+            Sıfırla ve Test Verisi Yükle
+          </Button>
+
+          <Button
+            color="red"
+            variant="outline"
+            onClick={handleDeleteAll}
+            loading={loading}
+            leftSection={<IconTrash size={16} />}
+          >
+            TÜM Verileri Sil (Temizle)
+          </Button>
+        </Group>
       </Stack>
     </Card>
   );

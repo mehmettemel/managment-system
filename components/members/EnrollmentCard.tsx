@@ -10,6 +10,7 @@ import {
   Menu,
   ActionIcon,
   Grid,
+  Tooltip,
 } from '@mantine/core';
 import {
   IconCalendar,
@@ -21,6 +22,7 @@ import {
   IconTrash,
   IconDotsVertical,
   IconPencil,
+  IconAlertCircle,
 } from '@tabler/icons-react';
 import { formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
@@ -28,7 +30,7 @@ import { MemberClassWithDetails, FrozenLog } from '@/types';
 import dayjs from 'dayjs';
 
 interface EnrollmentCardProps {
-  enrollment: MemberClassWithDetails;
+  enrollment: MemberClassWithDetails & { overdueMonthsCount?: number };
   effectiveDate: string;
   activeFreezeLog?: FrozenLog | null;
   onPay: () => void;
@@ -50,10 +52,12 @@ export function EnrollmentCard({
   onViewSchedule,
   onEditPrice,
 }: EnrollmentCardProps) {
+  // Use overdueMonthsCount if available, otherwise fallback to date comparison
   const isOverdue =
     !activeFreezeLog &&
-    enrollment.next_payment_date &&
-    dayjs(enrollment.next_payment_date).isBefore(dayjs(effectiveDate), 'day');
+    ((enrollment.overdueMonthsCount !== undefined && enrollment.overdueMonthsCount > 0) ||
+      (enrollment.next_payment_date &&
+        dayjs(enrollment.next_payment_date).isBefore(dayjs(effectiveDate), 'day')));
 
   // Use custom_price if active, else list price
   const displayPrice =
@@ -66,13 +70,30 @@ export function EnrollmentCard({
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Group justify="space-between" align="center" wrap="nowrap">
             <div>
-              <Text
-                fw={700}
-                size="xl"
-                className="text-gray-900 dark:text-white"
-              >
-                {enrollment.classes?.name}
-              </Text>
+              <Group gap="xs">
+                <Text
+                  fw={700}
+                  size="xl"
+                  className="text-gray-900 dark:text-white"
+                >
+                  {enrollment.classes?.name}
+                </Text>
+                {isOverdue && typeof enrollment.overdueMonthsCount === 'number' && enrollment.overdueMonthsCount > 0 && (
+                  <Tooltip
+                    label={
+                      enrollment.overdueMonthsCount === 1
+                        ? '1 Aylık Gecikmiş Ödeme'
+                        : `${enrollment.overdueMonthsCount} Aylık Gecikmiş Ödeme`
+                    }
+                    withArrow
+                  >
+                    <IconAlertCircle
+                      size={20}
+                      color="var(--mantine-color-red-6)"
+                    />
+                  </Tooltip>
+                )}
+              </Group>
               <Group gap="xs" mt={4}>
                 {enrollment.payment_interval &&
                 enrollment.payment_interval > 1 ? (
@@ -87,6 +108,13 @@ export function EnrollmentCard({
                 {activeFreezeLog && (
                   <Badge color="cyan" leftSection={<IconSnowflake size={12} />}>
                     Donduruldu
+                  </Badge>
+                )}
+                {isOverdue && typeof enrollment.overdueMonthsCount === 'number' && enrollment.overdueMonthsCount > 0 && (
+                  <Badge color="red" variant="light">
+                    {enrollment.overdueMonthsCount > 1
+                      ? `${enrollment.overdueMonthsCount} Ay Gecikmiş`
+                      : '1 Ay Gecikmiş'}
                   </Badge>
                 )}
               </Group>
@@ -106,7 +134,9 @@ export function EnrollmentCard({
             {/* Payment Date */}
             <Group gap={8}>
               <ThemeIcon
-                color={activeFreezeLog ? 'gray' : 'blue'}
+                color={
+                  activeFreezeLog ? 'gray' : isOverdue ? 'red' : 'blue'
+                }
                 variant="light"
                 size="md"
                 radius="md"
@@ -122,11 +152,20 @@ export function EnrollmentCard({
                     Donduruldu
                   </Text>
                 ) : (
-                  <Text fw={600} size="sm" c={isOverdue ? 'red' : undefined}>
-                    {enrollment.next_payment_date
-                      ? formatDate(enrollment.next_payment_date)
-                      : 'Belirlenmedi'}
-                  </Text>
+                  <>
+                    <Text fw={600} size="sm" c={isOverdue ? 'red' : undefined}>
+                      {enrollment.next_payment_date
+                        ? formatDate(enrollment.next_payment_date)
+                        : 'Belirlenmedi'}
+                    </Text>
+                    {isOverdue && typeof enrollment.overdueMonthsCount === 'number' && enrollment.overdueMonthsCount > 0 && (
+                      <Text size="xs" c="red" fw={500}>
+                        {enrollment.overdueMonthsCount === 1
+                          ? '1 ay gecikmiş'
+                          : `${enrollment.overdueMonthsCount} ay gecikmiş`}
+                      </Text>
+                    )}
+                  </>
                 )}
               </div>
             </Group>

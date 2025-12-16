@@ -97,11 +97,12 @@ export async function createInstructor(
     }
 
     const supabase = await createClient();
-    const instructorData: InstructorInsert = sanitizeInput({
+    const instructorData: any = sanitizeInput({
       first_name: formData.first_name,
       last_name: formData.last_name,
       specialty: formData.specialty || null,
       phone: formData.phone || null,
+      default_commission_rate: formData.default_commission_rate ?? 30,
     });
 
     const { data, error } = await supabase
@@ -139,11 +140,12 @@ export async function updateInstructor(
 ): Promise<ApiResponse<Instructor>> {
   try {
     const supabase = await createClient();
-    const instructorData: InstructorUpdate = sanitizeInput({
+    const instructorData: any = sanitizeInput({
       first_name: formData.first_name,
       last_name: formData.last_name,
       specialty: formData.specialty || null, // Keeping specialty column for legacy or display text if needed
       phone: formData.phone || null,
+      default_commission_rate: formData.default_commission_rate ?? 30,
     });
 
     const { data, error } = await supabase
