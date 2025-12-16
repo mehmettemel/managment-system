@@ -17,9 +17,7 @@ import {
   IconDots,
   IconEdit,
   IconTrash,
-  IconSnowflake,
   IconCreditCard,
-  IconPlayerPlay,
   IconRotateClockwise,
   IconAlertCircle,
 } from '@tabler/icons-react';
@@ -27,7 +25,6 @@ import { DataTable } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { MemberDrawer } from '@/components/members/MemberDrawer';
-import { FreezeMemberDrawer } from '@/components/members/FreezeMemberDrawer';
 // Removed MemberDetailModal
 import { modals } from '@mantine/modals';
 import { useMembers } from '@/hooks/use-members';
@@ -37,7 +34,6 @@ import {
   deleteMember,
   deleteMembers,
 } from '@/actions/members';
-import { unfreezeMembership } from '@/actions/freeze';
 import { showSuccess, showError } from '@/utils/notifications';
 import { formatDate, isPaymentOverdue } from '@/utils/date-helpers';
 import { formatPhone } from '@/utils/formatters';
@@ -94,7 +90,6 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
     ]}
   />;
   const [drawerOpened, setDrawerOpened] = useState(false);
-  const [freezeDrawerOpened, setFreezeDrawerOpened] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedRows, setSelectedRows] = useState<MemberWithClasses[]>([]);
@@ -209,32 +204,6 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
     });
   };
 
-  const handleFreeze = (member: Member, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setSelectedMember(member);
-    setFreezeDrawerOpened(true);
-  };
-
-  const handleUnfreeze = (member: Member, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    modals.openConfirmModal({
-      title: 'Üyeliği Aktifleştir',
-      children: (
-        <Text size="sm">{member.first_name} üyeliği aktifleştirilsin mi?</Text>
-      ),
-      labels: { confirm: 'Aktifleştir', cancel: 'İptal' },
-      onConfirm: async () => {
-        const result = await unfreezeMembership(member.id);
-        if (result.error) {
-          showError(result.error);
-        } else {
-          showSuccess('Üyelik aktifleştirildi');
-          setRefreshTrigger((prev) => prev + 1);
-        }
-      },
-    });
-  };
-
   const handleAddNew = () => {
     setSelectedMember(null);
     setDrawerOpened(true);
@@ -298,17 +267,88 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
       render: (member) => formatDate(member.join_date),
     },
     {
-      key: 'membership_duration',
-      label: 'Üyelik Süresi',
+      key: 'classes',
+      label: 'Dersler',
       render: (member) => {
         const activeClasses =
           member.member_classes?.filter((mc) => mc.active) || [];
         return (
-          <Stack gap={2}>
+          <Stack gap={4}>
             {activeClasses.map((mc) => (
-              <Text size="xs" key={mc.id} style={{ whiteSpace: 'nowrap' }}>
-                <span style={{ fontWeight: 600 }}>{mc.classes?.name}:</span>{' '}
-                {mc.payment_interval ? `${mc.payment_interval} Ay` : 'Aylık'}
+              <Group key={mc.id} gap={8} wrap="nowrap">
+                <Text size="xs" fw={600} style={{ minWidth: 80 }}>
+                  {mc.classes?.name || '-'}
+                </Text>
+              </Group>
+            ))}
+            {activeClasses.length === 0 && (
+              <Text size="xs" c="dimmed">
+                -
+              </Text>
+            )}
+          </Stack>
+        );
+      },
+    },
+    {
+      key: 'enrollment_date',
+      label: 'Derse Kayıt',
+      render: (member) => {
+        const activeClasses =
+          member.member_classes?.filter((mc) => mc.active) || [];
+        return (
+          <Stack gap={4}>
+            {activeClasses.map((mc) => (
+              <Text size="xs" key={mc.id}>
+                {mc.created_at ? formatDate(mc.created_at) : '-'}
+              </Text>
+            ))}
+            {activeClasses.length === 0 && (
+              <Text size="xs" c="dimmed">
+                -
+              </Text>
+            )}
+          </Stack>
+        );
+      },
+    },
+    {
+      key: 'first_payment',
+      label: 'İlk Ödeme',
+      render: (member) => {
+        const activeClasses =
+          member.member_classes?.filter((mc) => mc.active) || [];
+        return (
+          <Stack gap={4}>
+            {activeClasses.map((mc: any) => (
+              <Text
+                size="xs"
+                key={mc.id}
+                c={mc.first_payment_date ? undefined : 'orange'}
+              >
+                {mc.first_payment_date ? formatDate(mc.first_payment_date) : 'Bekliyor'}
+              </Text>
+            ))}
+            {activeClasses.length === 0 && (
+              <Text size="xs" c="dimmed">
+                -
+              </Text>
+            )}
+          </Stack>
+        );
+      },
+    },
+    {
+      key: 'last_payment',
+      label: 'Son Ödeme',
+      render: (member) => {
+        const activeClasses =
+          member.member_classes?.filter((mc) => mc.active) || [];
+        return (
+          <Stack gap={4}>
+            {activeClasses.map((mc: any) => (
+              <Text size="xs" key={mc.id} c={mc.last_payment_date ? 'green' : 'dimmed'}>
+                {mc.last_payment_date ? formatDate(mc.last_payment_date) : '-'}
               </Text>
             ))}
             {activeClasses.length === 0 && (
@@ -352,21 +392,6 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
             >
               Ödeme Al
             </Menu.Item>
-            {member.status === 'frozen' ? (
-              <Menu.Item
-                leftSection={<IconPlayerPlay size={16} />}
-                onClick={(e) => handleUnfreeze(member, e)}
-              >
-                Aktifleştir
-              </Menu.Item>
-            ) : (
-              <Menu.Item
-                leftSection={<IconSnowflake size={16} />}
-                onClick={(e) => handleFreeze(member, e)}
-              >
-                Dondur
-              </Menu.Item>
-            )}
             <Menu.Divider />
             {member.status === 'archived' ? (
               <Menu.Item
@@ -474,13 +499,6 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
       <MemberDrawer
         opened={drawerOpened}
         onClose={handleDrawerClose}
-        member={selectedMember}
-        onSuccess={handleSuccess}
-      />
-
-      <FreezeMemberDrawer
-        opened={freezeDrawerOpened}
-        onClose={() => setFreezeDrawerOpened(false)}
         member={selectedMember}
         onSuccess={handleSuccess}
       />

@@ -12,8 +12,10 @@ import {
   Checkbox,
   ScrollArea,
   useMantineColorScheme,
+  NumberInput,
+  Alert,
 } from '@mantine/core';
-import { IconCash } from '@tabler/icons-react';
+import { IconCash, IconInfoCircle } from '@tabler/icons-react';
 import { processPayout, getInstructorLedgerDetails } from '@/actions/finance';
 import { showSuccess, showError } from '@/utils/notifications';
 import { formatCurrency } from '@/utils/formatters';
@@ -43,6 +45,8 @@ export function InstructorPaymentModal({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
+  const [customAmount, setCustomAmount] = useState<number | string>(0);
+  const [isCustomAmountModified, setIsCustomAmountModified] = useState(false);
 
   // Fetch pending entries for this instructor
   useEffect(() => {
@@ -91,6 +95,18 @@ export function InstructorPaymentModal({
     .filter((e) => selectedIds.has(e.id))
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
+  // Auto-update custom amount when selection changes (if user hasn't manually edited it)
+  useEffect(() => {
+    if (!isCustomAmountModified) {
+      setCustomAmount(selectedTotal);
+    }
+  }, [selectedTotal, isCustomAmountModified]);
+
+  const handleCustomAmountChange = (value: number | string) => {
+    setCustomAmount(value);
+    setIsCustomAmountModified(true);
+  };
+
   const handleConfirm = async () => {
     if (!instructor) return;
 
@@ -99,11 +115,17 @@ export function InstructorPaymentModal({
       return;
     }
 
+    const finalAmount = Number(customAmount);
+    if (!finalAmount || finalAmount <= 0) {
+      showError('Lütfen geçerli bir tutar girin');
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await processPayout(
         instructor.id,
-        selectedTotal,
+        finalAmount,
         Array.from(selectedIds)
       );
 
@@ -116,6 +138,8 @@ export function InstructorPaymentModal({
         // Reset state
         setSelectedIds(new Set());
         setLedgerEntries([]);
+        setCustomAmount(0);
+        setIsCustomAmountModified(false);
       }
     } catch (error) {
       showError('Ödeme sırasında hata oluştu');
@@ -248,22 +272,55 @@ export function InstructorPaymentModal({
 
         <Divider />
 
-        <Group justify="space-between">
-          <div>
-            <Text size="sm" c="dimmed">
-              Seçilen Ay Sayısı
-            </Text>
-            <Text fw={700}>{selectedIds.size} ay</Text>
-          </div>
-          <div>
-            <Text size="sm" c="dimmed">
-              Ödenecek Tutar
-            </Text>
-            <Text fw={700} c="green" size="xl">
-              {formatCurrency(selectedTotal)}
-            </Text>
-          </div>
-        </Group>
+        <Stack gap="sm">
+          <Group justify="space-between">
+            <div>
+              <Text size="sm" c="dimmed">
+                Seçilen Ay Sayısı
+              </Text>
+              <Text fw={700}>{selectedIds.size} ay</Text>
+            </div>
+            <div>
+              <Text size="sm" c="dimmed">
+                Hesaplanan Tutar
+              </Text>
+              <Text fw={700} c="blue" size="lg">
+                {formatCurrency(selectedTotal)}
+              </Text>
+            </div>
+          </Group>
+
+          <NumberInput
+            label="Ödenecek Tutar"
+            description="Farklı bir anlaşma varsa tutarı değiştirebilirsiniz"
+            value={customAmount}
+            onChange={handleCustomAmountChange}
+            min={0}
+            decimalScale={2}
+            fixedDecimalScale
+            thousandSeparator=","
+            decimalSeparator="."
+            prefix="₺"
+            size="md"
+            disabled={loading || fetchLoading}
+            styles={{
+              input: {
+                fontWeight: 700,
+                fontSize: '1.1rem',
+                color: 'var(--mantine-color-green-6)',
+              },
+            }}
+          />
+
+          {Number(customAmount) !== selectedTotal && Number(customAmount) > 0 && (
+            <Alert icon={<IconInfoCircle size={16} />} color="orange" variant="light">
+              <Text size="sm">
+                Ödenecek tutar ({formatCurrency(Number(customAmount))}) hesaplanan tutardan ({formatCurrency(selectedTotal)}) farklı.
+                Bu farklılık özel anlaşma nedeniyle mi?
+              </Text>
+            </Alert>
+          )}
+        </Stack>
 
         <Group justify="flex-end">
           <Button variant="subtle" onClick={onClose} disabled={loading}>

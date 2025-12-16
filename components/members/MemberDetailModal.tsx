@@ -61,7 +61,7 @@ export function MemberDetailModal({
       getMemberPayments(memberId, 1, 1000), // Fetch first 1000 payments (no pagination in modal)
     ]);
 
-    if (memberRes.data) setMember(memberRes.data);
+    if (memberRes.data) setMember(memberRes.data as any);
     if (paymentsRes.data) setPayments(paymentsRes.data.data as PaymentWithClass[]);
     setLoading(false);
   };
@@ -170,7 +170,7 @@ export function MemberDetailModal({
                           <Group gap={4}>
                             <IconCurrencyLira size={14} color="gray" />
                             <Text size="xs" c="dimmed">
-                              {formatCurrency(mc.price || 0)}
+                              {formatCurrency(mc.custom_price || 0)}
                             </Text>
                           </Group>
                           <Group gap={4}>

@@ -53,7 +53,7 @@ export function ClassPaymentModal({
 
       if (classId) {
         const mc = memberClasses.find((c) => c.class_id.toString() === classId);
-        if (mc) setAmount(mc.price || 0);
+        if (mc) setAmount(mc.custom_price || 0);
       } else {
         setAmount(0);
       }
@@ -70,7 +70,7 @@ export function ClassPaymentModal({
       const mc = memberClasses.find(
         (c) => c.class_id.toString() === selectedClassId
       );
-      if (mc) setAmount(mc.price || 0);
+      if (mc) setAmount(mc.custom_price || 0);
     }
   }, [selectedClassId, memberClasses]);
 

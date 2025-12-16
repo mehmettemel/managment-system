@@ -105,33 +105,87 @@ export async function getMemberPayments(
 }
 
 /**
- * Generate a payment schedule for a specific member class
+ * Get last payment dates for member class enrollments
+ * Returns a map of member_class_id -> last payment date
+ */
+export async function getEnrollmentPaymentDates(
+  memberClassIds: number[]
+): Promise<ApiResponse<Record<number, { first_payment_date: string | null; last_payment_date: string | null }>>> {
+  try {
+    if (memberClassIds.length === 0) {
+      return successResponse({});
+    }
+
+    const supabase = await createClient();
+
+    // Get first and last payment dates for each enrollment
+    const { data, error } = await supabase
+      .from('payments')
+      .select('member_class_id, payment_date')
+      .in('member_class_id', memberClassIds)
+      .order('payment_date', { ascending: true });
+
+    if (error) {
+      logError('getEnrollmentPaymentDates', error);
+      return errorResponse(handleSupabaseError(error));
+    }
+
+    // Build a map of member_class_id -> { first_payment_date, last_payment_date }
+    const result: Record<number, { first_payment_date: string | null; last_payment_date: string | null }> = {};
+
+    if (data && data.length > 0) {
+      data.forEach((payment) => {
+        const mcId = payment.member_class_id;
+        if (!mcId) return;
+
+        if (!result[mcId]) {
+          result[mcId] = {
+            first_payment_date: payment.payment_date,
+            last_payment_date: payment.payment_date,
+          };
+        } else {
+          // Update last payment date (data is sorted ascending)
+          result[mcId].last_payment_date = payment.payment_date;
+        }
+      });
+    }
+
+    return successResponse(result);
+  } catch (error) {
+    logError('getEnrollmentPaymentDates', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Generate a payment schedule for a specific member class enrollment
  */
 export async function getPaymentSchedule(
   memberId: number,
-  classId: number
+  memberClassId: number
 ): Promise<ApiListResponse<PaymentScheduleItem>> {
   try {
     const supabase = await createClient();
 
     // 1. Get Member Class details (for price and created_at/join_date)
+    // CRITICAL: Use member_class_id (enrollment ID), not class_id
     const { data: memberClass, error: mcError } = await supabase
       .from('member_classes')
       .select('*, members(join_date)')
+      .eq('id', memberClassId)
       .eq('member_id', memberId)
-      .eq('class_id', classId)
       .single();
 
     if (mcError || !memberClass) {
       return errorListResponse('Üye ders kaydı bulunamadı');
     }
 
-    // 2. Get existing payments for this class
+    // 2. Get existing payments for this specific enrollment
+    // CRITICAL: Use member_class_id to get payments for THIS enrollment only
     const { data: payments, error: pError } = await supabase
       .from('payments')
       .select('*')
-      .eq('member_id', memberId)
-      .eq('class_id', classId);
+      .eq('member_class_id', memberClassId);
 
     // 3. Get frozen logs for this enrollment
     const { data: frozenLogs, error: fError } = await supabase
@@ -144,20 +198,20 @@ export async function getPaymentSchedule(
       return errorListResponse(handleSupabaseError(pError));
     }
 
-    // Helper function to check if a month is within a frozen period
-    const isMonthFrozen = (month: dayjs.Dayjs): boolean => {
+    // Helper function to check if a date is within a frozen period
+    const isDateFrozen = (date: dayjs.Dayjs): boolean => {
       if (!frozenLogs || frozenLogs.length === 0) return false;
 
       return frozenLogs.some((log) => {
-        const freezeStart = dayjs(log.start_date).startOf('month');
+        const freezeStart = dayjs(log.start_date);
         const freezeEnd = log.end_date
-          ? dayjs(log.end_date).endOf('month')
+          ? dayjs(log.end_date)
           : dayjs('2099-12-31'); // Indefinite freeze
 
-        // Check if month falls within freeze period
+        // Check if date falls within freeze period
         return (
-          month.isSameOrAfter(freezeStart, 'month') &&
-          month.isSameOrBefore(freezeEnd, 'month')
+          date.isSameOrAfter(freezeStart, 'day') &&
+          date.isSameOrBefore(freezeEnd, 'day')
         );
       });
     };
@@ -217,22 +271,22 @@ export async function getPaymentSchedule(
       const periodStart = currentMonth.format('YYYY-MM-DD');
       const nextMonth = currentMonth.add(1, 'month');
 
-      // CRITICAL: Skip frozen months
-      if (isMonthFrozen(currentMonth)) {
+      // CRITICAL: Skip frozen dates
+      if (isDateFrozen(currentMonth)) {
         currentMonth = nextMonth;
         continue;
       }
 
-      // Find if paid
+      // Find if paid (exact date match)
       const paidPayment = payments?.find((p) => {
         if (!p.period_start) return false;
-        return dayjs(p.period_start).isSame(currentMonth, 'month');
+        return dayjs(p.period_start).isSame(currentMonth, 'day');
       });
 
       let status: PaymentScheduleItem['status'] = 'unpaid';
       if (paidPayment) {
         status = 'paid';
-      } else if (currentMonth.isBefore(now.startOf('month'))) {
+      } else if (currentMonth.isBefore(now, 'day')) {
         status = 'overdue';
       }
 
@@ -298,6 +352,7 @@ export async function processClassPayment(
         payment_interval,
         custom_price,
         created_at,
+        first_payment_date,
         classes (
           name,
           price_monthly
@@ -430,48 +485,48 @@ export async function processClassPayment(
       .select('start_date, end_date')
       .eq('member_class_id', memberClass.id);
 
-    // Helper function to check if a month is frozen
-    const isMonthFrozen = (month: dayjs.Dayjs): boolean => {
+    // Helper function to check if a date is frozen
+    const isDateFrozen = (date: dayjs.Dayjs): boolean => {
       if (!frozenLogs || frozenLogs.length === 0) return false;
 
       return frozenLogs.some((log) => {
-        const freezeStart = dayjs(log.start_date).startOf('month');
+        const freezeStart = dayjs(log.start_date);
         const freezeEnd = log.end_date
-          ? dayjs(log.end_date).endOf('month')
+          ? dayjs(log.end_date)
           : dayjs('2099-12-31'); // Indefinite freeze
 
         return (
-          month.isSameOrAfter(freezeStart, 'month') &&
-          month.isSameOrBefore(freezeEnd, 'month')
+          date.isSameOrAfter(freezeStart, 'day') &&
+          date.isSameOrBefore(freezeEnd, 'day')
         );
       });
     };
 
-    // Start checking from enrollment date (NORMALIZE to start of month)
-    let checkDate = dayjs(memberClass.created_at || todayStr).startOf('month');
+    // Start checking from enrollment date (keep the exact day)
+    let checkDate = dayjs(memberClass.created_at || todayStr);
 
-    // Use set of paid months for O(1) lookup (NORMALIZE all dates)
-    const paidMonths = new Set(
+    // Use set of paid dates for O(1) lookup (exact date comparison)
+    const paidDates = new Set(
       (allPayments || []).map((p) =>
-        dayjs(p.period_start).startOf('month').format('YYYY-MM')
+        dayjs(p.period_start).format('YYYY-MM-DD')
       )
     );
 
     // Also add the newly created payments to this set
     paymentsCreated.forEach((p) => {
-      paidMonths.add(dayjs(p.period_start).startOf('month').format('YYYY-MM'));
+      paidDates.add(dayjs(p.period_start).format('YYYY-MM-DD'));
     });
 
     // Iterate forward to find first gap (skip frozen months)
     for (let i = 0; i < 120; i++) {
-      // Skip frozen months
-      if (isMonthFrozen(checkDate)) {
+      // Skip frozen dates
+      if (isDateFrozen(checkDate)) {
         checkDate = checkDate.add(1, 'month');
         continue;
       }
 
-      const key = checkDate.format('YYYY-MM');
-      if (paidMonths.has(key)) {
+      const key = checkDate.format('YYYY-MM-DD');
+      if (paidDates.has(key)) {
         checkDate = checkDate.add(1, 'month');
       } else {
         break; // Found the gap
@@ -480,9 +535,19 @@ export async function processClassPayment(
 
     const finalNextPaymentDate = checkDate.format('YYYY-MM-DD');
 
+    // Check if this is the first payment for this enrollment
+    const isFirstPayment = !memberClass.first_payment_date && paymentsCreated.length > 0;
+
+    // Prepare update data
+    const updateData: any = { next_payment_date: finalNextPaymentDate };
+    if (isFirstPayment) {
+      // Set first_payment_date to today (when the first payment was made)
+      updateData.first_payment_date = todayStr;
+    }
+
     const { error: updateError } = await supabase
       .from('member_classes')
-      .update({ next_payment_date: finalNextPaymentDate })
+      .update(updateData)
       .eq('id', memberClass.id);
 
     if (updateError) {

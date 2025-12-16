@@ -323,30 +323,37 @@ export async function processPayout(
       entriesToPay = pendingEntries || [];
     }
 
-    // Validate amount matches selected entries
-    const calculatedTotal =
-      entriesToPay.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
-
-    if (calculatedTotal <= 0) {
+    // Validate entries exist
+    if (!entriesToPay || entriesToPay.length === 0) {
       return errorResponse(
         'Ödenecek bakiye bulunamadı (Zaten ödenmiş olabilir).'
       );
     }
 
-    if (Math.abs(calculatedTotal - amount) > 0.01) {
-      return errorResponse('Ödeme tutarı uyuşmuyor');
-    }
+    // Calculate total for note purposes
+    const calculatedTotal =
+      entriesToPay.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+
+    // Note: We allow custom amounts for special agreements between admin and instructor
+    // The amount parameter can be different from calculatedTotal
 
     // 2. Create payout record
+    // Generate note with information about custom amount if applicable
+    let noteText = ledgerEntryIds
+      ? `${entriesToPay.length} aylık hakediş ödemesi`
+      : 'Otomatik hakediş ödemesi';
+
+    if (Math.abs(calculatedTotal - amount) > 0.01) {
+      noteText += ` (Hesaplanan: ${calculatedTotal.toFixed(2)}₺, Ödenen: ${amount.toFixed(2)}₺ - Özel anlaşma)`;
+    }
+
     const { data: payout, error: payoutError } = await supabase
       .from('instructor_payouts')
       .insert({
         instructor_id: instructorId,
         amount: amount,
         payment_date: today,
-        note: ledgerEntryIds
-          ? `${entriesToPay.length} aylık hakediş ödemesi`
-          : 'Otomatik hakediş ödemesi',
+        note: noteText,
       })
       .select()
       .single();

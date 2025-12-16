@@ -81,12 +81,13 @@ export interface MemberClassWithDetails {
   member_id: number;
   class_id: number;
   next_payment_date: string | null;
-  price: number | null;
   active: boolean;
   payment_interval: number | null;
   custom_price: number | null;
   classes: Class;
   created_at: string | null;
+  first_payment_date: string | null;
+  last_payment_date?: string | null; // Calculated from payments table
 }
 
 // Payment with class info

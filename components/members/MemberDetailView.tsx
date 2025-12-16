@@ -142,7 +142,7 @@ export function MemberDetailView({
         setMember(memberRes.data);
         // Filter for active enrollments
         setActiveEnrollments(
-          memberRes.data.member_classes.filter((mc) => mc.active) || []
+          (memberRes.data.member_classes.filter((mc: any) => mc.active) || []) as any
         );
       }
 
@@ -228,10 +228,10 @@ export function MemberDetailView({
     setActionLoading(false);
   };
 
-  // Helper to check if a month is frozen for an enrollment
-  const isMonthFrozen = (
+  // Helper to check if a date is frozen for an enrollment
+  const isDateFrozen = (
     enrollment: MemberClassWithDetails,
-    month: dayjs.Dayjs
+    date: dayjs.Dayjs
   ): boolean => {
     const enrollmentFrozenLogs =
       member?.frozen_logs?.filter(
@@ -239,52 +239,59 @@ export function MemberDetailView({
       ) || [];
 
     return enrollmentFrozenLogs.some((log) => {
-      const freezeStart = dayjs(log.start_date).startOf('month');
+      const freezeStart = dayjs(log.start_date);
       const freezeEnd = log.end_date
-        ? dayjs(log.end_date).endOf('month')
+        ? dayjs(log.end_date)
         : dayjs('2099-12-31'); // Indefinite freeze
 
       return (
-        month.isSameOrAfter(freezeStart, 'month') &&
-        month.isSameOrBefore(freezeEnd, 'month')
+        date.isSameOrAfter(freezeStart, 'day') &&
+        date.isSameOrBefore(freezeEnd, 'day')
       );
     });
   };
 
   // Helper to calculate effective next payment date client-side
   const getComputedNextDate = (enrollment: MemberClassWithDetails): string => {
-    const classPayments = allPaymentHistory.filter(
-      (p) => p.class_id === enrollment.class_id
-    );
-    const paidMonths = new Set(
-      classPayments.map((p) => dayjs(p.period_start).startOf('month').format('YYYY-MM'))
-    );
-
-    let start = dayjs(enrollment.created_at || new Date()).startOf('month');
-    if (classPayments.length > 0) {
-      const sorted = [...classPayments].sort(
-        (a, b) =>
-          dayjs(a.period_start).valueOf() - dayjs(b.period_start).valueOf()
-      );
-      const firstPay = dayjs(sorted[0].period_start).startOf('month');
-      if (firstPay.isBefore(start)) {
-        start = firstPay;
+    // CRITICAL: Filter by member_class_id (specific enrollment), not just class_id
+    // A member can enroll in the same class multiple times with different dates
+    // FALLBACK: If member_class_id is null (old data), filter by class_id AND date range
+    const classPayments = allPaymentHistory.filter((p) => {
+      // Prefer member_class_id if available
+      if (p.member_class_id) {
+        return p.member_class_id === enrollment.id;
       }
-    }
+      // Fallback for old data without member_class_id
+      // Only include payments that are within this enrollment's date range
+      if (p.class_id === enrollment.class_id) {
+        const paymentDate = dayjs(p.period_start);
+        const enrollStart = dayjs(enrollment.created_at);
+        // Only include if payment is on or after enrollment date
+        return paymentDate.isSameOrAfter(enrollStart, 'day');
+      }
+      return false;
+    });
 
-    let check = start;
+    const paidDates = new Set(
+      classPayments.map((p) => dayjs(p.period_start).format('YYYY-MM-DD'))
+    );
+
+    // Start from THIS enrollment's registration date (not member's join date)
+    const enrollmentDate = dayjs(enrollment.created_at || new Date());
+
+    let check = enrollmentDate;
     for (let i = 0; i < 120; i++) {
-      // Skip frozen months
-      if (isMonthFrozen(enrollment, check)) {
+      // Skip frozen dates
+      if (isDateFrozen(enrollment, check)) {
         check = check.add(1, 'month');
         continue;
       }
 
-      // Check if paid
-      if (paidMonths.has(check.format('YYYY-MM'))) {
+      // Check if this exact date is paid
+      if (paidDates.has(check.format('YYYY-MM-DD'))) {
         check = check.add(1, 'month');
       } else {
-        // Return the first day of the unpaid month
+        // Return the unpaid date
         return check.format('YYYY-MM-DD');
       }
     }
@@ -295,44 +302,49 @@ export function MemberDetailView({
   const getOverdueMonthsCount = (
     enrollment: MemberClassWithDetails
   ): number => {
-    const classPayments = allPaymentHistory.filter(
-      (p) => p.class_id === enrollment.class_id
-    );
-    const paidMonths = new Set(
-      classPayments.map((p) => dayjs(p.period_start).startOf('month').format('YYYY-MM'))
-    );
-
-    let start = dayjs(enrollment.created_at || new Date()).startOf('month');
-    if (classPayments.length > 0) {
-      const sorted = [...classPayments].sort(
-        (a, b) =>
-          dayjs(a.period_start).valueOf() - dayjs(b.period_start).valueOf()
-      );
-      const firstPay = dayjs(sorted[0].period_start).startOf('month');
-      if (firstPay.isBefore(start)) {
-        start = firstPay;
+    // CRITICAL: Filter by member_class_id (specific enrollment), not just class_id
+    // A member can enroll in the same class multiple times with different dates
+    // FALLBACK: If member_class_id is null (old data), filter by class_id AND date range
+    const classPayments = allPaymentHistory.filter((p) => {
+      // Prefer member_class_id if available
+      if (p.member_class_id) {
+        return p.member_class_id === enrollment.id;
       }
-    }
+      // Fallback for old data without member_class_id
+      // Only include payments that are within this enrollment's date range
+      if (p.class_id === enrollment.class_id) {
+        const paymentDate = dayjs(p.period_start);
+        const enrollStart = dayjs(enrollment.created_at);
+        // Only include if payment is on or after enrollment date
+        return paymentDate.isSameOrAfter(enrollStart, 'day');
+      }
+      return false;
+    });
+    const paidDates = new Set(
+      classPayments.map((p) => dayjs(p.period_start).format('YYYY-MM-DD'))
+    );
 
-    const today = dayjs(effectiveDate).startOf('month');
+    // Start from THIS enrollment's registration date (not member's join date)
+    const enrollmentDate = dayjs(enrollment.created_at || new Date());
+    const today = dayjs(effectiveDate);
     let overdueCount = 0;
-    let check = start;
+    let check = enrollmentDate;
 
-    // Iterate through all months from start until (but not including) current month
+    // Iterate through monthly cycles from enrollment date until today
     for (let i = 0; i < 120; i++) {
-      // Stop if we've reached current month (current month is not yet overdue)
-      if (check.isSameOrAfter(today, 'month')) {
+      // Stop if we've reached or passed today (today's payment is not yet overdue)
+      if (check.isSameOrAfter(today, 'day')) {
         break;
       }
 
-      // Skip frozen months
-      if (isMonthFrozen(enrollment, check)) {
+      // Skip frozen dates
+      if (isDateFrozen(enrollment, check)) {
         check = check.add(1, 'month');
         continue;
       }
 
-      // If not paid and before current month, it's overdue
-      if (!paidMonths.has(check.format('YYYY-MM'))) {
+      // If not paid and before today, it's overdue
+      if (!paidDates.has(check.format('YYYY-MM-DD'))) {
         overdueCount++;
       }
 
@@ -347,6 +359,23 @@ export function MemberDetailView({
     next_payment_date: getComputedNextDate(e),
     overdueMonthsCount: getOverdueMonthsCount(e),
   }));
+
+  // Calculate first and last payment dates from all payment history
+  const firstPaymentDate = allPaymentHistory.length > 0
+    ? allPaymentHistory.reduce((earliest, payment) => {
+        return !earliest || dayjs(payment.payment_date).isBefore(dayjs(earliest))
+          ? payment.payment_date
+          : earliest;
+      }, null as string | null)
+    : null;
+
+  const lastPaymentDate = allPaymentHistory.length > 0
+    ? allPaymentHistory.reduce((latest, payment) => {
+        return !latest || dayjs(payment.payment_date).isAfter(dayjs(latest))
+          ? payment.payment_date
+          : latest;
+      }, null as string | null)
+    : null;
 
   // Check for overdue payments
   const overdueEnrollments = computedEnrollments.filter((e) => {
@@ -387,7 +416,9 @@ export function MemberDetailView({
 
   const handleViewSchedule = async (enrollment: MemberClassWithDetails) => {
     setActionLoading(true);
-    const res = await getPaymentSchedule(memberId, enrollment.class_id);
+    // CRITICAL: Send enrollment.id (member_class_id), not class_id
+    // A member can enroll in the same class multiple times
+    const res = await getPaymentSchedule(memberId, enrollment.id);
     if (res.data) {
       setScheduleModal({ open: true, enrollment, schedule: res.data });
     } else {
@@ -628,6 +659,18 @@ export function MemberDetailView({
                   <IconCalendar size={16} style={{ opacity: 0.7 }} />
                   <Text size="sm">Kayıt: {formatDate(member.join_date)}</Text>
                 </Group>
+                {firstPaymentDate && (
+                  <Group gap={4}>
+                    <IconHistory size={16} style={{ opacity: 0.7 }} />
+                    <Text size="sm" c="green">İlk Ödeme: {formatDate(firstPaymentDate)}</Text>
+                  </Group>
+                )}
+                {lastPaymentDate && (
+                  <Group gap={4}>
+                    <IconHistory size={16} style={{ opacity: 0.7 }} />
+                    <Text size="sm" c="blue">Son Ödeme: {formatDate(lastPaymentDate)}</Text>
+                  </Group>
+                )}
               </Group>
             </div>
           </Group>

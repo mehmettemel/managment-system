@@ -86,11 +86,11 @@ export async function getMemberById(
           member_id,
           class_id,
           next_payment_date,
-          price,
           active,
           payment_interval,
           custom_price,
           created_at,
+          first_payment_date,
           classes (*)
         ),
         frozen_logs (*)
@@ -174,6 +174,8 @@ export async function createMember(
           active: true,
           payment_interval: reg.duration,
           custom_price: reg.price,
+          // CRITICAL: Use simulator date, not DB default NOW()
+          created_at: today,
         };
       });
 
@@ -465,7 +467,8 @@ export async function addMemberToClasses(
         active: true,
         payment_interval: reg.duration,
         custom_price: reg.price,
-        // created_at will be set by DB default (NOW), satisfying the requirement
+        // CRITICAL: Use simulator date, not DB default NOW()
+        created_at: today,
       };
     });
 

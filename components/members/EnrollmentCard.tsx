@@ -187,6 +187,32 @@ export function EnrollmentCard({
               </div>
             </Group>
 
+            {/* First Payment Date */}
+            <Group gap={8}>
+              <ThemeIcon
+                color={enrollment.first_payment_date ? 'green' : 'orange'}
+                variant="light"
+                size="md"
+                radius="md"
+              >
+                <IconCreditCard size={18} />
+              </ThemeIcon>
+              <div>
+                <Text size="xs" c="dimmed">
+                  İlk Ödeme
+                </Text>
+                <Text
+                  fw={600}
+                  size="sm"
+                  c={enrollment.first_payment_date ? 'green' : 'orange'}
+                >
+                  {enrollment.first_payment_date
+                    ? formatDate(enrollment.first_payment_date)
+                    : 'Bekliyor'}
+                </Text>
+              </div>
+            </Group>
+
             {/* Price */}
             <Group gap={8}>
               <ThemeIcon color="green" variant="light" size="md" radius="md">

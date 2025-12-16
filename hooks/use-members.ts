@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Member, MemberWithClasses } from '@/types';
+import { getEnrollmentPaymentDates } from '@/actions/payments';
 
 /**
  * Hook to fetch all members with optional real-time updates
@@ -36,7 +37,34 @@ export function useMembers(status?: string, refreshTrigger?: number) {
 
         if (error) throw error;
 
-        setMembers((data as unknown as MemberWithClasses[]) || []);
+        const membersData = (data as unknown as MemberWithClasses[]) || [];
+
+        // Fetch payment dates for all enrollments
+        const enrollmentIds = membersData.flatMap(
+          (m) => m.member_classes?.map((mc) => mc.id) || []
+        );
+
+        if (enrollmentIds.length > 0) {
+          const paymentDatesRes = await getEnrollmentPaymentDates(enrollmentIds);
+
+          if (paymentDatesRes.data) {
+            // Merge payment dates into member classes
+            membersData.forEach((member) => {
+              member.member_classes?.forEach((mc: any) => {
+                const dates = paymentDatesRes.data![mc.id];
+                if (dates) {
+                  mc.last_payment_date = dates.last_payment_date;
+                  // Also update first_payment_date if not set in DB
+                  if (!mc.first_payment_date && dates.first_payment_date) {
+                    mc.first_payment_date = dates.first_payment_date;
+                  }
+                }
+              });
+            });
+          }
+        }
+
+        setMembers(membersData);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Bir hata oluştu');
