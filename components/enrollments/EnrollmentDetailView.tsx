@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Title,
   Text,
@@ -80,6 +80,8 @@ export function EnrollmentDetailView({
   effectiveDate,
 }: EnrollmentDetailViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromMember = searchParams.get('from') === 'member';
 
   const [member, setMember] = useState<MemberWithClasses | null>(null);
   const [classData, setClassData] = useState<ClassWithInstructor | null>(null);
@@ -484,7 +486,13 @@ export function EnrollmentDetailView({
             variant="light"
             color="gray"
             size="lg"
-            onClick={() => router.push(`/classes?openDrawer=${classId}`)}
+            onClick={() => {
+              if (fromMember) {
+                router.push(`/members/${memberId}`);
+              } else {
+                router.push(`/classes?openDrawer=${classId}`);
+              }
+            }}
           >
             <IconArrowLeft size={20} />
           </ActionIcon>

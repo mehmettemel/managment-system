@@ -36,7 +36,7 @@ import { MemberLog } from '@/types';
 /**
  * Internal helper to add a log entry
  */
-async function addMemberLog(
+export async function addMemberLog(
   supabase: any,
   log: Omit<MemberLog, 'id' | 'created_at'>
 ) {
@@ -52,6 +52,33 @@ async function addMemberLog(
   } catch (error) {
     console.error('Failed to add member log:', error);
     // Don't throw, logging is secondary
+  }
+}
+
+/**
+ * Get member activity logs
+ */
+export async function getMemberLogs(
+  memberId: number
+): Promise<ApiListResponse<MemberLog>> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('member_logs')
+      .select('*, member_classes(classes(name))')
+      .eq('member_id', memberId)
+      .order('date', { ascending: false });
+
+    if (error) {
+      logError('getMemberLogs', error);
+      return errorListResponse(handleSupabaseError(error));
+    }
+
+    return successListResponse(data || []);
+  } catch (error) {
+    logError('getMemberLogs', error);
+    return errorListResponse(handleSupabaseError(error));
   }
 }
 
@@ -852,32 +879,5 @@ export async function terminateEnrollment(
   } catch (error) {
     logError('terminateEnrollment', error);
     return errorResponse(handleSupabaseError(error));
-  }
-}
-
-/**
- * Get member activity logs
- */
-export async function getMemberLogs(
-  memberId: number
-): Promise<ApiListResponse<MemberLog>> {
-  try {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-      .from('member_logs')
-      .select('*')
-      .eq('member_id', memberId)
-      .order('date', { ascending: false });
-
-    if (error) {
-      logError('getMemberLogs', error);
-      return errorListResponse(handleSupabaseError(error));
-    }
-
-    return successListResponse(data || []);
-  } catch (error) {
-    logError('getMemberLogs', error);
-    return errorListResponse(handleSupabaseError(error));
   }
 }

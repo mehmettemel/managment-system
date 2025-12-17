@@ -193,6 +193,11 @@ export interface MemberLog {
   created_at: string;
   description: string;
   metadata?: Record<string, any>;
+  member_classes?: {
+    classes: {
+      name: string;
+    } | null;
+  } | null;
 }
 
 // Member status types

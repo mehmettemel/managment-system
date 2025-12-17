@@ -26,6 +26,7 @@ import {
   calculateDaysBetween,
 } from '@/utils/date-helpers';
 import { getServerNow } from '@/utils/server-date-helper';
+import { addMemberLog } from './members';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 
@@ -154,6 +155,23 @@ export async function freezeMembership(
       .update({ status: newGlobalStatus })
       .eq('id', formData.member_id);
 
+    // LOGGING
+    for (const mcId of enrollmentIdsToFreeze) {
+      await addMemberLog(supabase, {
+        member_id: formData.member_id,
+        member_class_id: mcId,
+        action_type: 'freeze',
+        description: `Üyelik ${formData.is_indefinite ? 'süresiz' : 'süreli'} donduruldu.`,
+        date: start_date,
+        metadata: {
+          start_date,
+          end_date,
+          reason,
+          is_indefinite: formData.is_indefinite,
+        },
+      });
+    }
+
     revalidatePath('/members');
     revalidatePath(`/members/${formData.member_id}`);
     return successResponse(true);
@@ -233,6 +251,22 @@ export async function unfreezeLog(
         .update({ status: 'active' })
         .eq('id', log.member_id);
       revalidatePath(`/members/${log.member_id}`);
+    }
+
+    // LOGGING
+    if (log.member_id) {
+      await addMemberLog(supabase, {
+        member_id: log.member_id,
+        member_class_id: log.member_class_id,
+        action_type: 'unfreeze',
+        description: 'Üyelik dondurma işlemi sonlandırıldı.',
+        date: today.format('YYYY-MM-DD'),
+        metadata: {
+          original_log_id: logId,
+          effective_days: effectiveDays,
+          start_date: log.start_date,
+        },
+      });
     }
 
     revalidatePath('/members');

@@ -65,6 +65,7 @@ export function MemberHistoryTable({ logs }: MemberHistoryTableProps) {
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Tarih</Table.Th>
+            <Table.Th>Ders</Table.Th>
             <Table.Th>İşlem</Table.Th>
             <Table.Th>Açıklama</Table.Th>
             <Table.Th></Table.Th>
@@ -82,6 +83,17 @@ export function MemberHistoryTable({ logs }: MemberHistoryTableProps) {
                       minute: '2-digit',
                     })}
                   </Text>
+                </Table.Td>
+                <Table.Td>
+                  {log.member_classes?.classes?.name ? (
+                    <Badge variant="dot" color="blue">
+                      {log.member_classes.classes.name}
+                    </Badge>
+                  ) : (
+                    <Text size="xs" c="dimmed">
+                      -
+                    </Text>
+                  )}
                 </Table.Td>
                 <Table.Td>{getActionBadge(log.action_type)}</Table.Td>
                 <Table.Td>{log.description}</Table.Td>
@@ -105,7 +117,7 @@ export function MemberHistoryTable({ logs }: MemberHistoryTableProps) {
               {expandedRows.includes(log.id) && (
                 <Table.Tr>
                   <Table.Td
-                    colSpan={4}
+                    colSpan={5}
                     style={{ padding: 0, borderBottom: 'none' }}
                   >
                     <Box bg="gray.0" p="md">

@@ -161,7 +161,9 @@ export function MemberDetailView({
   };
 
   const navigateToEnrollment = (enrollment: MemberClassWithDetails) => {
-    router.push(`/classes/${enrollment.class_id}/enrollments/${enrollment.id}`);
+    router.push(
+      `/classes/${enrollment.class_id}/enrollments/${enrollment.id}?from=member`
+    );
   };
 
   if (loading) {
