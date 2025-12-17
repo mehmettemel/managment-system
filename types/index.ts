@@ -167,7 +167,33 @@ export type ApiListResponse<T> = {
   data: T[] | null;
   error: string | null;
   count?: number;
+  refundAmount?: number;
 };
+
+export interface TerminationFormValues {
+  terminationDate: Date;
+  financialAction: 'settled' | 'refund' | 'clear_debt' | 'debt';
+  refundAmount?: number;
+  debtAmount?: number;
+}
+
+export interface MemberLog {
+  id: number;
+  member_id: number;
+  member_class_id?: number | null;
+  action_type:
+    | 'enrollment'
+    | 'termination'
+    | 'freeze'
+    | 'unfreeze'
+    | 'payment'
+    | 'transfer'
+    | 'update';
+  date: string;
+  created_at: string;
+  description: string;
+  metadata?: Record<string, any>;
+}
 
 // Member status types
 export type MemberStatus = 'active' | 'frozen' | 'archived';

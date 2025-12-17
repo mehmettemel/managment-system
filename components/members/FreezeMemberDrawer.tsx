@@ -21,7 +21,11 @@ import {
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
-import { IconSnowflake, IconAlertCircle, IconCurrencyLira } from '@tabler/icons-react';
+import {
+  IconSnowflake,
+  IconAlertCircle,
+  IconCurrencyLira,
+} from '@tabler/icons-react';
 import { freezeMembership } from '@/actions/freeze';
 import { showSuccess, showError } from '@/utils/notifications';
 import { formatCurrency } from '@/utils/formatters';
@@ -86,17 +90,33 @@ export function FreezeMemberDrawer({
     );
     const today = dayjs(effectiveDate || new Date());
 
-    // If latest paid period is in the future, calculate unused months
+    // If latest paid period is in the future, calculate value
     if (latestPaidPeriodEnd.isAfter(today)) {
-      const unusedMonths = latestPaidPeriodEnd.diff(today, 'month', true);
-      const unusedDays = Math.floor(latestPaidPeriodEnd.diff(today, 'day'));
+      const daysRemaining = latestPaidPeriodEnd.diff(today, 'day');
+
+      // Calculate daily rate
+      // Price covers 'payment_interval' months
+      const intervalMonths = enrollment.payment_interval || 1;
+      const totalPrice =
+        enrollment.custom_price !== null
+          ? enrollment.custom_price
+          : enrollment.price || 0;
+
+      const monthlyPrice = totalPrice / intervalMonths;
+      const dailyPrice = monthlyPrice / 30; // Approximation
+
+      const estimatedValue = daysRemaining * dailyPrice;
+
+      // Calculate simplified months/days for display
+      const months = Math.floor(daysRemaining / 30);
+      const days = daysRemaining % 30;
 
       return {
         hasBalance: true,
-        unusedMonths: Math.floor(unusedMonths),
-        unusedDays,
+        unusedMonths: months,
+        unusedDays: days,
         latestPaidPeriodEnd: latestPaidPeriodEnd.format('YYYY-MM-DD'),
-        amount: (enrollment.custom_price || 0) * Math.floor(unusedMonths),
+        amount: Math.max(0, estimatedValue), // Ensure non-negative
       };
     }
 
@@ -150,13 +170,15 @@ export function FreezeMemberDrawer({
     try {
       const formData = {
         member_id: member.id,
-        start_date: values.start_date.toISOString().split('T')[0],
-        end_date: isIndefinite
-          ? undefined
-          : values.end_date?.toISOString().split('T')[0],
+        start_date: dayjs(values.start_date).format('YYYY-MM-DD'),
+        end_date:
+          isIndefinite || !values.end_date
+            ? undefined
+            : dayjs(values.end_date).format('YYYY-MM-DD'),
         reason: values.reason,
         is_indefinite: isIndefinite,
         selectedEnrollmentIds: selectedClasses.map(Number),
+        // Ensure "undefined" doesn't break JSON if framework is strict, optional
       };
 
       const res = await freezeMembership(formData);
@@ -168,8 +190,9 @@ export function FreezeMemberDrawer({
         onSuccess?.();
         onClose();
       }
-    } catch (error) {
-      showError('Bir hata oluştu');
+    } catch (error: any) {
+      console.error('Freeze error:', error);
+      showError(error?.message || 'Bir hata oluştu');
     } finally {
       setLoading(false);
     }
@@ -216,18 +239,21 @@ export function FreezeMemberDrawer({
                           >
                             <Stack gap={4}>
                               <Group gap="xs">
-                                <IconCurrencyLira size={14} />
                                 <Text size="xs" fw={500}>
-                                  Ön Ödeme Var: {formatCurrency(prepaidBalance.amount)}
+                                  Ön Ödeme Var:{' '}
+                                  {formatCurrency(prepaidBalance.amount)}
                                 </Text>
                               </Group>
                               <Text size="xs" c="dimmed">
-                                {prepaidBalance.unusedMonths > 0 && `${prepaidBalance.unusedMonths} ay `}
-                                {prepaidBalance.unusedDays > 0 && `${prepaidBalance.unusedDays} gün`}
-                                {' '}kullanılmamış ödeme var
+                                {prepaidBalance.unusedMonths > 0 &&
+                                  `${prepaidBalance.unusedMonths} ay `}
+                                {prepaidBalance.unusedDays > 0 &&
+                                  `${prepaidBalance.unusedDays} gün`}{' '}
+                                kullanılmamış ödeme var
                               </Text>
                               <Text size="xs" c="dimmed">
-                                Son ödenen dönem: {formatDate(prepaidBalance.latestPaidPeriodEnd)}
+                                Son ödenen dönem:{' '}
+                                {formatDate(prepaidBalance.latestPaidPeriodEnd)}
                               </Text>
                             </Stack>
                           </Alert>

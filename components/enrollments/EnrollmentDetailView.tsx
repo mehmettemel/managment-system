@@ -38,10 +38,8 @@ import {
 import { getMemberPayments, processClassPayment } from '@/actions/payments';
 import { getClassById } from '@/actions/classes';
 import { unfreezeLog } from '@/actions/freeze';
-import {
-  TerminationModal,
-  TerminationFormValues,
-} from '../members/TerminationModal';
+import { TerminationModal } from '../members/TerminationModal';
+import { TerminationFormValues } from '@/types';
 import { formatPhone, formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
 import {

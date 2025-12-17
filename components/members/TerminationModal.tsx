@@ -23,11 +23,7 @@ interface TerminationModalProps {
   loading?: boolean;
 }
 
-export interface TerminationFormValues {
-  terminationDate: Date;
-  financialAction: 'settled' | 'refund' | 'clear_debt';
-  refundAmount?: number;
-}
+import { TerminationFormValues } from '@/types';
 
 export function TerminationModal({
   opened,
@@ -90,6 +86,18 @@ export function TerminationModal({
                 value="clear_debt"
                 label="Borç Silinecek (Gelecek/Ödenmemiş faturaları iptal et)"
               />
+              <Radio
+                value="debt"
+                label="Borçlu Ayrıldı (Borç tutarını kaydet)"
+              />
+              {form.values.financialAction === 'debt' && (
+                <NumberInput
+                  placeholder="Borç Tutarı"
+                  leftSection="₺"
+                  min={0}
+                  {...form.getInputProps('debtAmount')}
+                />
+              )}
             </Stack>
           </Radio.Group>
 

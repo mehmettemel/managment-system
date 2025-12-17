@@ -31,6 +31,29 @@ import {
 import { getTodayDate } from '@/utils/date-helpers';
 import { getServerToday } from '@/utils/server-date-helper';
 import dayjs from 'dayjs';
+import { MemberLog } from '@/types';
+
+/**
+ * Internal helper to add a log entry
+ */
+async function addMemberLog(
+  supabase: any,
+  log: Omit<MemberLog, 'id' | 'created_at'>
+) {
+  try {
+    await supabase.from('member_logs').insert({
+      member_id: log.member_id,
+      member_class_id: log.member_class_id,
+      action_type: log.action_type,
+      date: log.date,
+      description: log.description,
+      metadata: log.metadata || {},
+    });
+  } catch (error) {
+    console.error('Failed to add member log:', error);
+    // Don't throw, logging is secondary
+  }
+}
 
 /**
  * Get all members with optional filtering
@@ -189,6 +212,15 @@ export async function createMember(
         // Continue anyway, member is created
       }
     }
+
+    // Log the event
+    await addMemberLog(supabase, {
+      member_id: member.id,
+      action_type: 'enrollment',
+      description: 'Yeni üye kaydı oluşturuldu.',
+      date: today,
+      metadata: { class_count: formData.class_registrations?.length || 0 },
+    });
 
     revalidatePath('/members');
     return successResponse(member);
@@ -498,6 +530,15 @@ export async function addMemberToClasses(
       return errorResponse(handleSupabaseError(error));
     }
 
+    // Log
+    await addMemberLog(supabase, {
+      member_id: memberId,
+      action_type: 'enrollment',
+      description: `${classRegistrations.length} yeni derse kayıt eklendi.`,
+      date: today,
+      metadata: { class_count: classRegistrations.length },
+    });
+
     revalidatePath(`/members/${memberId}`);
     revalidatePath('/members');
     return successResponse(true);
@@ -683,13 +724,15 @@ export async function terminateEnrollment(
   id: number,
   options: {
     terminationDate: Date;
-    financialAction: 'settled' | 'refund' | 'clear_debt';
+    financialAction: 'settled' | 'refund' | 'clear_debt' | 'debt';
     refundAmount?: number;
+    debtAmount?: number;
   }
 ): Promise<ApiResponse<boolean>> {
   try {
     const supabase = await createClient();
-    const { terminationDate, financialAction, refundAmount } = options;
+    const { terminationDate, financialAction, refundAmount, debtAmount } =
+      options;
     const termDateStr = dayjs(terminationDate).format('YYYY-MM-DD');
 
     // Get member_id for revalidation
@@ -777,7 +820,31 @@ export async function terminateEnrollment(
         description: 'Ders İptali - Para İadesi',
         payment_type: 'refund',
       } as any);
+    } else if (financialAction === 'debt' && debtAmount && debtAmount > 0) {
+      // Record Debt - Logged effectively
     }
+
+    // 3. Log History
+    let logDesc = 'Ders sonlandırıldı.';
+    if (financialAction === 'refund')
+      logDesc += ` Para iadesi: ${refundAmount} TL`;
+    if (financialAction === 'clear_debt') logDesc += ` Borçlar silindi.`;
+    if (financialAction === 'debt')
+      logDesc += ` Borçlu ayrıldı: ${debtAmount} TL`;
+
+    await addMemberLog(supabase, {
+      member_id: enrollment.member_id,
+      member_class_id: id,
+      action_type: 'termination',
+      description: logDesc,
+      date: termDateStr,
+      metadata: {
+        financialAction,
+        refundAmount,
+        debtAmount,
+        terminationDate: termDateStr,
+      },
+    });
 
     revalidatePath(`/members/${enrollment.member_id}`);
     revalidatePath('/members');
@@ -785,5 +852,32 @@ export async function terminateEnrollment(
   } catch (error) {
     logError('terminateEnrollment', error);
     return errorResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Get member activity logs
+ */
+export async function getMemberLogs(
+  memberId: number
+): Promise<ApiListResponse<MemberLog>> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('member_logs')
+      .select('*')
+      .eq('member_id', memberId)
+      .order('date', { ascending: false });
+
+    if (error) {
+      logError('getMemberLogs', error);
+      return errorListResponse(handleSupabaseError(error));
+    }
+
+    return successListResponse(data || []);
+  } catch (error) {
+    logError('getMemberLogs', error);
+    return errorListResponse(handleSupabaseError(error));
   }
 }
