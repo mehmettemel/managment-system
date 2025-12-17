@@ -2,7 +2,8 @@
  * Classes Page
  */
 
-import { Title, Text, Stack } from '@mantine/core';
+import { Suspense } from 'react';
+import { Title, Text, Stack, Loader, Center } from '@mantine/core';
 import { getClasses } from '@/actions/classes';
 import { getInstructors } from '@/actions/instructors';
 import { getDanceTypes } from '@/actions/dance-types';
@@ -22,11 +23,19 @@ export default async function ClassesPage() {
         <Text c="dimmed">Ders programını ve sınıfları yönetin.</Text>
       </div>
 
-      <ClassesContent
-        initialClasses={classesRes.data || []}
-        instructors={instructorsRes.data || []}
-        danceTypes={danceTypesRes.data || []}
-      />
+      <Suspense
+        fallback={
+          <Center h={400}>
+            <Loader />
+          </Center>
+        }
+      >
+        <ClassesContent
+          initialClasses={classesRes.data || []}
+          instructors={instructorsRes.data || []}
+          danceTypes={danceTypesRes.data || []}
+        />
+      </Suspense>
     </Stack>
   );
 }

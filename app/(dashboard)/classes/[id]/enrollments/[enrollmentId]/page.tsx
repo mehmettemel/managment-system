@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+import { Loader, Center } from '@mantine/core';
 import { EnrollmentDetailView } from '@/components/enrollments/EnrollmentDetailView';
 import { getServerToday } from '@/utils/server-date-helper';
 import { notFound } from 'next/navigation';
@@ -45,11 +47,19 @@ export default async function EnrollmentDetailPage({
   const effectiveDate = await getServerToday();
 
   return (
-    <EnrollmentDetailView
-      memberId={enrollment.member_id}
-      enrollmentId={enrollment.id}
-      classId={classId}
-      effectiveDate={effectiveDate}
-    />
+    <Suspense
+      fallback={
+        <Center h={400}>
+          <Loader />
+        </Center>
+      }
+    >
+      <EnrollmentDetailView
+        memberId={enrollment.member_id}
+        enrollmentId={enrollment.id}
+        classId={classId}
+        effectiveDate={effectiveDate}
+      />
+    </Suspense>
   );
 }
