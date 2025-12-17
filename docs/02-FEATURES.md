@@ -11,12 +11,14 @@ Bu belge, **Management System** projesinin tüm özelliklerini ve nasıl çalı�
 Proje, "Genel Üyelik" yerine **"Ders Bazlı Kayıt"** (Enrollment) mantığıyla çalışır.
 
 **Temel Prensipler:**
+
 - Bir üye birden fazla derse kayıt olabilir
 - Her dersin kendi ödeme döngüsü, fiyatı ve durumu vardır
 - Bir üye "Salsa 101" dersinde aktifken, "Bachata" dersinde ödemesi gecikmiş olabilir
 - Her ders kaydı (enrollment) bağımsız olarak yönetilebilir
 
 **Database Yapısı:**
+
 ```
 members (Üyeler)
     ↓
@@ -37,6 +39,7 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
 - **Sonraki Adım**: Üye detay sayfasından ders kayıtları yapılır
 
 **Kullanıcı Akışı:**
+
 1. "Yeni Üye" butonu → MemberDrawer açılır
 2. Ad, soyad, telefon girilir
 3. "Kaydet" → Üye oluşturulur (ders yok)
@@ -48,6 +51,7 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
 **Dosya:** `components/members/MemberDetailView.tsx`, `components/members/AddEnrollmentModal.tsx`
 
 #### Ders Ekleme (Add Enrollment)
+
 - **Modal Tabanlı**: AddEnrollmentModal ile ders ekleme
 - **Çoklu Seçim**: Birden fazla derse aynı anda kayıt
 - **Akıllı Filtreleme**: Sadece kayıtlı olmadığı dersler gösterilir
@@ -55,12 +59,14 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
 - **Süre Seçimi**: 1, 3, 6 veya 12 aylık taahhüt
 
 **Özellikler:**
+
 - Varsayılan fiyat otomatik doldurulur (class.default_price)
 - Her ders için farklı fiyat belirlenebilir (custom pricing)
 - Süre seçimi (payment_interval): 1, 3, 6, 12 ay
 - Tüm derslere kayıtlı üye için uyarı mesajı
 
 **Kullanıcı Akışı:**
+
 1. Üye detay sayfasına git
 2. "Ders Ekle" butonu → AddEnrollmentModal açılır
 3. Dersler seçilir (MultiSelect)
@@ -69,6 +75,7 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
 6. Enrollment card'lar görünür
 
 #### Ders Düzenleme (Edit Enrollment)
+
 - **Fiyat Değiştirme**: Mevcut ders fiyatını güncelleme
 - **Süre Değiştirme**: Payment interval değiştirme
 - **Modal Tabanlı**: EditEnrollmentModal ile düzenleme
@@ -76,6 +83,7 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
 **Dosya:** `components/members/EditEnrollmentModal.tsx`
 
 #### Ders Sonlandırma (Terminate Enrollment)
+
 - **Temiz Ayrılma**: Üyenin dersten çıkışını kaydetme
 - **Aktif Pasif**: `active` flag'i false yapılır
 - **Veri Korunur**: Ödeme geçmişi silinmez
@@ -88,6 +96,7 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
 **Dosya:** `components/members/MemberDetailView.tsx` (690+ satır)
 
 **Bilgiler:**
+
 - Kişisel bilgiler (Ad, soyad, telefon, kayıt tarihi)
 - Tüm ders kayıtları (aktif + pasif)
 - Her ders için:
@@ -98,6 +107,7 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
   - Dondurma durumu (aktif freeze varsa)
 
 **İşlemler:**
+
 - Ders ekle (AddEnrollmentModal)
 - Ders düzenle (EditEnrollmentModal)
 - Ders sonlandır (TerminationModal)
@@ -116,6 +126,7 @@ frozen_logs (Dondurma kayıtları - Her kayıta ait)
 **Çözüm:** `getOverdueMonthsCount()` fonksiyonu ile tüm gecikmiş aylar hesaplanıyor.
 
 **Algoritma:**
+
 ```typescript
 getOverdueMonthsCount(enrollment) {
   // 1. Kayıt tarihinden bugüne kadar tüm ayları kontrol et
@@ -127,6 +138,7 @@ getOverdueMonthsCount(enrollment) {
 ```
 
 **Özellikler:**
+
 - ✅ Tüm gecikmiş aylar hesaplanıyor (1, 2, 3... ay)
 - ✅ Dondurulmuş aylar atlanıyor
 - ✅ Ödenen aylar doğru şekilde işaretleniyor
@@ -135,6 +147,7 @@ getOverdueMonthsCount(enrollment) {
 #### Üye Detay Sayfası Göstergeleri
 
 **Kırmızı Alert Card (Üst Kısım):**
+
 ```
 ⚠️ Gecikmiş Ödemeler
 
@@ -145,12 +158,14 @@ Bu üyenin 2 dersinde toplam 7 aylık gecikmiş ödeme bulunmaktadır:
 ```
 
 **EnrollmentCard Göstergeleri:**
+
 - 🔴 **İkon**: Kırmızı uyarı ikonu (IconAlertCircle) + tooltip
 - 🔴 **Badge**: "3 Ay Gecikmiş" yazısı
 - 🔴 **Sonraki Ödeme**: Kırmızı vurgulu tarih + "3 ay gecikmiş" altyazı
 - 🔴 **ThemeIcon**: Sonraki ödeme ikonunun rengi kırmızıya döner
 
 **Tooltip Metinleri:**
+
 - 1 ay: "Gecikmiş Ödeme" / "1 Aylık Gecikmiş Ödeme"
 - 2+ ay: "3 Aylık Gecikmiş Ödeme" / "5 Aylık Gecikmiş Ödeme"
 
@@ -165,6 +180,7 @@ Bu üyenin 2 dersinde toplam 7 aylık gecikmiş ödeme bulunmaktadır:
 #### Teknik Detaylar
 
 **Helper Functions:**
+
 ```typescript
 // Bir ayın dondurulmuş olup olmadığını kontrol eder
 isMonthFrozen(enrollment, month: Dayjs): boolean
@@ -177,16 +193,18 @@ getOverdueMonthsCount(enrollment): number
 ```
 
 **Type Extensions:**
+
 ```typescript
 interface EnrollmentCardProps {
   enrollment: MemberClassWithDetails & {
-    overdueMonthsCount?: number
+    overdueMonthsCount?: number;
   };
   // ...
 }
 ```
 
 **Kontroller:**
+
 ```typescript
 // Sıkı null/undefined kontrolü
 {isOverdue &&
@@ -201,12 +219,14 @@ interface EnrollmentCardProps {
 ```
 
 **Bug Fixes:**
+
 - ✅ "0 ay gecikmiş" gösterilmesi önlendi
 - ✅ Ödeme yapıldığında gecikmiş göstergesi hemen kayboluyor
 - ✅ `.startOf('month')` ile tarih tutarlılığı sağlandı
 - ✅ Bugünün ayı "gecikmiş" sayılmıyor
 
 **Smart Features:**
+
 - **Computed Next Date**: Frozen period'ları atlayan sonraki ödeme tarihi hesaplama
 - **Overdue Detection**: Gecikmiş ödemeleri tespit edip gösterme
 - **Empty States**: Ders yoksa yönlendirici mesajlar
@@ -217,12 +237,14 @@ interface EnrollmentCardProps {
 **Dosya:** `components/members/MembersContent.tsx`
 
 **Filtreleme:**
+
 - **Tab Bazlı**: Aktif, Dondurulmuş, Arşiv, Tümü
 - **URL State**: Tab durumu URL'de tutulur (?tab=active)
 - **Search**: Ad, soyad, telefon araması
 - **Sort**: Her kolona göre sıralama
 
 **Tablo Kolonları:**
+
 1. Ad Soyad (+ Gecikmiş ödeme ikonu)
 2. Telefon (formatlanmış)
 3. Kayıt Tarihi
@@ -231,10 +253,12 @@ interface EnrollmentCardProps {
 6. Aksiyonlar (Menu)
 
 **Bulk Operations:**
+
 - **Çoklu Seçim**: Checkbox ile seçim (sadece arşiv tab'ında)
 - **Toplu Silme**: Seçili üyeleri kalıcı silme
 
 **Row Actions:**
+
 - Düzenle → MemberDrawer (edit mode)
 - Ödeme Al → Detay sayfasına yönlendirme
 - Dondur/Çöz → FreezeMemberDrawer
@@ -242,6 +266,7 @@ interface EnrollmentCardProps {
 - Kalıcı Sil → Confirm modal (sadece arşivdeyken)
 
 **Overdue Indicator:**
+
 - Her üyenin yanında kırmızı uyarı ikonu
 - Tooltip: "Gecikmiş Ödeme"
 - Aktif derslerdeki gecikmiş ödemeleri tespit eder
@@ -251,37 +276,42 @@ interface EnrollmentCardProps {
 **Dosya:** `actions/freeze.ts`, `components/members/FreezeMemberDrawer.tsx`
 
 #### Özellikler:
+
 - **Per-Enrollment Freeze**: Her ders kaydı ayrı ayrı dondurulabilir
 - **Timed Freeze**: Başlangıç ve bitiş tarihi ile sınırlı dondurma
 - **Indefinite Freeze**: Bitiş tarihi olmayan dondurma
 - **Multiple Freeze Periods**: Aynı kayıt birden fazla kez dondurulabilir
 
 #### Freeze Logic (Kritik):
+
 ```typescript
 // Frozen month check
 const isMonthFrozen = (month: Dayjs): boolean => {
-  return frozenLogs.some(log => {
-    const freezeStart = dayjs(log.start_date).startOf('month')
+  return frozenLogs.some((log) => {
+    const freezeStart = dayjs(log.start_date).startOf('month');
     const freezeEnd = log.end_date
       ? dayjs(log.end_date).endOf('month')
-      : dayjs('2099-12-31') // Indefinite freeze
+      : dayjs('2099-12-31'); // Indefinite freeze
 
-    return month.isSameOrAfter(freezeStart) && month.isSameOrBefore(freezeEnd)
-  })
-}
+    return month.isSameOrAfter(freezeStart) && month.isSameOrBefore(freezeEnd);
+  });
+};
 ```
 
 #### Otomatik Ödeme Tarihi Kaydırma:
+
 - Dondurulmuş aylar payment schedule'da **atlanır**
 - Next payment date hesaplamasında frozen period'lar skip edilir
 - Örnek: 3 ay ödedi, 6 ay dondurdu, çözdü → Frozen 6 ay gecikmiş gösterilmez
 
 #### Freeze Status Badge:
+
 - **Aktif Freeze**: Yeşil badge "Donduruldu (Başlangıç - Bitiş)"
 - **Belirsiz Freeze**: Kırmızı badge "Donduruldu (Süresiz)"
 - **Frozen Logs**: Tüm geçmiş dondurma kayıtları
 
 #### Unfreeze:
+
 - Aktif freeze'i sonlandırır
 - `end_date` şimdiki tarihe set edilir
 - Üye durumu `frozen` → `active` olur (eğer tüm dersler çözüldüyse)
@@ -295,6 +325,7 @@ const isMonthFrozen = (month: Dayjs): boolean => {
 - **archived**: Üye arşivlenmiş (soft delete)
 
 **Durum Geçişleri:**
+
 - Yeni üye → `active`
 - Tüm dersler freeze → `frozen` (otomatik)
 - Arşivle → `archived`
@@ -309,6 +340,7 @@ const isMonthFrozen = (month: Dayjs): boolean => {
 **Dosya:** `components/payments/PaymentConfirmModal.tsx`
 
 **Özellikler:**
+
 - **Multi-Month Payments**: Tek seferde birden fazla ay ödemesi alabilme
 - **Individual Records**: Her ay ayrı bir payment kaydı olarak saklanır
 - **Payment Types**: Nakit, Kredi Kartı, Havale
@@ -316,12 +348,14 @@ const isMonthFrozen = (month: Dayjs): boolean => {
 - **Amount Calculation**: Seçilen period'ların toplam tutarı
 
 **Period Selection:**
+
 - Radio buttons ile ay seçimi
 - Her period için bilgi: Tarih, Tutar, Durum (Paid/Unpaid/Overdue)
 - Ödenmemiş aylar vurgulanır
 - Gecikmiş aylar kırmızı ile işaretlenir
 
 **Process Flow:**
+
 1. Üye detay sayfasından "Ödeme Al" veya enrollment card'dan "Ödeme Ekle"
 2. Modal açılır, ödenmemiş period'lar listelenir
 3. Kaç ay ödeyeceği seçilir (1, 2, 3+ ay)
@@ -331,6 +365,7 @@ const isMonthFrozen = (month: Dayjs): boolean => {
 7. Next payment date otomatik güncellenir
 
 **Validation:**
+
 - En az 1 period seçilmeli
 - Ödeme yöntemi seçilmeli
 - Total amount > 0 olmalı
@@ -366,6 +401,7 @@ for (month = startDate; month < commitmentEndDate; month++) {
 ```
 
 **Schedule Items:**
+
 ```typescript
 {
   periodMonth: '2025-01-01',  // Period start
@@ -378,6 +414,7 @@ for (month = startDate; month < commitmentEndDate; month++) {
 ```
 
 **Status Logic:**
+
 - **paid**: Payment kaydı var
 - **overdue**: Tarih geçmiş ama ödeme yok
 - **unpaid**: Gelecek period veya ödenmemiş
@@ -387,6 +424,7 @@ for (month = startDate; month < commitmentEndDate; month++) {
 **Dosya:** `components/members/MemberDetailView.tsx → getComputedNextDate()`
 
 **Logic:**
+
 1. Enrollment başlangıç tarihinden başla
 2. Her ay için kontrol et:
    - Frozen mu? → Skip (CRITICAL FIX)
@@ -395,28 +433,31 @@ for (month = startDate; month < commitmentEndDate; month++) {
 3. 120 aylık max iterasyon (10 yıl)
 
 **Freeze Awareness (Bug Fix):**
+
 ```typescript
 const getComputedNextDate = (enrollment) => {
-  const start = dayjs(enrollment.created_at)
-  const paidMonths = new Set(payments.map(p => dayjs(p.period_start).format('YYYY-MM')))
+  const start = dayjs(enrollment.created_at);
+  const paidMonths = new Set(
+    payments.map((p) => dayjs(p.period_start).format('YYYY-MM'))
+  );
 
-  let check = start
+  let check = start;
   for (let i = 0; i < 120; i++) {
     // CRITICAL: Skip frozen months
     if (isMonthFrozen(check)) {
-      check = check.add(1, 'month')
-      continue
+      check = check.add(1, 'month');
+      continue;
     }
 
     // Check if paid
     if (paidMonths.has(check.format('YYYY-MM'))) {
-      check = check.add(1, 'month')
+      check = check.add(1, 'month');
     } else {
-      return check.format('YYYY-MM-DD') // First unpaid non-frozen month
+      return check.format('YYYY-MM-DD'); // First unpaid non-frozen month
     }
   }
-  return check.format('YYYY-MM-DD')
-}
+  return check.format('YYYY-MM-DD');
+};
 ```
 
 ### 2.4 Ödeme Listesi (Payment History)
@@ -424,6 +465,7 @@ const getComputedNextDate = (enrollment) => {
 **Dosya:** `app/(dashboard)/payments/page.tsx`, `components/payments/PaymentsTable.tsx`
 
 **Özellikler:**
+
 - **Çoklu Filtreleme**: Üye, Ders, Ödeme Yöntemi
 - **Tarih Aralığı**: Başlangıç - Bitiş tarihi filtresi
 - **Server-Side Pagination**: Büyük veri setleri için
@@ -431,6 +473,7 @@ const getComputedNextDate = (enrollment) => {
 - **Total Amount**: Filtrelenmiş toplam tutar gösterimi
 
 **Tablo Kolonları:**
+
 1. Tarih (formatlanmış)
 2. Üye (Ad Soyad)
 3. Ders
@@ -441,6 +484,7 @@ const getComputedNextDate = (enrollment) => {
 8. Aksiyonlar (Detay, Sil)
 
 **Actions:**
+
 - **Detay**: PaymentDetailDrawer ile full bilgi
 - **Sil**: Confirm modal ile güvenli silme
   - Next payment date otomatik güncellenir
@@ -451,6 +495,7 @@ const getComputedNextDate = (enrollment) => {
 **Dosya:** `components/payments/PaymentDetailDrawer.tsx`
 
 **Bilgiler:**
+
 - Ödeme tarihi
 - Üye bilgileri (ad, telefon)
 - Ders bilgileri (isim, eğitmen)
@@ -469,12 +514,14 @@ const getComputedNextDate = (enrollment) => {
 **Dosya:** `app/(dashboard)/classes/page.tsx`, `actions/classes.ts`
 
 **Özellikler:**
+
 - **Ders Oluşturma**: Ad, varsayılan fiyat, eğitmen atama
 - **Ders Düzenleme**: Bilgileri güncelleme
 - **Arşivleme**: Soft delete (ders silinmez, active=false)
 - **Geri Alma**: Arşivden çıkarma
 
 **Class Fields:**
+
 ```typescript
 {
   name: string,              // Ders adı (Salsa 101)
@@ -489,6 +536,7 @@ const getComputedNextDate = (enrollment) => {
 **Dosya:** `components/classes/ClassMembersDrawer.tsx`
 
 **Özellikler:**
+
 - Dersteki tüm üyeleri listeleme
 - Her üye için:
   - Ad soyad
@@ -498,6 +546,7 @@ const getComputedNextDate = (enrollment) => {
 - Üye detayına yönlendirme
 
 **Statistics:**
+
 - Toplam üye sayısı
 - Aktif üye sayısı
 - Toplam aylık gelir
@@ -516,6 +565,7 @@ const getComputedNextDate = (enrollment) => {
 **Dosya:** `actions/finance.ts`
 
 **Sistem:**
+
 - Her payment kaydında eğitmen commission'ı hesaplanır
 - `instructor_ledger` tablosuna `pending` statüsünde kaydedilir
 - Vade tarihinde `payable` olur
@@ -525,11 +575,13 @@ const getComputedNextDate = (enrollment) => {
 **Migration:** `supabase/migrations/017_class_based_commission.sql`
 
 **Komisyon Öncelik Sırası:**
+
 1. **Ders Özel Oranı**: `classes.instructor_commission_rate` (Her ders için özel)
 2. **Eğitmen Varsayılan Oranı**: `instructors.default_commission_rate` (Eğitmenin genel oranı)
 3. **Fallback**: 0 (Komisyon yok)
 
 **Commission Calculation:**
+
 ```typescript
 // Ders özel oranı öncelikli
 let rate = 0;
@@ -544,11 +596,13 @@ commission = (payment.amount * rate) / 100;
 ```
 
 **Avantajlar:**
+
 - Her ders için farklı komisyon oranı belirlenebilir
 - Özel dersler için özel oranlar
 - Eğitmen değiştiğinde otomatik oran önerisi
 
 **Ledger Entry:**
+
 ```typescript
 {
   instructor_id: number,
@@ -565,11 +619,13 @@ commission = (payment.amount * rate) / 100;
 **Dosya:** `app/(dashboard)/instructors/page.tsx`
 
 **Özellikler:**
+
 - **Pending Balance**: Eğitmen başına toplam bekleyen tutar
 - **Payable Amount**: Ödemeye hazır tutar
 - **Payment History**: Geçmiş ödemeler
 
 **Payout Process:**
+
 1. Eğitmen listesinde "Ödeme Yap" butonu
 2. Confirm modal
 3. Ledger'daki tüm `payable` kayıtlar `paid` olur
@@ -577,6 +633,7 @@ commission = (payment.amount * rate) / 100;
 5. Balance sıfırlanır
 
 **Payout Record:**
+
 ```typescript
 {
   instructor_id: number,
@@ -592,10 +649,12 @@ commission = (payment.amount * rate) / 100;
 **Dosya:** `components/payments/InstructorPaymentsTable.tsx`
 
 **Özellikler:**
+
 - **Yeni Sekme**: "Komisyon Detayları" sekmesi eklendi
 - **Detaylı Görünüm**: Hangi öğrenciden ne kadar komisyon alındığı görünüyor
 
 **Gösterilen Bilgiler:**
+
 - Eğitmen adı
 - Öğrenci adı (Hangi üyeden komisyon alındı)
 - Ders adı (Hangi dersten komisyon alındı)
@@ -606,12 +665,14 @@ commission = (payment.amount * rate) / 100;
 - Durum (Beklemede/Ödendi/İptal)
 
 **Filtreleme Özellikleri:**
+
 - Eğitmene göre filtreleme
 - Duruma göre filtreleme (Tümü/Bekleyen/Ödenen)
 - Toplam kayıt sayısı
 - Toplam komisyon tutarı özeti
 
 **Server Action:**
+
 ```typescript
 getInstructorLedgerDetails(
   instructorId?: number,
@@ -626,6 +687,7 @@ getInstructorLedgerDetails(
 ```
 
 **Kullanım Senaryoları:**
+
 1. "Bu ayın komisyonlarını kim ödedi?" → Eğitmen filtreleyip bekleyen kayıtlara bak
 2. "X eğitmeninin Y öğrencisinden ne kadar komisyonu var?" → Detaylı listeleme
 3. "Hangi dersten en çok komisyon alınıyor?" → Ders bazında analiz
@@ -637,6 +699,7 @@ getInstructorLedgerDetails(
 **Senaryo:** Bir dersin eğitmeni değiştirildiğinde komisyon oranı ne olmalı?
 
 **Sistem Davranışı:**
+
 1. **Tespit**: Eğitmen dropdown'ında değişiklik algılanır
 2. **Alert Gösterimi**: Kırmızı bilgilendirme kutusu görünür
 3. **İki Seçenek Sunulur**:
@@ -644,6 +707,7 @@ getInstructorLedgerDetails(
    - "Mevcut oranı koru (%Y)" → Eski dersin instructor_commission_rate'i
 
 **Alert İçeriği:**
+
 ```
 🔵 Eğitmen Değişikliği Tespit Edildi
 
@@ -658,6 +722,7 @@ Komisyon oranını nasıl güncellemek istersiniz?
 ```
 
 **Avantajlar:**
+
 - Eğitmen değişikliğinde komisyon unutulması önlenir
 - Kullanıcı kontrolü sağlar
 - Veri kaybı riski minimize edilir
@@ -671,6 +736,7 @@ Komisyon oranını nasıl güncellemek istersiniz?
 **Dosya:** `app/(dashboard)/page.tsx`
 
 **KPI Cards:**
+
 1. **Toplam Gelir**: Tüm zamanların toplam tahsilatı
 2. **Aylık Gelir**: Bu ayki tahsilat
 3. **Aktif Üyeler**: Aktif statüdeki üye sayısı
@@ -681,25 +747,30 @@ Komisyon oranını nasıl güncellemek istersiniz?
 **Dosya:** `components/dashboard/`
 
 **Revenue Chart:**
+
 - Son 6 aylık gelir trendi
 - Bar chart (Recharts)
 - Tooltip ile detaylar
 
 **Member Distribution:**
+
 - Pie chart: Aktif, Dondurulmuş, Arşiv
 - Yüzdelik dağılım
 
 **Class Distribution:**
+
 - Her dersin üye sayısı
 - Bar chart
 
 **Payment Methods:**
+
 - Ödeme yöntemlerine göre dağılım
 - Pie chart: Nakit, Kart, Havale
 
 ### 5.3 Recent Activities
 
 **Özellikler:**
+
 - Son 10 ödeme
 - Son 10 üye kaydı
 - Tarih, tutar, üye bilgileri
@@ -715,47 +786,68 @@ Komisyon oranını nasıl güncellemek istersiniz?
 **Amaç:** Test ve demo için tarihi değiştirme
 
 **Özellikler:**
+
 - Admin panelinden tarih seçimi
 - Cookie tabanlı (`x-simulation-date`)
 - Sistem genelinde etkili
 - Server-side date helper kullanır
 
 **Usage:**
+
 ```typescript
 // Server actions'da
-const today = await getServerToday() // Simulated or real date
+const today = await getServerToday(); // Simulated or real date
 
 // Logic
-const isOverdue = dayjs(nextDate).isBefore(today, 'day')
+const isOverdue = dayjs(nextDate).isBefore(today, 'day');
 ```
 
 **UI:**
+
 - DatePicker ile tarih seçimi
 - "Simülasyonu Aktifleştir" switch
 - "Sıfırla" butonu (bugüne döner)
 - Mevcut simülasyon tarihi gösterimi
 
-### 6.2 Test Data Generation (Seed)
+### 6.2 Gelişmiş Admin Araçları
 
-**Dosya:** `actions/seed.ts`
+Simülasyon, test verisi yönetimi ve sistem sıfırlama gibi gelişmiş özellikler için **[06-ADMIN-GUIDE.md](./06-ADMIN-GUIDE.md)** dosyasına bakınız.
 
-**Özellikler:**
-- Rastgele üye oluşturma
-- Rastgele ders kayıtları
-- Rastgele ödemeler
-- Gerçekçi veriler (isimler, telefonlar, tarihler)
+Bu belge şunları içerir:
+
+- Sistem Simülatörü detayları
+- Veri Sıfırlama (Wipe) ve Test Verisi Yükleme (Seed)
+- Dans Türleri Yönetimi
 
 ---
 
-## 🎨 UI/UX Özellikleri
+## 📚 Yardım ve Dokümantasyon (Help System)
+
+### 7.1 Uygulama İçi Yardım
+
+**Dosya:** `app/(dashboard)/help/page.tsx`
+
+Kullanıcıların sisteme adapte olmasını sağlamak için uygulama içinde entegre bir kullanım kılavuzu bulunur.
+
+**İçerik:**
+
+- **Hızlı Başlangıç Kartları:** En sık yapılan işlemler için kısa yollar.
+- **Senaryo Bazlı Rehber:** "Yeni Üye Kaydı", "Ödeme Alma" gibi senaryoları adım adım anlatır. (Accordion yapısı)
+- **Sıkça Sorulan Sorular:** Kullanıcıların sık yaşadığı sorunlar için çözüm önerileri.
+
+---
+
+## 🎨 UI/UX Özellikleri (Section 8)
 
 ### 7.1 URL State Management
 
 **Kullanılan Yerler:**
+
 - Member list tab filtering (?tab=active)
 - Payment list filtering (?member=123&class=5)
 
 **Avantajlar:**
+
 - Paylaşılabilir linkler
 - Browser back/forward desteği
 - Sayfa yenilemede state korunur
@@ -763,12 +855,14 @@ const isOverdue = dayjs(nextDate).isBefore(today, 'day')
 ### 7.2 Modal & Drawer Patterns
 
 **Drawer (Yan Panel):**
+
 - MemberDrawer: Üye oluştur/düzenle
 - FreezeMemberDrawer: Dondurma yönetimi
 - PaymentDetailDrawer: Ödeme detayları
 - ClassMembersDrawer: Ders üye listesi
 
 **Modal (Popup):**
+
 - PaymentConfirmModal: Ödeme alma
 - AddEnrollmentModal: Ders ekleme
 - EditEnrollmentModal: Ders düzenleme
@@ -778,12 +872,14 @@ const isOverdue = dayjs(nextDate).isBefore(today, 'day')
 ### 7.3 Empty States
 
 **Özellikler:**
+
 - Her liste için özel empty state
 - Yönlendirici mesajlar
 - Aksiyon butonları
 - İkonlar ile görsellik
 
 **Örnekler:**
+
 - "Henüz ders kaydı bulunmuyor" → "İlk Dersi Ekle" butonu
 - "Arşivlenmiş üye bulunmamaktadır" → Filtre değiştirme önerisi
 - "Ödeme geçmişi bulunmuyor" → "İlk Ödemeyi Al" butonu
@@ -791,11 +887,13 @@ const isOverdue = dayjs(nextDate).isBefore(today, 'day')
 ### 7.4 Loading States
 
 **Skeleton Loaders:**
+
 - DataTable loading state
 - Card loading states
 - Button loading spinners
 
 **Progressive Loading:**
+
 - Initial data load
 - Action-specific loading (per button)
 - Optimistic updates (hemen UI güncelle, sonra confirm)
@@ -805,33 +903,37 @@ const isOverdue = dayjs(nextDate).isBefore(today, 'day')
 **Dosya:** `utils/notifications.ts`
 
 **Types:**
+
 - Success (Yeşil): "Üye başarıyla eklendi"
 - Error (Kırmızı): "Bir hata oluştu"
 - Warning (Sarı): "Tüm derslere kayıtlısınız"
 - Info (Mavi): Bilgilendirme mesajları
 
 **Kullanım:**
-```typescript
-import { showSuccess, showError } from '@/utils/notifications'
 
-showSuccess('İşlem başarılı')
-showError('Hata oluştu')
+```typescript
+import { showSuccess, showError } from '@/utils/notifications';
+
+showSuccess('İşlem başarılı');
+showError('Hata oluştu');
 ```
 
 ### 7.6 Overdue Indicators
 
 **Özellikler:**
+
 - Üye listesinde kırmızı uyarı ikonu
 - Tooltip: "Gecikmiş Ödeme"
 - Enrollment card'larda kırmızı badge
 - Payment schedule'da "overdue" status
 
 **Logic:**
+
 ```typescript
-const isOverdue = member.member_classes?.some(mc => {
-  if (!mc.active || !mc.next_payment_date) return false
-  return isPaymentOverdue(mc.next_payment_date, effectiveDate)
-})
+const isOverdue = member.member_classes?.some((mc) => {
+  if (!mc.active || !mc.next_payment_date) return false;
+  return isPaymentOverdue(mc.next_payment_date, effectiveDate);
+});
 ```
 
 ---
@@ -841,6 +943,7 @@ const isOverdue = member.member_classes?.some(mc => {
 ### 8.1 Input Validation
 
 **Server-Side:**
+
 - `validateRequiredFields()` helper
 - Type validation (TypeScript)
 - SQL injection koruması (Supabase)
@@ -848,6 +951,7 @@ const isOverdue = member.member_classes?.some(mc => {
 ### 8.2 Error Handling
 
 **Standardized Responses:**
+
 ```typescript
 // Success
 { data: T, error: null }
@@ -857,6 +961,7 @@ const isOverdue = member.member_classes?.some(mc => {
 ```
 
 **Error Messages:**
+
 - Kullanıcı dostu Türkçe mesajlar
 - Supabase error code'larını anlamlı mesajlara çevirme
 - Console logging (development)
@@ -864,11 +969,13 @@ const isOverdue = member.member_classes?.some(mc => {
 ### 8.3 Action Safety
 
 **Confirm Modals:**
+
 - Silme işlemlerinde onay
 - Arşivleme onayı
 - Geri alınamaz işlemlerde uyarı
 
 **Soft Deletes:**
+
 - Üyeler arşivlenir (silinmez)
 - Dersler arşivlenir (silinmez)
 - Sadece arşivdeki üyeler kalıcı silinebilir
@@ -878,12 +985,14 @@ const isOverdue = member.member_classes?.some(mc => {
 ## 📱 Responsive Design
 
 **Özellikler:**
+
 - Mobile-first approach
 - Mantine Grid sistemi
 - Responsive tablo (scroll on mobile)
 - Mobile menüler (Drawer kullanımı)
 
 **Breakpoints:**
+
 - xs: 0-576px (Mobile)
 - sm: 576-768px (Tablet)
 - md: 768-992px (Desktop)
@@ -897,22 +1006,26 @@ const isOverdue = member.member_classes?.some(mc => {
 ### 9.1 Data Fetching
 
 **Server Components:**
+
 - Default olarak server-side rendering
 - Initial data load hızlı
 - SEO friendly
 
 **Client Components:**
+
 - Sadece interaktif bileşenler
 - Minimal client-side JavaScript
 
 ### 9.2 Caching
 
 **Next.js Cache:**
+
 - Automatic request memoization
 - `revalidatePath()` ile cache invalidation
 - Server action sonrası otomatik güncelleme
 
 **Custom Hooks:**
+
 - `useMembers`: Member list caching
 - `usePayments`: Payment history caching
 - `useClasses`: Class list caching
@@ -920,11 +1033,13 @@ const isOverdue = member.member_classes?.some(mc => {
 ### 9.3 Database Optimization
 
 **Indexes:**
+
 - Primary keys (id)
 - Foreign keys (member_id, class_id)
 - Frequently queried columns (status, active)
 
 **Selective Queries:**
+
 - Sadece gerekli kolonları seç
 - JOIN'ler minimize edilmiş
 - Pagination ile veri limitleme
@@ -934,6 +1049,7 @@ const isOverdue = member.member_classes?.some(mc => {
 ## 🔮 Gelecek Özellikler (Roadmap)
 
 ### Planlanan:
+
 1. **Toplu SMS Gönderimi**: Gecikmiş ödemeler için otomatik hatırlatma
 2. **Otomatik Fatura**: PDF fatura oluşturma ve e-posta gönderme
 3. **Multi-Tenant**: Birden fazla stüdyo yönetimi

@@ -30,6 +30,7 @@ import {
   IconHelp,
 } from '@tabler/icons-react';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
+import { GlobalSearch } from '@/components/shared/GlobalSearch';
 import { usePathname, useRouter } from 'next/navigation';
 
 interface NavItem {
@@ -182,6 +183,7 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
           </Group>
 
           <Group>
+            <GlobalSearch />
             <ThemeToggle />
             <UnstyledButton>
               <Group gap="xs">

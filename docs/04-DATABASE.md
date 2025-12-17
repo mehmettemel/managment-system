@@ -8,18 +8,18 @@ Proje veritabanı olarak **PostgreSQL** (Supabase üzerinde) kullanmaktadır.
 
 ### Tablo Özeti
 
-| Tablo | Amaç | Satır Sayısı (Tipik) |
-|-------|------|---------------------|
-| `members` | Üye bilgileri | 100-1000+ |
-| `classes` | Ders tanımları | 5-50 |
-| `member_classes` | Üye-ders kayıtları (Enrollment) | 200-5000+ |
-| `payments` | Ödeme kayıtları | 1000-50000+ |
-| `frozen_logs` | Dondurma geçmişi | 50-500 |
-| `instructors` | Eğitmen bilgileri | 5-20 |
-| `instructor_ledger` | Eğitmen komisyon defteri | 1000-10000+ |
-| `instructor_payouts` | Eğitmen ödemeleri | 50-500 |
-| `dance_types` | Dans türleri | 5-20 |
-| `instructor_rates` | Eğitmen özel komisyon oranları | 10-100 |
+| Tablo                | Amaç                            | Satır Sayısı (Tipik) |
+| -------------------- | ------------------------------- | -------------------- |
+| `members`            | Üye bilgileri                   | 100-1000+            |
+| `classes`            | Ders tanımları                  | 5-50                 |
+| `member_classes`     | Üye-ders kayıtları (Enrollment) | 200-5000+            |
+| `payments`           | Ödeme kayıtları                 | 1000-50000+          |
+| `frozen_logs`        | Dondurma geçmişi                | 50-500               |
+| `instructors`        | Eğitmen bilgileri               | 5-20                 |
+| `instructor_ledger`  | Eğitmen komisyon defteri        | 1000-10000+          |
+| `instructor_payouts` | Eğitmen ödemeleri               | 50-500               |
+| `dance_types`        | Dans türleri                    | 5-20                 |
+| `instructor_rates`   | Eğitmen özel komisyon oranları  | 10-100               |
 
 ---
 
@@ -31,24 +31,26 @@ Proje veritabanı olarak **PostgreSQL** (Supabase üzerinde) kullanmaktadır.
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key |
-| `first_name` | TEXT | NO | - | Ad |
-| `last_name` | TEXT | NO | - | Soyad |
-| `phone` | TEXT | YES | NULL | Telefon numarası (masked format: 5XX XXX XX XX) |
-| `email` | TEXT | YES | NULL | E-posta (opsiyonel) |
-| `status` | TEXT | NO | 'active' | Üye durumu: 'active', 'frozen', 'archived' |
-| `join_date` | DATE | NO | current_date | Üyelik başlangıç tarihi |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı |
-| `updated_at` | TIMESTAMP | NO | now() | Son güncelleme zamanı |
+| Kolon        | Tip       | Null? | Default      | Açıklama                                        |
+| ------------ | --------- | ----- | ------------ | ----------------------------------------------- |
+| `id`         | BIGINT    | NO    | Auto         | Primary key                                     |
+| `first_name` | TEXT      | NO    | -            | Ad                                              |
+| `last_name`  | TEXT      | NO    | -            | Soyad                                           |
+| `phone`      | TEXT      | YES   | NULL         | Telefon numarası (masked format: 5XX XXX XX XX) |
+| `email`      | TEXT      | YES   | NULL         | E-posta (opsiyonel)                             |
+| `status`     | TEXT      | NO    | 'active'     | Üye durumu: 'active', 'frozen', 'archived'      |
+| `join_date`  | DATE      | NO    | current_date | Üyelik başlangıç tarihi                         |
+| `created_at` | TIMESTAMP | NO    | now()        | Kayıt oluşturma zamanı                          |
+| `updated_at` | TIMESTAMP | NO    | now()        | Son güncelleme zamanı                           |
 
 **Constraints:**
+
 ```sql
 CHECK (status IN ('active', 'frozen', 'archived'))
 ```
 
 **Indexes:**
+
 ```sql
 PRIMARY KEY (id)
 CREATE INDEX idx_members_status ON members(status);
@@ -56,11 +58,13 @@ CREATE INDEX idx_members_phone ON members(phone);
 ```
 
 **İlişkiler:**
+
 - `member_classes.member_id` → `members.id` (One-to-Many)
 - `payments.member_id` → `members.id` (One-to-Many)
 - `frozen_logs.member_id` → `members.id` (One-to-Many)
 
 **Notlar:**
+
 - `status` otomatik güncellenir (tüm dersleri frozen ise 'frozen', en az biri active ise 'active')
 - `monthly_fee` kolonu kaldırıldı (artık enrollment bazlı fiyatlandırma)
 - `next_payment_due_date` kolonu kaldırıldı (artık enrollment bazlı)
@@ -73,26 +77,28 @@ CREATE INDEX idx_members_phone ON members(phone);
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key |
-| `name` | TEXT | NO | - | Ders adı (ör: "Salsa 101") |
-| `default_price` | NUMERIC | NO | 0 | Varsayılan aylık ücret (TL) |
-| `instructor_id` | BIGINT | YES | NULL | Sorumlu eğitmen (FK) |
-| `day_of_week` | TEXT | YES | NULL | Ders günü (opsiyonel) |
-| `start_time` | TIME | YES | NULL | Başlangıç saati (opsiyonel) |
-| `duration_minutes` | INTEGER | YES | NULL | Ders süresi (dakika) |
-| `active` | BOOLEAN | NO | true | Aktif/arşiv durumu |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı |
-| `updated_at` | TIMESTAMP | NO | now() | Son güncelleme zamanı |
+| Kolon              | Tip       | Null? | Default | Açıklama                    |
+| ------------------ | --------- | ----- | ------- | --------------------------- |
+| `id`               | BIGINT    | NO    | Auto    | Primary key                 |
+| `name`             | TEXT      | NO    | -       | Ders adı (ör: "Salsa 101")  |
+| `default_price`    | NUMERIC   | NO    | 0       | Varsayılan aylık ücret (TL) |
+| `instructor_id`    | BIGINT    | YES   | NULL    | Sorumlu eğitmen (FK)        |
+| `day_of_week`      | TEXT      | YES   | NULL    | Ders günü (opsiyonel)       |
+| `start_time`       | TIME      | YES   | NULL    | Başlangıç saati (opsiyonel) |
+| `duration_minutes` | INTEGER   | YES   | NULL    | Ders süresi (dakika)        |
+| `active`           | BOOLEAN   | NO    | true    | Aktif/arşiv durumu          |
+| `created_at`       | TIMESTAMP | NO    | now()   | Kayıt oluşturma zamanı      |
+| `updated_at`       | TIMESTAMP | NO    | now()   | Son güncelleme zamanı       |
 
 **Constraints:**
+
 ```sql
 CHECK (default_price >= 0)
 CHECK (day_of_week IN ('Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'))
 ```
 
 **Indexes:**
+
 ```sql
 PRIMARY KEY (id)
 CREATE INDEX idx_classes_active ON classes(active);
@@ -100,11 +106,13 @@ CREATE INDEX idx_classes_instructor ON classes(instructor_id);
 ```
 
 **İlişkiler:**
+
 - `instructors.id` ← `classes.instructor_id` (Many-to-One)
 - `member_classes.class_id` → `classes.id` (One-to-Many)
 - `payments.class_id` → `classes.id` (One-to-Many)
 
 **Notlar:**
+
 - `active=false` olanlar arşivdedir (soft delete)
 - `default_price` her yeni enrollment için başlangıç fiyatıdır
 - `price_monthly` kolonu `default_price` olarak yeniden adlandırıldı
@@ -117,19 +125,20 @@ CREATE INDEX idx_classes_instructor ON classes(instructor_id);
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key (Serial) |
-| `member_id` | BIGINT | NO | - | Üye ID (FK) |
-| `class_id` | BIGINT | NO | - | Ders ID (FK) |
-| `price` | NUMERIC | NO | 0 | Bu kayıt için özel fiyat (custom pricing) |
-| `payment_interval` | INTEGER | YES | NULL | Taahhüt süresi (1, 3, 6, 12 ay) |
-| `next_payment_date` | DATE | NO | current_date | Sonraki ödeme tarihi |
-| `active` | BOOLEAN | NO | true | Aktif/pasif durumu |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı (ENROLLMENT DATE) |
-| `updated_at` | TIMESTAMP | NO | now() | Son güncelleme zamanı |
+| Kolon               | Tip       | Null? | Default      | Açıklama                                  |
+| ------------------- | --------- | ----- | ------------ | ----------------------------------------- |
+| `id`                | BIGINT    | NO    | Auto         | Primary key (Serial)                      |
+| `member_id`         | BIGINT    | NO    | -            | Üye ID (FK)                               |
+| `class_id`          | BIGINT    | NO    | -            | Ders ID (FK)                              |
+| `price`             | NUMERIC   | NO    | 0            | Bu kayıt için özel fiyat (custom pricing) |
+| `payment_interval`  | INTEGER   | YES   | NULL         | Taahhüt süresi (1, 3, 6, 12 ay)           |
+| `next_payment_date` | DATE      | NO    | current_date | Sonraki ödeme tarihi                      |
+| `active`            | BOOLEAN   | NO    | true         | Aktif/pasif durumu                        |
+| `created_at`        | TIMESTAMP | NO    | now()        | Kayıt oluşturma zamanı (ENROLLMENT DATE)  |
+| `updated_at`        | TIMESTAMP | NO    | now()        | Son güncelleme zamanı                     |
 
 **Constraints:**
+
 ```sql
 PRIMARY KEY (id)
 CHECK (price >= 0)
@@ -138,6 +147,7 @@ UNIQUE (member_id, class_id, created_at) -- Aynı üye aynı derse aynı anda ik
 ```
 
 **Indexes:**
+
 ```sql
 CREATE INDEX idx_member_classes_member ON member_classes(member_id);
 CREATE INDEX idx_member_classes_class ON member_classes(class_id);
@@ -146,12 +156,14 @@ CREATE INDEX idx_member_classes_next_payment ON member_classes(next_payment_date
 ```
 
 **İlişkiler:**
+
 - `members.id` ← `member_classes.member_id` (Many-to-One)
 - `classes.id` ← `member_classes.class_id` (Many-to-One)
 - `payments.member_class_id` → `member_classes.id` (One-to-Many)
 - `frozen_logs.member_class_id` → `member_classes.id` (One-to-Many)
 
 **Kritik Notlar:**
+
 1. **Composite Key'den ID'ye Geçiş**: Eski versiyonda `(member_id, class_id)` composite primary key kullanılıyordu. Şimdi `id` serial primary key kullanılıyor.
 2. **Enrollment History**: Aynı üye aynı dersten ayrılıp tekrar kaydolabilir. Her kayıt ayrı bir `id` ile saklanır.
 3. **created_at = ENROLLMENT DATE**: Payment schedule bu tarihten başlar.
@@ -166,22 +178,23 @@ CREATE INDEX idx_member_classes_next_payment ON member_classes(next_payment_date
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key |
-| `member_id` | BIGINT | NO | - | Üye ID (FK) |
-| `class_id` | BIGINT | NO | - | Ders ID (FK) |
-| `member_class_id` | BIGINT | YES | NULL | Enrollment ID (FK) |
-| `amount` | NUMERIC | NO | - | Ödeme tutarı (TL) |
-| `payment_date` | DATE | NO | current_date | Ödemenin yapıldığı tarih |
-| `payment_method` | TEXT | YES | NULL | Ödeme yöntemi: 'cash', 'card', 'transfer' |
-| `payment_type` | TEXT | NO | 'monthly' | Ödeme türü: 'monthly', 'difference', 'refund', 'registration' |
-| `period_start` | DATE | NO | - | Ödenen dönemin başlangıcı (Ay-Yıl) |
-| `period_end` | DATE | YES | NULL | Ödenen dönemin bitişi (opsiyonel) |
-| `notes` | TEXT | YES | NULL | Açıklama/not |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı |
+| Kolon             | Tip       | Null? | Default      | Açıklama                                                      |
+| ----------------- | --------- | ----- | ------------ | ------------------------------------------------------------- |
+| `id`              | BIGINT    | NO    | Auto         | Primary key                                                   |
+| `member_id`       | BIGINT    | NO    | -            | Üye ID (FK)                                                   |
+| `class_id`        | BIGINT    | NO    | -            | Ders ID (FK)                                                  |
+| `member_class_id` | BIGINT    | YES   | NULL         | Enrollment ID (FK)                                            |
+| `amount`          | NUMERIC   | NO    | -            | Ödeme tutarı (TL)                                             |
+| `payment_date`    | DATE      | NO    | current_date | Ödemenin yapıldığı tarih                                      |
+| `payment_method`  | TEXT      | YES   | NULL         | Ödeme yöntemi: 'cash', 'card', 'transfer'                     |
+| `payment_type`    | TEXT      | NO    | 'monthly'    | Ödeme türü: 'monthly', 'difference', 'refund', 'registration' |
+| `period_start`    | DATE      | NO    | -            | Ödenen dönemin başlangıcı (Ay-Yıl)                            |
+| `period_end`      | DATE      | YES   | NULL         | Ödenen dönemin bitişi (opsiyonel)                             |
+| `notes`           | TEXT      | YES   | NULL         | Açıklama/not                                                  |
+| `created_at`      | TIMESTAMP | NO    | now()        | Kayıt oluşturma zamanı                                        |
 
 **Constraints:**
+
 ```sql
 CHECK (amount > 0)
 CHECK (payment_method IN ('cash', 'card', 'transfer'))
@@ -189,6 +202,7 @@ CHECK (payment_type IN ('monthly', 'difference', 'refund', 'registration'))
 ```
 
 **Indexes:**
+
 ```sql
 PRIMARY KEY (id)
 CREATE INDEX idx_payments_member ON payments(member_id);
@@ -200,12 +214,14 @@ CREATE INDEX idx_payments_method ON payments(payment_method);
 ```
 
 **İlişkiler:**
+
 - `members.id` ← `payments.member_id` (Many-to-One)
 - `classes.id` ← `payments.class_id` (Many-to-One)
 - `member_classes.id` ← `payments.member_class_id` (Many-to-One)
 - `instructor_ledger.payment_id` → `payments.id` (One-to-One)
 
 **Kritik Notlar:**
+
 1. **Multi-Month Split**: 3 aylık ödeme → 3 ayrı payment kaydı (her ay için bir tane)
 2. **period_start**: Payment schedule'daki periodMonth ile eşleşir (YYYY-MM-01 formatında)
 3. **member_class_id**: Hangi enrollment'a ait olduğunu gösterir (Migration 012'de eklendi)
@@ -219,22 +235,24 @@ CREATE INDEX idx_payments_method ON payments(payment_method);
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key |
-| `member_id` | BIGINT | NO | - | Üye ID (FK, raporlama için) |
-| `member_class_id` | BIGINT | YES | NULL | Enrollment ID (FK) |
-| `start_date` | DATE | NO | - | Dondurma başlangıç tarihi |
-| `end_date` | DATE | YES | NULL | Dondurma bitiş tarihi (NULL = süresiz) |
-| `reason` | TEXT | YES | NULL | Dondurma nedeni (opsiyonel) |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı |
+| Kolon             | Tip       | Null? | Default | Açıklama                               |
+| ----------------- | --------- | ----- | ------- | -------------------------------------- |
+| `id`              | BIGINT    | NO    | Auto    | Primary key                            |
+| `member_id`       | BIGINT    | NO    | -       | Üye ID (FK, raporlama için)            |
+| `member_class_id` | BIGINT    | YES   | NULL    | Enrollment ID (FK)                     |
+| `start_date`      | DATE      | NO    | -       | Dondurma başlangıç tarihi              |
+| `end_date`        | DATE      | YES   | NULL    | Dondurma bitiş tarihi (NULL = süresiz) |
+| `reason`          | TEXT      | YES   | NULL    | Dondurma nedeni (opsiyonel)            |
+| `created_at`      | TIMESTAMP | NO    | now()   | Kayıt oluşturma zamanı                 |
 
 **Constraints:**
+
 ```sql
 CHECK (end_date IS NULL OR end_date >= start_date)
 ```
 
 **Indexes:**
+
 ```sql
 PRIMARY KEY (id)
 CREATE INDEX idx_frozen_logs_member ON frozen_logs(member_id);
@@ -243,10 +261,12 @@ CREATE INDEX idx_frozen_logs_dates ON frozen_logs(start_date, end_date);
 ```
 
 **İlişkiler:**
+
 - `members.id` ← `frozen_logs.member_id` (Many-to-One)
 - `member_classes.id` ← `frozen_logs.member_class_id` (Many-to-One)
 
 **Kritik Notlar:**
+
 1. **Per-Enrollment Freeze**: Her enrollment ayrı ayrı dondurulabilir
 2. **Indefinite Freeze**: `end_date = NULL` süresiz dondurma anlamına gelir
 3. **Multiple Periods**: Aynı enrollment birden fazla kez dondurulabilir (geçmiş kayıtlar tutulur)
@@ -261,29 +281,32 @@ CREATE INDEX idx_frozen_logs_dates ON frozen_logs(start_date, end_date);
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key |
-| `first_name` | TEXT | NO | - | Ad |
-| `last_name` | TEXT | NO | - | Soyad |
-| `phone` | TEXT | YES | NULL | Telefon |
-| `email` | TEXT | YES | NULL | E-posta |
-| `commission_rate` | NUMERIC | NO | 0 | Varsayılan komisyon oranı (%) |
-| `active` | BOOLEAN | NO | true | Aktif/pasif durumu |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı |
+| Kolon             | Tip       | Null? | Default | Açıklama                      |
+| ----------------- | --------- | ----- | ------- | ----------------------------- |
+| `id`              | BIGINT    | NO    | Auto    | Primary key                   |
+| `first_name`      | TEXT      | NO    | -       | Ad                            |
+| `last_name`       | TEXT      | NO    | -       | Soyad                         |
+| `phone`           | TEXT      | YES   | NULL    | Telefon                       |
+| `email`           | TEXT      | YES   | NULL    | E-posta                       |
+| `commission_rate` | NUMERIC   | NO    | 0       | Varsayılan komisyon oranı (%) |
+| `active`          | BOOLEAN   | NO    | true    | Aktif/pasif durumu            |
+| `created_at`      | TIMESTAMP | NO    | now()   | Kayıt oluşturma zamanı        |
 
 **Constraints:**
+
 ```sql
 CHECK (commission_rate >= 0 AND commission_rate <= 100)
 ```
 
 **Indexes:**
+
 ```sql
 PRIMARY KEY (id)
 CREATE INDEX idx_instructors_active ON instructors(active);
 ```
 
 **İlişkiler:**
+
 - `classes.instructor_id` → `instructors.id` (One-to-Many)
 - `instructor_ledger.instructor_id` → `instructors.id` (One-to-Many)
 - `instructor_payouts.instructor_id` → `instructors.id` (One-to-Many)
@@ -296,23 +319,25 @@ CREATE INDEX idx_instructors_active ON instructors(active);
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key |
-| `instructor_id` | BIGINT | NO | - | Eğitmen ID (FK) |
-| `payment_id` | BIGINT | NO | - | Ödeme ID (FK) |
-| `amount` | NUMERIC | NO | - | Komisyon tutarı (TL) |
-| `status` | TEXT | NO | 'pending' | Durum: 'pending', 'payable', 'paid' |
-| `due_date` | DATE | NO | - | Vade tarihi (payment_date ile aynı) |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı |
+| Kolon           | Tip       | Null? | Default   | Açıklama                            |
+| --------------- | --------- | ----- | --------- | ----------------------------------- |
+| `id`            | BIGINT    | NO    | Auto      | Primary key                         |
+| `instructor_id` | BIGINT    | NO    | -         | Eğitmen ID (FK)                     |
+| `payment_id`    | BIGINT    | NO    | -         | Ödeme ID (FK)                       |
+| `amount`        | NUMERIC   | NO    | -         | Komisyon tutarı (TL)                |
+| `status`        | TEXT      | NO    | 'pending' | Durum: 'pending', 'payable', 'paid' |
+| `due_date`      | DATE      | NO    | -         | Vade tarihi (payment_date ile aynı) |
+| `created_at`    | TIMESTAMP | NO    | now()     | Kayıt oluşturma zamanı              |
 
 **Constraints:**
+
 ```sql
 CHECK (status IN ('pending', 'payable', 'paid'))
 CHECK (amount >= 0)
 ```
 
 **Indexes:**
+
 ```sql
 PRIMARY KEY (id)
 CREATE INDEX idx_ledger_instructor ON instructor_ledger(instructor_id);
@@ -321,10 +346,12 @@ CREATE INDEX idx_ledger_status ON instructor_ledger(status);
 ```
 
 **İlişkiler:**
+
 - `instructors.id` ← `instructor_ledger.instructor_id` (Many-to-One)
 - `payments.id` ← `instructor_ledger.payment_id` (Many-to-One)
 
 **Notlar:**
+
 - Her payment kaydı için otomatik olarak ledger kaydı oluşturulur
 - Commission calculation: `amount = payment.amount * (instructor.commission_rate / 100)`
 
@@ -336,17 +363,18 @@ CREATE INDEX idx_ledger_status ON instructor_ledger(status);
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key |
-| `instructor_id` | BIGINT | NO | - | Eğitmen ID (FK) |
-| `amount` | NUMERIC | NO | - | Ödeme tutarı (TL) |
-| `payment_date` | DATE | NO | current_date | Ödeme tarihi |
-| `payment_method` | TEXT | YES | NULL | Ödeme yöntemi |
-| `notes` | TEXT | YES | NULL | Açıklama |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı |
+| Kolon            | Tip       | Null? | Default      | Açıklama               |
+| ---------------- | --------- | ----- | ------------ | ---------------------- |
+| `id`             | BIGINT    | NO    | Auto         | Primary key            |
+| `instructor_id`  | BIGINT    | NO    | -            | Eğitmen ID (FK)        |
+| `amount`         | NUMERIC   | NO    | -            | Ödeme tutarı (TL)      |
+| `payment_date`   | DATE      | NO    | current_date | Ödeme tarihi           |
+| `payment_method` | TEXT      | YES   | NULL         | Ödeme yöntemi          |
+| `notes`          | TEXT      | YES   | NULL         | Açıklama               |
+| `created_at`     | TIMESTAMP | NO    | now()        | Kayıt oluşturma zamanı |
 
 **Indexes:**
+
 ```sql
 PRIMARY KEY (id)
 CREATE INDEX idx_payouts_instructor ON instructor_payouts(instructor_id);
@@ -354,6 +382,7 @@ CREATE INDEX idx_payouts_date ON instructor_payouts(payment_date);
 ```
 
 **İlişkiler:**
+
 - `instructors.id` ← `instructor_payouts.instructor_id` (Many-to-One)
 
 ---
@@ -364,11 +393,11 @@ CREATE INDEX idx_payouts_date ON instructor_payouts(payment_date);
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key |
-| `name` | TEXT | NO | - | Dans türü adı (Salsa, Bachata, etc.) |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı |
+| Kolon        | Tip       | Null? | Default | Açıklama                             |
+| ------------ | --------- | ----- | ------- | ------------------------------------ |
+| `id`         | BIGINT    | NO    | Auto    | Primary key                          |
+| `name`       | TEXT      | NO    | -       | Dans türü adı (Salsa, Bachata, etc.) |
+| `created_at` | TIMESTAMP | NO    | now()   | Kayıt oluşturma zamanı               |
 
 ---
 
@@ -378,13 +407,13 @@ CREATE INDEX idx_payouts_date ON instructor_payouts(payment_date);
 
 **Kolonlar:**
 
-| Kolon | Tip | Null? | Default | Açıklama |
-|-------|-----|-------|---------|----------|
-| `id` | BIGINT | NO | Auto | Primary key |
-| `instructor_id` | BIGINT | NO | - | Eğitmen ID (FK) |
-| `dance_type_id` | BIGINT | NO | - | Dans türü ID (FK) |
-| `commission_rate` | NUMERIC | NO | - | Özel komisyon oranı (%) |
-| `created_at` | TIMESTAMP | NO | now() | Kayıt oluşturma zamanı |
+| Kolon             | Tip       | Null? | Default | Açıklama                |
+| ----------------- | --------- | ----- | ------- | ----------------------- |
+| `id`              | BIGINT    | NO    | Auto    | Primary key             |
+| `instructor_id`   | BIGINT    | NO    | -       | Eğitmen ID (FK)         |
+| `dance_type_id`   | BIGINT    | NO    | -       | Dans türü ID (FK)       |
+| `commission_rate` | NUMERIC   | NO    | -       | Özel komisyon oranı (%) |
+| `created_at`      | TIMESTAMP | NO    | now()   | Kayıt oluşturma zamanı  |
 
 ---
 
@@ -412,21 +441,13 @@ CREATE INDEX idx_payouts_date ON instructor_payouts(payment_date);
 │ - id (PK)        │         │ - name      │
 │ - member_id (FK) │         │ - default_  │
 │ - class_id (FK)  │         │   price     │
-│ - price          │         │ - instructor│
-│ - payment_       │         │   _id (FK)  │
-│   interval       │         │ - active    │
-│ - next_payment_  │         └──────┬──────┘
+│ - payment_       │         │ - instructor│
+│   interval       │         │   _id (FK)  │
+│ - active         │         │ - active    │
+│ - price          │         └──────┬──────┘
+│ - custom_price   │                │
+│ - next_payment_  │                │ N:1
 │   date           │                │
-│ - active         │                │ N:1
-│ - created_at     │                │
-└─────┬────────────┘                ▼
-      │                      ┌──────────────┐
-      │ 1:N                  │ instructors  │
-      │                      │              │
-      ▼                      │ - id (PK)    │
-┌──────────────┐             │ - first_name │
-│   payments   │             │ - last_name  │
-│              │             │ - commission_│
 │ - id (PK)    │             │   rate       │
 │ - member_id  │             └──────┬───────┘
 │ - class_id   │                    │
@@ -515,6 +536,7 @@ Proje veritabanı şeması `supabase/migrations/` klasöründeki SQL dosyaları 
 ### Önerilen RLS Policies:
 
 #### 1. Members Table
+
 ```sql
 -- Enable RLS
 ALTER TABLE members ENABLE ROW LEVEL SECURITY;
@@ -538,6 +560,7 @@ USING (
 ```
 
 #### 2. Payments Table
+
 ```sql
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
@@ -561,6 +584,7 @@ USING (
 ```
 
 #### 3. Classes Table
+
 ```sql
 ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
 
@@ -591,6 +615,7 @@ npx supabase gen types typescript --project-id YOUR_PROJECT_ID > types/database.
 ```
 
 **Ne Zaman Yapılmalı:**
+
 - Yeni tablo eklendiğinde
 - Yeni kolon eklendiğinde
 - Kolon tipi değiştiğinde
@@ -628,10 +653,12 @@ VACUUM ANALYZE;
 ### 4. Backup Strategy
 
 **Supabase Automatic Backups:**
+
 - Daily backups (7 gün tutulur)
 - Point-in-time recovery (Pro plan)
 
 **Manual Backup:**
+
 ```bash
 # Supabase CLI ile backup
 supabase db dump -f backup_$(date +%Y%m%d).sql
@@ -642,6 +669,7 @@ supabase db dump -f backup_$(date +%Y%m%d).sql
 ## 📊 Örnek Sorgular (Common Queries)
 
 ### 1. Gecikmiş Ödemesi Olan Üyeler
+
 ```sql
 SELECT DISTINCT
   m.id,
@@ -658,6 +686,7 @@ ORDER BY mc.next_payment_date ASC;
 ```
 
 ### 2. Aylık Gelir Raporu
+
 ```sql
 SELECT
   DATE_TRUNC('month', payment_date) as month,
@@ -670,6 +699,7 @@ ORDER BY month DESC;
 ```
 
 ### 3. Ders Başına Aktif Üye Sayısı
+
 ```sql
 SELECT
   c.name,
@@ -683,6 +713,7 @@ ORDER BY active_members DESC;
 ```
 
 ### 4. Eğitmen Komisyon Özeti
+
 ```sql
 SELECT
   i.first_name || ' ' || i.last_name as instructor_name,
@@ -696,6 +727,7 @@ ORDER BY payable_amount DESC;
 ```
 
 ### 5. Dondurulmuş Üyeler
+
 ```sql
 SELECT
   m.first_name,
@@ -720,6 +752,7 @@ ORDER BY fl.start_date DESC;
 ## 🎯 Best Practices
 
 ### 1. Migration Kuralları
+
 - ✅ Her değişiklik için ayrı migration dosyası oluşturun
 - ✅ Migration dosyalarını asla silmeyin
 - ✅ Dosya adı format: `XXX_descriptive_name.sql` (örn: `012_enrollment_based_architecture.sql`)
@@ -727,8 +760,10 @@ ORDER BY fl.start_date DESC;
 - ✅ Test verisi eklemeyi production migration'larından ayırın
 
 ### 2. Foreign Key Constraints
+
 - ✅ Tüm ilişkiler için FK constraint tanımlayın
 - ✅ ON DELETE davranışını belirleyin:
+
   ```sql
   -- Cascade delete (üye silinince enrollment'ları da silinsin)
   FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
@@ -738,18 +773,21 @@ ORDER BY fl.start_date DESC;
   ```
 
 ### 3. Index Strategy
+
 - ✅ WHERE clause'da sık kullanılan kolonlara index ekleyin
 - ✅ Foreign key'lere index ekleyin (JOIN performansı için)
 - ⚠️ Çok fazla index write performansını düşürür
 - ⚠️ Composite index sırası önemlidir: (member_id, class_id) ≠ (class_id, member_id)
 
 ### 4. Data Integrity
+
 - ✅ NOT NULL constraint'leri ekleyin
 - ✅ CHECK constraint'leri ile veri validasyonu yapın
 - ✅ UNIQUE constraint'ler ile duplicate önleyin
 - ✅ DEFAULT değerler tanımlayın
 
 ### 5. Naming Conventions
+
 - ✅ Tablo adları: çoğul, snake_case (`member_classes`, `payments`)
 - ✅ Kolon adları: snake_case (`next_payment_date`, `member_class_id`)
 - ✅ FK kolon adları: `table_id` format (`member_id`, `class_id`)
@@ -761,6 +799,7 @@ ORDER BY fl.start_date DESC;
 ## 🔍 Troubleshooting
 
 ### Sorun: Type Generation Çalışmıyor
+
 ```bash
 # Çözüm 1: Project ID'yi kontrol et
 supabase projects list
@@ -773,6 +812,7 @@ supabase db dump --schema public > schema.sql
 ```
 
 ### Sorun: Migration Hataları
+
 ```bash
 # Local migration durumunu kontrol et
 supabase migration list
@@ -785,6 +825,7 @@ supabase migration up --version XXX
 ```
 
 ### Sorun: Yavaş Sorgular
+
 ```sql
 -- Query execution plan'ı kontrol et
 EXPLAIN ANALYZE

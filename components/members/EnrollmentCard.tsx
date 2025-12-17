@@ -11,6 +11,10 @@ import {
   ActionIcon,
   Grid,
   Tooltip,
+  Collapse,
+  Stack,
+  Divider,
+  Alert,
 } from '@mantine/core';
 import {
   IconCalendar,
@@ -23,16 +27,21 @@ import {
   IconDotsVertical,
   IconPencil,
   IconAlertCircle,
+  IconChevronDown,
+  IconChevronUp,
+  IconInfoCircle,
 } from '@tabler/icons-react';
 import { formatCurrency } from '@/utils/formatters';
 import { formatDate } from '@/utils/date-helpers';
 import { MemberClassWithDetails, FrozenLog } from '@/types';
 import dayjs from 'dayjs';
+import { useState } from 'react';
 
 interface EnrollmentCardProps {
   enrollment: MemberClassWithDetails & { overdueMonthsCount?: number };
   effectiveDate: string;
   activeFreezeLog?: FrozenLog | null;
+  pastFrozenLogs?: FrozenLog[];
   onPay: () => void;
   onDrop: () => void;
   onFreeze: () => void;
@@ -45,6 +54,7 @@ export function EnrollmentCard({
   enrollment,
   effectiveDate,
   activeFreezeLog,
+  pastFrozenLogs = [],
   onPay,
   onDrop,
   onFreeze,
@@ -52,16 +62,26 @@ export function EnrollmentCard({
   onViewSchedule,
   onEditPrice,
 }: EnrollmentCardProps) {
+  const [showFrozenHistory, setShowFrozenHistory] = useState(false);
+
   // Use overdueMonthsCount if available, otherwise fallback to date comparison
   const isOverdue =
     !activeFreezeLog &&
-    ((enrollment.overdueMonthsCount !== undefined && enrollment.overdueMonthsCount > 0) ||
+    ((enrollment.overdueMonthsCount !== undefined &&
+      enrollment.overdueMonthsCount > 0) ||
       (enrollment.next_payment_date &&
-        dayjs(enrollment.next_payment_date).isBefore(dayjs(effectiveDate), 'day')));
+        dayjs(enrollment.next_payment_date).isBefore(
+          dayjs(effectiveDate),
+          'day'
+        )));
 
   // Use custom_price if active, else list price
   const displayPrice =
     enrollment.custom_price ?? enrollment.classes?.price_monthly ?? 0;
+
+  // Filter past frozen logs (those that have ended)
+  const completedFrozenLogs = pastFrozenLogs.filter((log) => log.end_date);
+  const hasFrozenHistory = completedFrozenLogs.length > 0;
 
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -78,21 +98,23 @@ export function EnrollmentCard({
                 >
                   {enrollment.classes?.name}
                 </Text>
-                {isOverdue && typeof enrollment.overdueMonthsCount === 'number' && enrollment.overdueMonthsCount > 0 && (
-                  <Tooltip
-                    label={
-                      enrollment.overdueMonthsCount === 1
-                        ? '1 Aylık Gecikmiş Ödeme'
-                        : `${enrollment.overdueMonthsCount} Aylık Gecikmiş Ödeme`
-                    }
-                    withArrow
-                  >
-                    <IconAlertCircle
-                      size={20}
-                      color="var(--mantine-color-red-6)"
-                    />
-                  </Tooltip>
-                )}
+                {isOverdue &&
+                  typeof enrollment.overdueMonthsCount === 'number' &&
+                  enrollment.overdueMonthsCount > 0 && (
+                    <Tooltip
+                      label={
+                        enrollment.overdueMonthsCount === 1
+                          ? '1 Aylık Gecikmiş Ödeme'
+                          : `${enrollment.overdueMonthsCount} Aylık Gecikmiş Ödeme`
+                      }
+                      withArrow
+                    >
+                      <IconAlertCircle
+                        size={20}
+                        color="var(--mantine-color-red-6)"
+                      />
+                    </Tooltip>
+                  )}
               </Group>
               <Group gap="xs" mt={4}>
                 {enrollment.payment_interval &&
@@ -110,13 +132,15 @@ export function EnrollmentCard({
                     Donduruldu
                   </Badge>
                 )}
-                {isOverdue && typeof enrollment.overdueMonthsCount === 'number' && enrollment.overdueMonthsCount > 0 && (
-                  <Badge color="red" variant="light">
-                    {enrollment.overdueMonthsCount > 1
-                      ? `${enrollment.overdueMonthsCount} Ay Gecikmiş`
-                      : '1 Ay Gecikmiş'}
-                  </Badge>
-                )}
+                {isOverdue &&
+                  typeof enrollment.overdueMonthsCount === 'number' &&
+                  enrollment.overdueMonthsCount > 0 && (
+                    <Badge color="red" variant="light">
+                      {enrollment.overdueMonthsCount > 1
+                        ? `${enrollment.overdueMonthsCount} Ay Gecikmiş`
+                        : '1 Ay Gecikmiş'}
+                    </Badge>
+                  )}
               </Group>
               {activeFreezeLog && (
                 <Text size="xs" c="cyan" mt={4}>
@@ -134,9 +158,7 @@ export function EnrollmentCard({
             {/* Payment Date */}
             <Group gap={8}>
               <ThemeIcon
-                color={
-                  activeFreezeLog ? 'gray' : isOverdue ? 'red' : 'blue'
-                }
+                color={activeFreezeLog ? 'gray' : isOverdue ? 'red' : 'blue'}
                 variant="light"
                 size="md"
                 radius="md"
@@ -158,13 +180,15 @@ export function EnrollmentCard({
                         ? formatDate(enrollment.next_payment_date)
                         : 'Belirlenmedi'}
                     </Text>
-                    {isOverdue && typeof enrollment.overdueMonthsCount === 'number' && enrollment.overdueMonthsCount > 0 && (
-                      <Text size="xs" c="red" fw={500}>
-                        {enrollment.overdueMonthsCount === 1
-                          ? '1 ay gecikmiş'
-                          : `${enrollment.overdueMonthsCount} ay gecikmiş`}
-                      </Text>
-                    )}
+                    {isOverdue &&
+                      typeof enrollment.overdueMonthsCount === 'number' &&
+                      enrollment.overdueMonthsCount > 0 && (
+                        <Text size="xs" c="red" fw={500}>
+                          {enrollment.overdueMonthsCount === 1
+                            ? '1 ay gecikmiş'
+                            : `${enrollment.overdueMonthsCount} ay gecikmiş`}
+                        </Text>
+                      )}
                   </>
                 )}
               </div>
@@ -305,6 +329,71 @@ export function EnrollmentCard({
           </Group>
         </Grid.Col>
       </Grid>
+
+      {/* Frozen History Section */}
+      {hasFrozenHistory && (
+        <>
+          <Divider my="md" />
+          <div>
+            <Button
+              variant="subtle"
+              size="xs"
+              color="cyan"
+              leftSection={<IconSnowflake size={14} />}
+              rightSection={
+                showFrozenHistory ? (
+                  <IconChevronUp size={14} />
+                ) : (
+                  <IconChevronDown size={14} />
+                )
+              }
+              onClick={() => setShowFrozenHistory(!showFrozenHistory)}
+            >
+              Dondurma Geçmişi ({completedFrozenLogs.length})
+            </Button>
+
+            <Collapse in={showFrozenHistory}>
+              <Stack gap="xs" mt="sm">
+                {completedFrozenLogs
+                  .sort((a, b) => dayjs(b.start_date).diff(dayjs(a.start_date)))
+                  .map((log) => {
+                    const startDate = dayjs(log.start_date);
+                    const endDate = dayjs(log.end_date!);
+                    const durationDays = endDate.diff(startDate, 'day');
+                    const durationMonths = Math.floor(durationDays / 30);
+                    const remainingDays = durationDays % 30;
+
+                    return (
+                      <Alert
+                        key={log.id}
+                        icon={<IconSnowflake size={16} />}
+                        color="cyan"
+                        variant="light"
+                      >
+                        <Group justify="space-between" wrap="nowrap">
+                          <div style={{ flex: 1 }}>
+                            <Text size="sm" fw={500}>
+                              {formatDate(log.start_date)} -{' '}
+                              {formatDate(log.end_date!)}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {durationMonths > 0 && `${durationMonths} ay `}
+                              {remainingDays > 0 && `${remainingDays} gün`}
+                              {log.reason && ` • ${log.reason}`}
+                            </Text>
+                          </div>
+                          <Badge size="sm" color="cyan" variant="outline">
+                            Tamamlandı
+                          </Badge>
+                        </Group>
+                      </Alert>
+                    );
+                  })}
+              </Stack>
+            </Collapse>
+          </div>
+        </>
+      )}
     </Card>
   );
 }

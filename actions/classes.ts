@@ -76,11 +76,15 @@ export async function getClassById(
       `
       )
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       logError('getClassById', error);
       return errorResponse(handleSupabaseError(error));
+    }
+
+    if (!data) {
+      return errorResponse('Ders bulunamadı');
     }
 
     return successResponse(data as ClassWithInstructor);
@@ -230,7 +234,8 @@ export async function getClassMembers(
         `
         *,
         members (*),
-        frozen_logs (id, end_date)
+        frozen_logs (id, end_date),
+        payments!member_class_id (payment_date)
       `
       )
       .eq('class_id', classId)
@@ -249,9 +254,25 @@ export async function getClassMembers(
         // Check if frozen
         const isFrozen = item.frozen_logs?.some((log: any) => !log.end_date);
 
+        // Calculate first/last payment dates
+        const paymentDates =
+          item.payments?.map((p: any) => p.payment_date).sort() || [];
+        const firstDate = paymentDates.length > 0 ? paymentDates[0] : null;
+        const lastDate =
+          paymentDates.length > 0
+            ? paymentDates[paymentDates.length - 1]
+            : null;
+
         return {
           ...item.members,
+          enrollment_id: item.id,
           enrollment_date: item.created_at, // Add enrollment date from member_class
+          next_payment_date: item.next_payment_date,
+          active_enrollment: item.active,
+          custom_price: item.custom_price,
+          list_price: item.price,
+          first_payment_date: firstDate,
+          last_payment_date: lastDate,
           // Override status for this context if frozen
           status: isFrozen ? 'frozen' : item.members.status,
           // Note: If member is 'active' globally but frozen in this class, we return 'frozen'.

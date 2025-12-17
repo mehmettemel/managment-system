@@ -56,6 +56,8 @@ interface DataTableProps<T> {
   // Server-side sorting props
   sortField?: string | null;
   sortDirection?: 'asc' | 'desc';
+  searchable?: boolean;
+  searchKeys?: (keyof T | string)[];
   onSort?: (field: string, direction: 'asc' | 'desc') => void;
 }
 

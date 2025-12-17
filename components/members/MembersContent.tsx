@@ -312,58 +312,13 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
         );
       },
     },
-    {
-      key: 'first_payment',
-      label: 'İlk Ödeme',
-      render: (member) => {
-        const activeClasses =
-          member.member_classes?.filter((mc) => mc.active) || [];
-        return (
-          <Stack gap={4}>
-            {activeClasses.map((mc: any) => (
-              <Text
-                size="xs"
-                key={mc.id}
-                c={mc.first_payment_date ? undefined : 'orange'}
-              >
-                {mc.first_payment_date ? formatDate(mc.first_payment_date) : 'Bekliyor'}
-              </Text>
-            ))}
-            {activeClasses.length === 0 && (
-              <Text size="xs" c="dimmed">
-                -
-              </Text>
-            )}
-          </Stack>
-        );
-      },
-    },
-    {
-      key: 'last_payment',
-      label: 'Son Ödeme',
-      render: (member) => {
-        const activeClasses =
-          member.member_classes?.filter((mc) => mc.active) || [];
-        return (
-          <Stack gap={4}>
-            {activeClasses.map((mc: any) => (
-              <Text size="xs" key={mc.id} c={mc.last_payment_date ? 'green' : 'dimmed'}>
-                {mc.last_payment_date ? formatDate(mc.last_payment_date) : '-'}
-              </Text>
-            ))}
-            {activeClasses.length === 0 && (
-              <Text size="xs" c="dimmed">
-                -
-              </Text>
-            )}
-          </Stack>
-        );
-      },
-    },
+
     {
       key: 'status',
       label: 'Durum',
-      render: (member) => <StatusBadge status={member.status as MemberStatus} />,
+      render: (member) => (
+        <StatusBadge status={member.status as MemberStatus} />
+      ),
     },
     {
       key: 'actions',

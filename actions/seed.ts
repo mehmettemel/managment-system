@@ -266,6 +266,7 @@ export async function seedDatabase() {
       custom_price: 1500,
       payment_interval: 1,
       next_payment_date: osmanNewDate, // Next payment is Today
+      first_payment_date: osmanNewDate,
       created_at: osmanNewDate, // Started today
     });
 
@@ -375,36 +376,40 @@ async function createMemberScenario(
   for (const enr of params.enrollments) {
     const effectivePrice = enr.customPrice ?? enr.price;
     // Calculate Next Payment Date
-    // If paid 3 months, next payment is Join Date + 3 Months
     const nextPaymentDate = dayjs(joinDate)
       .add(enr.paidMonths, 'month')
       .format('YYYY-MM-DD');
 
-    await supabase.from('member_classes').insert({
-      member_id: member.id,
-      class_id: enr.classId,
-      active: enr.active ?? true,
-      price: enr.price,
-      custom_price: enr.customPrice,
-      payment_interval: 1,
-      next_payment_date: nextPaymentDate,
-    });
+    // Calculate First Payment Date (if any payments made)
+    const firstPaymentDate = enr.paidMonths > 0 ? joinDate : null;
+
+    const { data: memberClass } = await supabase
+      .from('member_classes')
+      .insert({
+        member_id: member.id,
+        class_id: enr.classId,
+        active: enr.active ?? true,
+        price: enr.price,
+        custom_price: enr.customPrice,
+        payment_interval: 1,
+        next_payment_date: nextPaymentDate,
+        first_payment_date: firstPaymentDate,
+        created_at: joinDate,
+      })
+      .select()
+      .single();
+
+    if (!memberClass) continue;
 
     // Create Payments History
     const payments = [];
     for (let i = 0; i < enr.paidMonths; i++) {
       const pStart = dayjs(joinDate).add(i, 'month');
-      // Don't create payments for future dates if paidMonths extends into future,
-      // BUT current system logic often prepays. Let's assume they paid on due date.
-      // If due date is in future, maybe they haven't paid yet?
-      // "paidMonths" implies confirmed payments.
-
-      // Only insert payment if the payment date is in past or today (Simulating real history)
-      // Or if it's a prepayment. Let's assume all 'paidMonths' are actual payments made.
 
       payments.push({
         member_id: member.id,
         class_id: enr.classId,
+        member_class_id: memberClass.id, // Linked to enrollment
         amount: effectivePrice,
         payment_date: pStart.format('YYYY-MM-DD'), // Paid on due date
         period_start: pStart.format('YYYY-MM-DD'),

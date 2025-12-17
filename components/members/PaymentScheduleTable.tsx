@@ -149,7 +149,7 @@ export function PaymentScheduleTable({
     },
     {
       key: 'paymentDate',
-      label: 'İşlem Tarihi',
+      label: 'Ödeme Tarihi',
       render: (item) => (item.paymentDate ? formatDate(item.paymentDate) : '-'),
     },
     {

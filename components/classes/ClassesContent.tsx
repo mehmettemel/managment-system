@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Button,
   Group,
@@ -9,27 +9,27 @@ import {
   Text,
   Badge,
   ActionIcon,
-  SimpleGrid,
   Menu,
-  ThemeIcon,
-  Divider,
+  Stack,
 } from '@mantine/core';
+import { useEffect } from 'react';
 import {
   IconPlus,
-  IconDotsVertical,
+  IconDots,
   IconEdit,
   IconTrash,
-  IconClock,
-  IconCalendar,
-  IconUser,
-  IconUsers,
-  IconArrowsRight,
+  IconEye,
+  IconInfoCircle,
+  IconDotsVertical,
+  IconCopy,
+  IconPower,
 } from '@tabler/icons-react';
 import { ClassDrawer } from './ClassDrawer';
 import { ClassMembersDrawer } from './ClassMembersDrawer';
 import { ClassMigrateModal } from './ClassMigrateModal';
 import { ClassWithInstructor, Instructor, Class, DanceType } from '@/types';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { DataTable, DataTableColumn } from '@/components/shared/DataTable';
 import { useDisclosure } from '@mantine/hooks';
 import { deactivateClass, bulkMigrateClass } from '@/actions/classes';
 import { showSuccess, showError } from '@/utils/notifications';
@@ -47,44 +47,54 @@ export function ClassesContent({
   danceTypes,
 }: ClassesContentProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [opened, { open, close }] = useDisclosure(false);
-  const [membersDrawerOpen, { open: openMembers, close: closeMembers }] =
-    useDisclosure(false);
+
   const [migrateOpen, { open: openMigrate, close: closeMigrate }] =
     useDisclosure(false); // Migration Modal
 
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const [editingClass, setEditingClass] = useState<Class | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const openDrawerId = searchParams.get('openDrawer');
+    if (openDrawerId) {
+      const classId = parseInt(openDrawerId);
+      if (!isNaN(classId)) {
+        setSelectedClassId(classId);
+      }
+    }
+  }, [searchParams]);
 
   const handleSuccess = () => {
     router.refresh();
   };
 
   const handleEdit = (item: Class) => {
-    setSelectedClass(item);
+    setEditingClass(item);
     open();
   };
 
   const handleAdd = () => {
-    setSelectedClass(null);
+    setEditingClass(null);
     open();
   };
 
   const handleViewMembers = (item: Class) => {
-    setSelectedClass(item);
-    openMembers();
+    setSelectedClassId(item.id);
   };
 
-  const handleMigrateClick = (item: Class) => {
-    setSelectedClass(item);
+  const handleMigrateClick = (classItem: Class) => {
+    setEditingClass(classItem);
     openMigrate();
   };
 
   const onMigrateConfirm = async (targetClassId: number) => {
-    if (!selectedClass) return;
+    if (!editingClass) return;
 
     setLoading(true);
-    const result = await bulkMigrateClass(selectedClass.id, targetClassId);
+    const result = await bulkMigrateClass(editingClass.id, targetClassId);
 
     if (result.error) {
       showError(result.error);
@@ -93,7 +103,7 @@ export function ClassesContent({
         `${result.data?.migratedCount} üye taşındı ve sınıf arşivlendi.`
       );
       closeMigrate();
-      setSelectedClass(null);
+      setEditingClass(null);
     }
     setLoading(false);
   };
@@ -110,140 +120,197 @@ export function ClassesContent({
     }
   };
 
+  const columns: DataTableColumn<ClassWithInstructor>[] = [
+    {
+      key: 'name',
+      label: 'Ders Adı',
+      sortable: true,
+      searchable: true,
+      render: (row) => <Text fw={500}>{row.name}</Text>,
+    },
+    {
+      key: 'day_of_week',
+      label: 'Gün',
+      sortable: true,
+      render: (row) => (
+        <Badge variant="dot" color="blue">
+          {row.day_of_week}
+        </Badge>
+      ),
+    },
+    {
+      key: 'start_time',
+      label: 'Saat',
+      sortable: true,
+      render: (row) => <Text>{row.start_time?.toString().slice(0, 5)}</Text>,
+    },
+    {
+      key: 'duration_minutes',
+      label: 'Süre',
+      render: (row) => <Text>{row.duration_minutes} dk</Text>,
+    },
+    {
+      key: 'instructor',
+      label: 'Eğitmen',
+      searchable: true,
+      render: (row) => (
+        <Text>
+          {row.instructors
+            ? `${row.instructors.first_name} ${row.instructors.last_name}`
+            : 'Eğitmen Yok'}
+        </Text>
+      ),
+    },
+    {
+      key: 'price_monthly',
+      label: 'Liste Fiyatı',
+      sortable: true,
+      render: (row) => (
+        <Text fw={500} c="orange">
+          {row.price_monthly ? formatCurrency(Number(row.price_monthly)) : '-'}
+        </Text>
+      ),
+    },
+    {
+      key: 'actions',
+      label: '',
+      width: 100, // Reduced width since we removed one button
+      render: (classItem) => (
+        <Group gap="xs" justify="flex-end">
+          {/* Info Button - Opens Drawer */}
+          <ActionIcon
+            variant="light"
+            color="blue"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewMembers(classItem);
+            }} // Added stopPropagation
+            title="Sınıf Detayı ve Öğrenciler"
+          >
+            <IconInfoCircle size={18} />
+          </ActionIcon>
+
+          {/* Edit Button */}
+          <ActionIcon
+            variant="light"
+            color="orange"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(classItem);
+            }} // Added stopPropagation
+            title="Düzenle"
+          >
+            <IconEdit size={18} />
+          </ActionIcon>
+
+          {/* Menu for less common actions */}
+          <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+              <ActionIcon
+                variant="light"
+                color="gray"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {' '}
+                {/* Added stopPropagation */}
+                <IconDotsVertical size={18} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {/* Duplicate */}
+              <Menu.Item
+                leftSection={<IconCopy size={16} />}
+                onClick={(e) => {
+                  e.stopPropagation(); // Added stopPropagation
+                  handleMigrateClick(classItem); // Use existing handler
+                }}
+              >
+                Taşı ve Arşivle
+              </Menu.Item>
+
+              {/* Deactivate */}
+              <Menu.Item
+                leftSection={<IconPower size={16} />}
+                color="red"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(classItem.id);
+                }} // Use existing handler
+              >
+                Sil (Sadece Arşivle)
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        </Group>
+      ),
+    },
+  ];
+
   return (
     <>
-      <Group justify="flex-end">
-        <Button leftSection={<IconPlus size={20} />} onClick={handleAdd}>
-          Yeni Ders
-        </Button>
-      </Group>
-
-      {initialClasses.length === 0 ? (
-        <EmptyState
-          title="Ders Bulunamadı"
-          description="Henüz tanımlanmış bir ders programı yok."
-          action={
-            <Button variant="light" onClick={handleAdd}>
-              İlk Dersi Ekle
-            </Button>
-          }
-        />
-      ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-          {initialClasses.map((item) => (
-            <Card key={item.id} withBorder padding="lg" radius="md">
-              <Group justify="space-between" mb="sm">
-                <ThemeIcon size="xl" radius="md" variant="light" color="blue">
-                  <IconCalendar size={24} />
-                </ThemeIcon>
-                <Menu withinPortal position="bottom-end" shadow="sm">
-                  <Menu.Target>
-                    <ActionIcon variant="subtle" color="gray">
-                      <IconDotsVertical size={16} />
-                    </ActionIcon>
-                  </Menu.Target>
-
-                  <Menu.Dropdown>
-                    <Menu.Item
-                      leftSection={<IconEdit size={14} />}
-                      onClick={() => handleEdit(item)}
-                    >
-                      Düzenle
-                    </Menu.Item>
-                    <Menu.Item
-                      leftSection={<IconArrowsRight size={14} />}
-                      onClick={() => handleMigrateClick(item)}
-                    >
-                      Taşı ve Arşivle
-                    </Menu.Item>
-                    <Menu.Divider />
-                    <Menu.Item
-                      leftSection={<IconTrash size={14} />}
-                      color="red"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      Sil (Sadece Arşivle)
-                    </Menu.Item>
-                  </Menu.Dropdown>
-                </Menu>
-              </Group>
-
-              <Text fw={700} size="lg">
-                {item.name}
-              </Text>
-
-              <Group gap="xs" mt="xs">
-                <Badge variant="dot" color="blue">
-                  {item.day_of_week}
-                </Badge>
-                <Badge
-                  variant="outline"
-                  color="gray"
-                  leftSection={<IconClock size={12} />}
-                >
-                  {item.start_time?.toString().slice(0, 5)}
-                </Badge>
-              </Group>
-
-              <Group mt="md" justify="space-between">
-                <Group gap={8}>
-                  <IconUser size={16} style={{ opacity: 0.7 }} />
-                  <Text size="sm" c="dimmed">
-                    {item.instructors
-                      ? `${item.instructors.first_name} ${item.instructors.last_name}`
-                      : 'Eğitmen Yok'}
-                  </Text>
-                </Group>
-
-                {item.price_monthly && (
-                  <Text fw={700} c="orange">
-                    {formatCurrency(Number(item.price_monthly))}
-                  </Text>
-                )}
-              </Group>
-
-              <Button
-                variant="light"
-                color="blue"
-                fullWidth
-                mt="md"
-                leftSection={<IconUsers size={16} />}
-                onClick={() => handleViewMembers(item)}
-              >
-                Kayıtlı Üyeler
+      <Stack>
+        {' '}
+        {/* Wrapped content in Stack */}
+        <Group justify="space-between">
+          {' '}
+          {/* Updated justify */}
+          <Button leftSection={<IconPlus size={20} />} onClick={handleAdd}>
+            Yeni Ders
+          </Button>
+        </Group>
+        {initialClasses.length === 0 ? (
+          <EmptyState
+            title="Ders Bulunamadı"
+            description="Henüz tanımlanmış bir ders programı yok."
+            action={
+              <Button variant="light" onClick={handleAdd}>
+                İlk Dersi Ekle
               </Button>
-            </Card>
-          ))}
-        </SimpleGrid>
-      )}
+            }
+          />
+        ) : (
+          <Card withBorder padding="sm" radius="md">
+            <DataTable
+              data={initialClasses}
+              columns={columns}
+              searchable // Added searchable
+              searchKeys={[
+                'name',
+                'instructors.first_name',
+                'instructors.last_name',
+              ]} // Added searchKeys
+              onRowClick={(row) => handleViewMembers(row)}
+            />
+          </Card>
+        )}
+      </Stack>
 
       <ClassDrawer
         opened={opened}
         onClose={close}
-        classItem={selectedClass}
+        classItem={editingClass} // Used editingClass
         instructors={instructors}
         danceTypes={danceTypes}
         onSuccess={handleSuccess}
       />
 
-      <ClassMembersDrawer
-        opened={membersDrawerOpen}
-        onClose={closeMembers}
-        classId={selectedClass?.id || null}
-        className={selectedClass?.name || ''}
-      />
-
       {/* Migrate Modal */}
-      {selectedClass && (
+      {editingClass && (
         <ClassMigrateModal
           opened={migrateOpen}
           onClose={closeMigrate}
-          sourceClass={selectedClass as ClassWithInstructor}
+          sourceClass={editingClass as ClassWithInstructor} // Used editingClass
           classes={initialClasses}
           onConfirm={onMigrateConfirm}
           loading={loading}
         />
       )}
+
+      <ClassMembersDrawer
+        opened={!!selectedClassId}
+        onClose={() => setSelectedClassId(null)}
+        classId={selectedClassId}
+      />
     </>
   );
 }

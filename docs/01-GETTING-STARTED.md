@@ -74,3 +74,7 @@ npm run build
 ```
 
 Eğer TypeScript veya ESLint hataları varsa bu aşamada görünecektir.
+
+## 📚 Yardım ve Destek
+
+Uygulama çalıştıktan sonra, kullanım senaryoları ve özellikleri öğrenmek için sol menüdeki **Yardım** butonuna (`/help`) tıklayabilirsiniz. Burada detaylı bir kullanım kılavuzu bulunmaktadır.

@@ -86,11 +86,12 @@ export async function getMemberById(
           member_id,
           class_id,
           next_payment_date,
+          first_payment_date,
           active,
           payment_interval,
           custom_price,
+          price,
           created_at,
-          first_payment_date,
           classes (*)
         ),
         frozen_logs (*)
@@ -254,13 +255,29 @@ export async function searchMembers(
 ): Promise<ApiListResponse<Member>> {
   try {
     const supabase = await createClient();
+    const cleanQuery = query.trim();
+
+    // Standard OR query for single terms or exact matches
+    let filterString = `first_name.ilike.%${cleanQuery}%,last_name.ilike.%${cleanQuery}%,phone.ilike.%${cleanQuery}%`;
+
+    // Handle "Firstname Lastname" searches
+    if (cleanQuery.includes(' ')) {
+      const parts = cleanQuery.split(/\s+/).filter((p) => p.length > 0);
+      if (parts.length >= 2) {
+        // Assume first word is First Name part, and the rest is Last Name part
+        const firstPart = parts[0];
+        const lastPart = parts.slice(1).join(' ');
+
+        // Add an AND condition to the OR group
+        // "match generic OR match (FirstName matches Part1 AND LastName matches Part2)"
+        filterString += `,and(first_name.ilike.%${firstPart}%,last_name.ilike.%${lastPart}%)`;
+      }
+    }
 
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .or(
-        `first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone.ilike.%${query}%`
-      )
+      .or(filterString)
       .order('created_at', { ascending: false });
 
     if (error) {

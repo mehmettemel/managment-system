@@ -19,6 +19,8 @@ import {
   Grid,
   Modal,
   Alert,
+  Select,
+  ThemeIcon,
 } from '@mantine/core';
 import {
   IconArrowLeft,
@@ -26,7 +28,10 @@ import {
   IconCalendar,
   IconHistory,
   IconPlus,
+  IconRotateClockwise,
+  IconArrowRight,
   IconAlertCircle,
+  IconCreditCard,
 } from '@tabler/icons-react';
 import {
   getMemberById,
@@ -54,6 +59,7 @@ import { EnrollmentCard } from './EnrollmentCard';
 import { FreezeStatusCard } from './FreezeStatusCard';
 import { FreezeMemberDrawer } from './FreezeMemberDrawer';
 import { PaymentScheduleTable } from './PaymentScheduleTable';
+import { PaymentHistory } from './PaymentHistory';
 import { PaymentConfirmModal } from '@/components/payments/PaymentConfirmModal';
 import { DataTable, DataTableColumn } from '@/components/shared/DataTable';
 import dayjs from 'dayjs';
@@ -72,11 +78,13 @@ import { AddEnrollmentModal } from './AddEnrollmentModal';
 interface MemberDetailViewProps {
   memberId: number;
   effectiveDate: string;
+  focusedClassId?: number;
 }
 
 export function MemberDetailView({
   memberId,
   effectiveDate,
+  focusedClassId,
 }: MemberDetailViewProps) {
   const router = useRouter();
 
@@ -85,7 +93,9 @@ export function MemberDetailView({
     MemberClassWithDetails[]
   >([]);
   const [paymentHistory, setPaymentHistory] = useState<PaymentWithClass[]>([]); // Paginated for display
-  const [allPaymentHistory, setAllPaymentHistory] = useState<PaymentWithClass[]>([]); // All payments for calculations
+  const [allPaymentHistory, setAllPaymentHistory] = useState<
+    PaymentWithClass[]
+  >([]); // All payments for calculations
   const [allClasses, setAllClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -93,6 +103,9 @@ export function MemberDetailView({
   const [paymentPage, setPaymentPage] = useState(1);
   const [paymentPageSize] = useState(10);
   const [paymentTotalRecords, setPaymentTotalRecords] = useState(0);
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string | null>(
+    focusedClassId ? focusedClassId.toString() : null
+  );
 
   // Modals state
   const [payModal, setPayModal] = useState<{
@@ -141,9 +154,17 @@ export function MemberDetailView({
       if (memberRes.data) {
         setMember(memberRes.data);
         // Filter for active enrollments
-        setActiveEnrollments(
-          (memberRes.data.member_classes.filter((mc: any) => mc.active) || []) as any
-        );
+        let enrollments = (memberRes.data.member_classes.filter(
+          (mc: any) => mc.active
+        ) || []) as any;
+
+        if (focusedClassId) {
+          enrollments = enrollments.filter(
+            (e: any) => e.class_id === focusedClassId
+          );
+        }
+
+        setActiveEnrollments(enrollments);
       }
 
       if (paginatedPaymentsRes.data) {
@@ -164,7 +185,7 @@ export function MemberDetailView({
     } finally {
       setLoading(false);
     }
-  }, [memberId, paymentPage, paymentPageSize]);
+  }, [memberId, paymentPage, paymentPageSize, focusedClassId]);
 
   useEffect(() => {
     fetchData();
@@ -360,22 +381,18 @@ export function MemberDetailView({
     overdueMonthsCount: getOverdueMonthsCount(e),
   }));
 
-  // Calculate first and last payment dates from all payment history
-  const firstPaymentDate = allPaymentHistory.length > 0
-    ? allPaymentHistory.reduce((earliest, payment) => {
-        return !earliest || dayjs(payment.payment_date).isBefore(dayjs(earliest))
-          ? payment.payment_date
-          : earliest;
-      }, null as string | null)
-    : null;
+  // Filter payment history by class
+  const filteredPaymentHistory = selectedClassFilter
+    ? paymentHistory.filter(
+        (p) => p.class_id?.toString() === selectedClassFilter
+      )
+    : paymentHistory;
 
-  const lastPaymentDate = allPaymentHistory.length > 0
-    ? allPaymentHistory.reduce((latest, payment) => {
-        return !latest || dayjs(payment.payment_date).isAfter(dayjs(latest))
-          ? payment.payment_date
-          : latest;
-      }, null as string | null)
-    : null;
+  const filteredPaymentTotalRecords = selectedClassFilter
+    ? allPaymentHistory.filter(
+        (p) => p.class_id?.toString() === selectedClassFilter
+      ).length
+    : paymentTotalRecords;
 
   // Check for overdue payments
   const overdueEnrollments = computedEnrollments.filter((e) => {
@@ -400,6 +417,10 @@ export function MemberDetailView({
 
   const handleDropClick = (enrollment: MemberClassWithDetails) => {
     setDropModal({ open: true, enrollment });
+  };
+
+  const handlePaymentSuccess = () => {
+    fetchData();
   };
 
   const handleUnfreezeLog = async (logId: number) => {
@@ -429,9 +450,7 @@ export function MemberDetailView({
 
   const handleAddClassClick = () => {
     // Filter out already enrolled classes
-    const enrolledClassIds = new Set(
-      activeEnrollments.map((e) => e.class_id)
-    );
+    const enrolledClassIds = new Set(activeEnrollments.map((e) => e.class_id));
     const available = allClasses.filter((c) => !enrolledClassIds.has(c.id));
 
     if (available.length === 0) {
@@ -574,7 +593,7 @@ export function MemberDetailView({
     },
     {
       key: 'payment_date',
-      label: 'İşlem Tarihi',
+      label: 'Ödeme Tarihi',
       render: (row) => formatDate(row.payment_date),
     },
     {
@@ -659,18 +678,6 @@ export function MemberDetailView({
                   <IconCalendar size={16} style={{ opacity: 0.7 }} />
                   <Text size="sm">Kayıt: {formatDate(member.join_date)}</Text>
                 </Group>
-                {firstPaymentDate && (
-                  <Group gap={4}>
-                    <IconHistory size={16} style={{ opacity: 0.7 }} />
-                    <Text size="sm" c="green">İlk Ödeme: {formatDate(firstPaymentDate)}</Text>
-                  </Group>
-                )}
-                {lastPaymentDate && (
-                  <Group gap={4}>
-                    <IconHistory size={16} style={{ opacity: 0.7 }} />
-                    <Text size="sm" c="blue">Son Ödeme: {formatDate(lastPaymentDate)}</Text>
-                  </Group>
-                )}
               </Group>
             </div>
           </Group>
@@ -687,135 +694,232 @@ export function MemberDetailView({
         )}
 
         {/* Overdue Payments Alert */}
-        {overdueEnrollments.length > 0 && (() => {
-          const totalOverdueMonths = overdueEnrollments.reduce(
-            (sum, e) => sum + (e.overdueMonthsCount || 0),
-            0
-          );
+        {overdueEnrollments.length > 0 &&
+          (() => {
+            const totalOverdueMonths = overdueEnrollments.reduce(
+              (sum, e) => sum + (e.overdueMonthsCount || 0),
+              0
+            );
 
-          // Only show alert if there are actual overdue months
-          if (totalOverdueMonths === 0) return null;
+            // Only show alert if there are actual overdue months
+            if (totalOverdueMonths === 0) return null;
 
-          return (
-            <Alert
-              icon={<IconAlertCircle size={16} />}
-              title="Gecikmiş Ödemeler"
-              color="red"
-              variant="light"
-            >
-              <Stack gap="xs">
-                <Text size="sm">
-                  Bu üyenin <strong>{overdueEnrollments.length}</strong> dersinde
-                  toplam{' '}
-                  <strong>
-                    {totalOverdueMonths}{' '}
-                    {totalOverdueMonths === 1 ? 'aylık' : 'aylık'}
-                  </strong>{' '}
-                  gecikmiş ödeme bulunmaktadır:
-                </Text>
-                {overdueEnrollments.map((e) => {
-                  if (!e.overdueMonthsCount || e.overdueMonthsCount === 0) return null;
+            return (
+              <Alert
+                icon={<IconAlertCircle size={16} />}
+                title="Gecikmiş Ödemeler"
+                color="red"
+                variant="light"
+              >
+                <Stack gap="xs">
+                  <Text size="sm">
+                    Bu üyenin <strong>{overdueEnrollments.length}</strong>{' '}
+                    dersinde toplam <strong>{totalOverdueMonths} adet</strong>{' '}
+                    gecikmiş ödeme bulunmaktadır:
+                  </Text>
+                  {overdueEnrollments.map((e) => {
+                    if (!e.overdueMonthsCount || e.overdueMonthsCount === 0)
+                      return null;
 
-                  return (
-                    <Group key={e.id} gap="xs">
-                      <Text size="sm" fw={500}>
-                        • {e.classes?.name}:
-                      </Text>
-                      <Text size="sm" c="red">
-                        {e.overdueMonthsCount === 1
-                          ? '1 ay gecikmiş'
-                          : `${e.overdueMonthsCount} ay gecikmiş`}
-                      </Text>
-                      <Text size="sm" c="dimmed">
-                        (İlk gecikme: {formatDate(e.next_payment_date!)})
-                      </Text>
-                    </Group>
-                  );
-                })}
-              </Stack>
-            </Alert>
-          );
-        })()}
+                    return (
+                      <Group key={e.id} gap="xs">
+                        <Text size="sm" fw={500}>
+                          • {e.classes?.name}:
+                        </Text>
+                        <Text size="sm" c="red">
+                          {e.overdueMonthsCount === 1
+                            ? '1 ay gecikmiş'
+                            : `${e.overdueMonthsCount} ay gecikmiş`}
+                        </Text>
+                        <Text size="sm" c="dimmed">
+                          (İlk gecikme: {formatDate(e.next_payment_date!)})
+                        </Text>
+                      </Group>
+                    );
+                  })}
+                </Stack>
+              </Alert>
+            );
+          })()}
 
         {/* Active Enrollments */}
         <Group justify="space-between" align="center">
-          <Title order={4}>Kayıtlı Dersler</Title>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            variant="light"
-            onClick={handleAddClassClick}
-          >
-            Ders Ekle
-          </Button>
+          <Title order={4}>
+            {focusedClassId ? 'Ders Detayı' : 'Kayıtlı Dersler'}
+          </Title>
+          {!focusedClassId && (
+            <Button
+              leftSection={<IconPlus size={16} />}
+              variant="light"
+              onClick={handleAddClassClick}
+            >
+              Ders Ekle
+            </Button>
+          )}
         </Group>
         {computedEnrollments.length === 0 ? (
-          <Card withBorder p="xl">
-            <Stack align="center" gap="md">
-              <Text c="dimmed" ta="center" size="lg" fw={500}>
-                Henüz ders kaydı bulunmuyor
-              </Text>
-              <Text c="dimmed" ta="center" size="sm">
-                Üyeyi derslerinize kaydetmek için aşağıdaki butona tıklayın
-              </Text>
-              <Button
-                leftSection={<IconPlus size={16} />}
-                onClick={handleAddClassClick}
-                size="md"
-              >
-                İlk Dersi Ekle
-              </Button>
-            </Stack>
-          </Card>
+          focusedClassId ? (
+            <Text c="dimmed">Bu derse ait aktif kayıt bulunamadı.</Text>
+          ) : (
+            <Card withBorder p="xl">
+              <Stack align="center" gap="md">
+                <Text c="dimmed" ta="center" size="lg" fw={500}>
+                  Henüz ders kaydı bulunmuyor
+                </Text>
+                <Text c="dimmed" ta="center" size="sm">
+                  Üyeyi derslerinize kaydetmek için aşağıdaki butona tıklayın
+                </Text>
+                <Button
+                  leftSection={<IconPlus size={16} />}
+                  onClick={handleAddClassClick}
+                  size="md"
+                >
+                  İlk Dersi Ekle
+                </Button>
+              </Stack>
+            </Card>
+          )
         ) : (
           <Stack gap="md">
             {computedEnrollments.map((enrollment) => {
-              // Find active freeze log for this enrollment
-              const activeLog = member.frozen_logs?.find(
-                (log) => log.member_class_id === enrollment.id && !log.end_date
-              );
+              // Logic for Focused View: Show full card
+              if (focusedClassId) {
+                const activeLog = member.frozen_logs?.find(
+                  (log) =>
+                    log.member_class_id === enrollment.id && !log.end_date
+                );
+                const enrollmentFrozenLogs =
+                  member.frozen_logs?.filter(
+                    (log) => log.member_class_id === enrollment.id
+                  ) || [];
 
+                return (
+                  <EnrollmentCard
+                    key={enrollment.id}
+                    enrollment={enrollment}
+                    effectiveDate={effectiveDate}
+                    activeFreezeLog={activeLog}
+                    pastFrozenLogs={enrollmentFrozenLogs}
+                    onPay={() => handlePayClick(enrollment)}
+                    onDrop={() => handleDropClick(enrollment)}
+                    onFreeze={() => handleFreezeClick(enrollment)}
+                    onUnfreeze={() => {
+                      if (activeLog) handleUnfreezeLog(activeLog.id);
+                    }}
+                    onViewSchedule={() => handleViewSchedule(enrollment)}
+                    onEditPrice={() => handleEditPriceClick(enrollment)}
+                  />
+                );
+              }
+
+              // Logic for General View: Show simplified Summary Card
               return (
-                <EnrollmentCard
-                  key={enrollment.id}
-                  enrollment={enrollment}
-                  effectiveDate={effectiveDate}
-                  activeFreezeLog={activeLog}
-                  onPay={() => handlePayClick(enrollment)}
-                  onDrop={() => handleDropClick(enrollment)}
-                  onFreeze={() => handleFreezeClick(enrollment)}
-                  onUnfreeze={() => {
-                    if (activeLog) handleUnfreezeLog(activeLog.id);
-                  }}
-                  onViewSchedule={() => handleViewSchedule(enrollment)}
-                  onEditPrice={() => handleEditPriceClick(enrollment)}
-                />
+                <Card key={enrollment.id} withBorder padding="md" radius="md">
+                  <Group justify="space-between">
+                    <Group>
+                      <ThemeIcon size="lg" variant="light" color="blue">
+                        <IconCreditCard size={20} />
+                      </ThemeIcon>
+                      <div>
+                        <Text fw={600} size="lg">
+                          {enrollment.classes?.name}
+                        </Text>
+                        <Group gap="xs">
+                          <Badge
+                            size="sm"
+                            variant="dot"
+                            color={enrollment.active ? 'green' : 'gray'}
+                          >
+                            {enrollment.active ? 'Aktif' : 'Pasif'}
+                          </Badge>
+                          <Text size="sm" c="dimmed">
+                            Kayıt: {formatDate(enrollment.created_at)}
+                          </Text>
+                        </Group>
+                      </div>
+                    </Group>
+                    <Button
+                      variant="light"
+                      rightSection={<IconArrowRight size={16} />}
+                      onClick={() =>
+                        router.push(
+                          `/classes/${enrollment.class_id}/enrollments/${memberId}`
+                        )
+                      }
+                    >
+                      Yönet & Detay
+                    </Button>
+                  </Group>
+                </Card>
               );
             })}
           </Stack>
         )}
 
-        {/* History Tabs */}
-        <Card withBorder radius="md" mt="lg">
-          <Tabs defaultValue="history">
-            <Tabs.List>
-              <Tabs.Tab value="history" leftSection={<IconHistory size={16} />}>
-                Ödeme Geçmişi
-              </Tabs.Tab>
-            </Tabs.List>
+        {/* History Tabs - Only show in Focused Mode */}
+        {focusedClassId && (
+          <Card withBorder radius="md" mt="lg">
+            <Tabs defaultValue="history">
+              <Tabs.List>
+                <Tabs.Tab
+                  value="history"
+                  leftSection={<IconHistory size={16} />}
+                >
+                  Ödeme Geçmişi
+                </Tabs.Tab>
+              </Tabs.List>
 
-            <Tabs.Panel value="history" pt="md">
-              <DataTable
-                data={paymentHistory}
-                columns={historyColumns}
-                pageSize={paymentPageSize}
-                emptyText="Ödeme geçmişi bulunamadı."
-                totalRecords={paymentTotalRecords}
-                page={paymentPage}
-                onPageChange={setPaymentPage}
-              />
-            </Tabs.Panel>
-          </Tabs>
-        </Card>
+              <Tabs.Panel value="history" pt="md">
+                <Stack gap="md">
+                  <Group>
+                    <Select
+                      placeholder="Tüm Dersler"
+                      value={selectedClassFilter}
+                      onChange={setSelectedClassFilter}
+                      data={[
+                        { value: '', label: 'Tüm Dersler' },
+                        ...Array.from(
+                          new Set(
+                            allPaymentHistory
+                              .filter((p) => p.class_id)
+                              .map((p) => p.class_id!.toString())
+                          )
+                        ).map((classId) => {
+                          const payment = allPaymentHistory.find(
+                            (p) => p.class_id?.toString() === classId
+                          );
+                          return {
+                            value: classId,
+                            label:
+                              payment?.snapshot_class_name ||
+                              payment?.classes?.name ||
+                              `Ders ${classId}`,
+                          };
+                        }),
+                      ]}
+                      clearable
+                      style={{ width: 250 }}
+                    />
+                    {selectedClassFilter && (
+                      <Text size="sm" c="dimmed">
+                        {filteredPaymentTotalRecords} ödeme bulundu
+                      </Text>
+                    )}
+                  </Group>
+                  <DataTable
+                    data={filteredPaymentHistory}
+                    columns={historyColumns}
+                    pageSize={paymentPageSize}
+                    emptyText="Ödeme geçmişi bulunamadı."
+                    totalRecords={filteredPaymentTotalRecords}
+                    page={paymentPage}
+                    onPageChange={setPaymentPage}
+                  />
+                </Stack>
+              </Tabs.Panel>
+            </Tabs>
+          </Card>
+        )}
       </Stack>
       {/* Modals */}
       {/* Drop / Termination Modal */}
@@ -832,6 +936,8 @@ export function MemberDetailView({
         member={member}
         initialSelectedEnrollmentId={freezeModal.enrollment?.id}
         onSuccess={fetchData}
+        effectiveDate={effectiveDate}
+        allPayments={allPaymentHistory}
       />
       {payModal.enrollment && (
         <PaymentConfirmModal

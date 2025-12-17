@@ -16,13 +16,18 @@ import {
   LoadingOverlay,
   Checkbox,
   ScrollArea,
+  Alert,
+  Badge,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
-import { IconSnowflake } from '@tabler/icons-react';
+import { IconSnowflake, IconAlertCircle, IconCurrencyLira } from '@tabler/icons-react';
 import { freezeMembership } from '@/actions/freeze';
 import { showSuccess, showError } from '@/utils/notifications';
-import type { Member, MemberWithClasses } from '@/types';
+import { formatCurrency } from '@/utils/formatters';
+import { formatDate } from '@/utils/date-helpers';
+import type { Member, MemberWithClasses, PaymentWithClass } from '@/types';
+import dayjs from 'dayjs';
 
 interface FreezeMemberDrawerProps {
   opened: boolean;
@@ -30,6 +35,8 @@ interface FreezeMemberDrawerProps {
   member: Member | MemberWithClasses | null;
   onSuccess?: () => void;
   initialSelectedEnrollmentId?: number | null;
+  effectiveDate?: string;
+  allPayments?: PaymentWithClass[];
 }
 
 export function FreezeMemberDrawer({
@@ -38,6 +45,8 @@ export function FreezeMemberDrawer({
   member,
   onSuccess,
   initialSelectedEnrollmentId,
+  effectiveDate,
+  allPayments = [],
 }: FreezeMemberDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [isIndefinite, setIsIndefinite] = useState(false);
@@ -49,6 +58,50 @@ export function FreezeMemberDrawer({
     memberWithClasses?.member_classes?.filter((mc) => mc.active) || [];
 
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+
+  // Calculate prepaid balance for an enrollment
+  const calculatePrepaidBalance = (enrollmentId: number) => {
+    const enrollment = activeClasses.find((mc) => mc.id === enrollmentId);
+    if (!enrollment) return null;
+
+    // Get all payments for this enrollment
+    const enrollmentPayments = allPayments.filter(
+      (p) => p.member_class_id === enrollmentId
+    );
+
+    if (enrollmentPayments.length === 0) return null;
+
+    // Find the latest paid period
+    const latestPayment = enrollmentPayments.reduce((latest, payment) => {
+      if (!latest) return payment;
+      return dayjs(payment.period_end || payment.period_start).isAfter(
+        dayjs(latest.period_end || latest.period_start)
+      )
+        ? payment
+        : latest;
+    }, enrollmentPayments[0]);
+
+    const latestPaidPeriodEnd = dayjs(
+      latestPayment.period_end || latestPayment.period_start
+    );
+    const today = dayjs(effectiveDate || new Date());
+
+    // If latest paid period is in the future, calculate unused months
+    if (latestPaidPeriodEnd.isAfter(today)) {
+      const unusedMonths = latestPaidPeriodEnd.diff(today, 'month', true);
+      const unusedDays = Math.floor(latestPaidPeriodEnd.diff(today, 'day'));
+
+      return {
+        hasBalance: true,
+        unusedMonths: Math.floor(unusedMonths),
+        unusedDays,
+        latestPaidPeriodEnd: latestPaidPeriodEnd.format('YYYY-MM-DD'),
+        amount: (enrollment.custom_price || 0) * Math.floor(unusedMonths),
+      };
+    }
+
+    return null;
+  };
 
   const form = useForm({
     initialValues: {
@@ -143,14 +196,45 @@ export function FreezeMemberDrawer({
                 value={selectedClasses}
                 onChange={setSelectedClasses}
               >
-                <Stack gap="xs">
-                  {activeClasses.map((mc) => (
-                    <Checkbox
-                      key={mc.id}
-                      value={String(mc.id)}
-                      label={`${mc.classes?.name || 'Ders'} (${mc.payment_interval ? mc.payment_interval + ' Ay' : 'Aylık'})`}
-                    />
-                  ))}
+                <Stack gap="sm">
+                  {activeClasses.map((mc) => {
+                    const prepaidBalance = calculatePrepaidBalance(mc.id);
+
+                    return (
+                      <div key={mc.id}>
+                        <Checkbox
+                          value={String(mc.id)}
+                          label={`${mc.classes?.name || 'Ders'} (${mc.payment_interval ? mc.payment_interval + ' Ay' : 'Aylık'})`}
+                        />
+                        {prepaidBalance && prepaidBalance.hasBalance && (
+                          <Alert
+                            icon={<IconAlertCircle size={16} />}
+                            color="orange"
+                            variant="light"
+                            mt="xs"
+                            ml={28}
+                          >
+                            <Stack gap={4}>
+                              <Group gap="xs">
+                                <IconCurrencyLira size={14} />
+                                <Text size="xs" fw={500}>
+                                  Ön Ödeme Var: {formatCurrency(prepaidBalance.amount)}
+                                </Text>
+                              </Group>
+                              <Text size="xs" c="dimmed">
+                                {prepaidBalance.unusedMonths > 0 && `${prepaidBalance.unusedMonths} ay `}
+                                {prepaidBalance.unusedDays > 0 && `${prepaidBalance.unusedDays} gün`}
+                                {' '}kullanılmamış ödeme var
+                              </Text>
+                              <Text size="xs" c="dimmed">
+                                Son ödenen dönem: {formatDate(prepaidBalance.latestPaidPeriodEnd)}
+                              </Text>
+                            </Stack>
+                          </Alert>
+                        )}
+                      </div>
+                    );
+                  })}
                 </Stack>
               </Checkbox.Group>
             </Stack>
