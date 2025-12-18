@@ -24,7 +24,7 @@ export function PaymentsTable() {
 
   // Pagination State
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
 
   // Sorting State
@@ -66,6 +66,7 @@ export function PaymentsTable() {
         setTotalRecords(response.data.meta.total);
       }
     } catch (error) {
+      console.error(error);
       showError('Ödemeler yüklenirken hata oluştu');
     } finally {
       setLoading(false);

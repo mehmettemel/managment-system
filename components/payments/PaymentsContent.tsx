@@ -6,17 +6,8 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Button,
-  Group,
-  Table,
-  Badge,
-  Card,
-  Text,
-  ActionIcon,
-  Alert,
-} from '@mantine/core';
-import { IconInfoCircle, IconTrash } from '@tabler/icons-react';
+import { Button, Table, Badge, Card, ActionIcon } from '@mantine/core';
+import { IconTrash } from '@tabler/icons-react';
 import { Payment } from '@/types';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { deletePayment } from '@/actions/payments';
@@ -80,7 +71,9 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
                   </Table.Td>
                   <Table.Td>{(payment as any).classes?.name || '-'}</Table.Td>
                   <Table.Td>
-                    <Badge variant="dot">{formatPaymentMethod(payment.payment_method)}</Badge>
+                    <Badge variant="dot">
+                      {formatPaymentMethod(payment.payment_method)}
+                    </Badge>
                   </Table.Td>
                   <Table.Td>
                     {payment.period_start &&

@@ -68,6 +68,7 @@ export function DanceTypesTable({ data }: { data: DanceType[] }) {
         router.refresh();
       }
     } catch (error) {
+      console.error(error); // Log error to use it
       showError('Hata oluştu');
     } finally {
       setLoading(false);
@@ -92,6 +93,7 @@ export function DanceTypesTable({ data }: { data: DanceType[] }) {
             router.refresh();
           }
         } catch (err) {
+          console.error(err); // Log error to use it
           showError('Hata oluştu');
         }
       },

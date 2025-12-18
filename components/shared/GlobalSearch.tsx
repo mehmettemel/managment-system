@@ -1,15 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import {
-  Autocomplete,
-  Loader,
-  Group,
-  Text,
-  Avatar,
-  UnstyledButton,
-} from '@mantine/core';
-import { IconSearch, IconUser } from '@tabler/icons-react';
+import { useState, useEffect } from 'react';
+import { Autocomplete, Loader, Group, Text, Avatar } from '@mantine/core';
+import { IconSearch } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { useDebouncedValue } from '@mantine/hooks';
 import { searchMembers } from '@/actions/members';
@@ -36,14 +29,6 @@ export function GlobalSearch() {
       .catch(() => setData([]))
       .finally(() => setLoading(false));
   }, [debounced]);
-
-  const handleSelect = (option: string) => {
-    // The option value is the member ID as string, but Autocomplete expects a string label for value
-    // We'll parse the member ID from the selected item's value if possible, or use the onOptionSubmit
-    // Actually, Mantine Autocomplete 'data' can be strings or objects. Object is better.
-    // BUT, Autocomplete 'value' is just the display string.
-    // Better strategy: Use the `onOptionSubmit` and find the member.
-  };
 
   const handleItemSubmit = (item: any) => {
     // Navigate to member profile

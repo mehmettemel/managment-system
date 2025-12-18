@@ -32,7 +32,7 @@ export const MaskedPhoneInput = forwardRef<
       {...props}
       // IMask specific props
       inputRef={ref} // Pass ref to the input element
-      onAccept={(value: string, mask: any) => {
+      onAccept={() => {
         // If we need to handle raw value, we can use mask.unmaskedValue
         // But usually onChange passed from Mantine form handles the masked value
         if (props.onChange) {

@@ -16,9 +16,7 @@ import {
   Pagination,
   Paper,
   Stack,
-  Select,
   Badge,
-  rem,
   Box,
   ScrollArea,
 } from '@mantine/core';

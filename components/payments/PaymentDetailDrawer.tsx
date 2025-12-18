@@ -16,7 +16,6 @@ import {
   IconX,
   IconCreditCard,
   IconCalendar,
-  IconCurrencyLira,
   IconNote,
   IconTrash,
 } from '@tabler/icons-react';
