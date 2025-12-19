@@ -267,7 +267,7 @@ export async function updateMember(
   try {
     const supabase = await createClient();
 
-    const sanitizedUpdates = sanitizeInput(updates);
+    const sanitizedUpdates = sanitizeInput(updates as any) as MemberUpdate;
 
     const { data, error } = await supabase
       .from('members')
@@ -530,6 +530,23 @@ export async function addMemberToClasses(
       return successResponse(true);
     }
 
+    // Check if all classes are active
+    const classIds = classRegistrations.map(reg => reg.class_id);
+    const { data: classes, error: classError } = await supabase
+      .from('classes')
+      .select('id, name, active')
+      .in('id', classIds);
+
+    if (classError) {
+      return errorResponse('Dersler kontrol edilirken hata oluştu');
+    }
+
+    const inactiveClasses = classes?.filter(c => !c.active) || [];
+    if (inactiveClasses.length > 0) {
+      const inactiveNames = inactiveClasses.map(c => c.name).join(', ');
+      return errorResponse(`Pasif derslere kayıt yapılamaz: ${inactiveNames}`);
+    }
+
     const memberClasses = classRegistrations.map((reg) => {
       // Initialize next_payment_date to TODAY (start of period).
       // It will advance as payments are made.
@@ -548,23 +565,29 @@ export async function addMemberToClasses(
       };
     });
 
-    const { error } = await supabase
+    const { data: insertedClasses, error } = await supabase
       .from('member_classes')
-      .insert(memberClasses);
+      .insert(memberClasses)
+      .select('id, class_id, classes(name)');
 
     if (error) {
       logError('addMemberToClasses', error);
       return errorResponse(handleSupabaseError(error));
     }
 
-    // Log
-    await addMemberLog(supabase, {
-      member_id: memberId,
-      action_type: 'enrollment',
-      description: `${classRegistrations.length} yeni derse kayıt eklendi.`,
-      date: today,
-      metadata: { class_count: classRegistrations.length },
-    });
+    // Log each enrollment separately with member_class_id
+    if (insertedClasses) {
+      for (const inserted of insertedClasses) {
+        await addMemberLog(supabase, {
+          member_id: memberId,
+          member_class_id: inserted.id,
+          action_type: 'enrollment',
+          description: `${(inserted as any).classes?.name || 'Ders'} kaydı eklendi.`,
+          date: today,
+          metadata: { class_id: inserted.class_id },
+        });
+      }
+    }
 
     revalidatePath(`/members/${memberId}`);
     revalidatePath('/members');
@@ -762,15 +785,21 @@ export async function terminateEnrollment(
       options;
     const termDateStr = dayjs(terminationDate).format('YYYY-MM-DD');
 
-    // Get member_id for revalidation
+    // Get enrollment with class info for validation
     const { data: enrollment } = await supabase
       .from('member_classes')
-      .select('member_id, class_id')
+      .select('member_id, class_id, classes(id, name, active)')
       .eq('id', id)
       .single();
 
     if (!enrollment) {
-      return errorResponse('Enrollment not found');
+      return errorResponse('Kayıt bulunamadı');
+    }
+
+    // Check if class is active
+    const classData = enrollment.classes as any;
+    if (!classData || !classData.active) {
+      return errorResponse('Pasif veya arşivlenmiş bir dersten öğrenci çıkarılamaz');
     }
 
     // 1. Deactivate enrollment
@@ -831,22 +860,15 @@ export async function terminateEnrollment(
       refundAmount &&
       refundAmount > 0
     ) {
-      // Record refund.
-      // Ideally insert a negative payment? or a 'refund' type payment?
-      // Let's insert a record with negative amount to represent refund?
-      // Or just log it.
-      // User said "Tutar kasadan düşer".
-      // Let's insert a payment record with negative amount for tracking.
-      await supabase.from('payments').insert({
+      // Record refund as an expense (money going out)
+      await supabase.from('expenses').insert({
+        amount: refundAmount,
+        category: 'Para İadesi',
+        description: `Ders İptali - Para İadesi (${enrollment.member_id ? `Üye: ${enrollment.member_id}` : 'Üye'})`,
+        date: termDateStr,
         member_id: enrollment.member_id,
-        class_id: enrollment.class_id,
         member_class_id: id,
-        amount: -refundAmount,
-        payment_date: termDateStr,
-        payment_method: 'cash', // Default to cash refund?
-        description: 'Ders İptali - Para İadesi',
-        payment_type: 'refund',
-      } as any);
+      });
     } else if (financialAction === 'debt' && debtAmount && debtAmount > 0) {
       // Record Debt - Logged effectively
     }

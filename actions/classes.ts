@@ -26,15 +26,16 @@ import {
 } from '@/utils/response-helpers';
 
 /**
- * Get all active classes with instructor info
+ * Get classes with optional status filter
+ * @param status - 'active', 'archived', or 'all'
  */
-export async function getClasses(): Promise<
-  ApiListResponse<ClassWithInstructor>
-> {
+export async function getClasses(
+  status?: string
+): Promise<ApiListResponse<ClassWithInstructor>> {
   try {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('classes')
       .select(
         `
@@ -42,9 +43,18 @@ export async function getClasses(): Promise<
         instructors (*)
       `
       )
-      .eq('active', true)
       .order('day_of_week')
       .order('start_time');
+
+    // Apply status filter
+    if (status === 'archived') {
+      query = query.eq('active', false);
+    } else if (!status || status === 'active') {
+      query = query.eq('active', true);
+    }
+    // 'all' - no filter
+
+    const { data, error } = await query;
 
     if (error) {
       logError('getClasses', error);
@@ -186,10 +196,174 @@ export async function updateClass(
 }
 
 /**
- * Deactivate a class
+ * Deactivate a class and all its enrollments
  */
 export async function deactivateClass(id: number): Promise<ApiResponse<Class>> {
-  return updateClass(id, { active: false });
+  try {
+    const supabase = await createClient();
+
+    // 1. Deactivate all member_classes for this class
+    const { error: enrollmentError } = await supabase
+      .from('member_classes')
+      .update({ active: false })
+      .eq('class_id', id);
+
+    if (enrollmentError) {
+      logError('deactivateClass - deactivate enrollments', enrollmentError);
+      return errorResponse(
+        'Ders kayıtları pasife alınamadı: ' +
+          handleSupabaseError(enrollmentError)
+      );
+    }
+
+    // 2. Deactivate the class itself
+    const result = await updateClass(id, { active: false });
+
+    revalidatePath('/classes');
+    revalidatePath('/members');
+    return result;
+  } catch (error) {
+    logError('deactivateClass', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Reactivate an archived class (does NOT reactivate member_classes)
+ */
+export async function unarchiveClass(id: number): Promise<ApiResponse<Class>> {
+  try {
+    const supabase = await createClient();
+
+    // Only reactivate the class, NOT member_classes
+    // User can manually re-enroll members if needed
+    const result = await updateClass(id, { active: true });
+
+    revalidatePath('/classes');
+    revalidatePath('/members');
+    return result;
+  } catch (error) {
+    logError('unarchiveClass', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Permanently delete a class (only if archived)
+ */
+export async function deleteClass(id: number): Promise<ApiResponse<boolean>> {
+  try {
+    const supabase = await createClient();
+
+    // 1. Check if class is archived
+    const { data: classData, error: fetchError } = await supabase
+      .from('classes')
+      .select('active, name')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !classData) {
+      return errorResponse('Ders bulunamadı');
+    }
+
+    if (classData.active) {
+      return errorResponse(
+        'Sadece arşivlenmiş dersler kalıcı olarak silinebilir'
+      );
+    }
+
+    // 2. Check if there are any enrollments (even inactive ones)
+    const { data: enrollments, error: enrollmentError } = await supabase
+      .from('member_classes')
+      .select('id')
+      .eq('class_id', id)
+      .limit(1);
+
+    if (enrollmentError) {
+      logError('deleteClass - check enrollments', enrollmentError);
+      return errorResponse(handleSupabaseError(enrollmentError));
+    }
+
+    if (enrollments && enrollments.length > 0) {
+      return errorResponse(
+        'Bu dersin kayıtlı üyeleri var. Önce tüm kayıtları silmeniz gerekiyor.'
+      );
+    }
+
+    // 3. Delete the class
+    const { error: deleteError } = await supabase
+      .from('classes')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      logError('deleteClass', deleteError);
+      return errorResponse(handleSupabaseError(deleteError));
+    }
+
+    revalidatePath('/classes');
+    return successResponse(true);
+  } catch (error) {
+    logError('deleteClass', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}
+
+/**
+ * Delete multiple classes (only if archived)
+ */
+export async function deleteClasses(
+  ids: number[]
+): Promise<ApiResponse<boolean>> {
+  try {
+    const supabase = await createClient();
+
+    // Check all classes are archived
+    const { data: classes, error: fetchError } = await supabase
+      .from('classes')
+      .select('id, active, name')
+      .in('id', ids);
+
+    if (fetchError) {
+      return errorResponse(handleSupabaseError(fetchError));
+    }
+
+    const activeClasses = classes?.filter((c) => c.active) || [];
+    if (activeClasses.length > 0) {
+      return errorResponse(
+        'Bazı dersler hala aktif. Sadece arşivlenmiş dersler silinebilir.'
+      );
+    }
+
+    // Check enrollments
+    const { data: enrollments } = await supabase
+      .from('member_classes')
+      .select('class_id')
+      .in('class_id', ids);
+
+    if (enrollments && enrollments.length > 0) {
+      return errorResponse(
+        'Seçilen derslerden bazılarının kayıtlı üyeleri var.'
+      );
+    }
+
+    // Delete all classes
+    const { error: deleteError } = await supabase
+      .from('classes')
+      .delete()
+      .in('id', ids);
+
+    if (deleteError) {
+      logError('deleteClasses', deleteError);
+      return errorResponse(handleSupabaseError(deleteError));
+    }
+
+    revalidatePath('/classes');
+    return successResponse(true);
+  } catch (error) {
+    logError('deleteClasses', error);
+    return errorResponse(handleSupabaseError(error));
+  }
 }
 
 /**
@@ -228,13 +402,13 @@ export async function getClassMembers(
   try {
     const supabase = await createClient();
 
+    // First, get all member_classes for this class
     const { data, error } = await supabase
       .from('member_classes')
       .select(
         `
         *,
         members (*),
-        frozen_logs (id, end_date),
         payments!member_class_id (payment_date)
       `
       )
@@ -246,13 +420,33 @@ export async function getClassMembers(
       return errorListResponse(handleSupabaseError(error));
     }
 
+    // Get enrollment IDs
+    const enrollmentIds = data.map((item: any) => item.id);
+
+    // Fetch active frozen logs for these enrollments
+    const { data: frozenLogs, error: frozenError } = await supabase
+      .from('frozen_logs')
+      .select('member_class_id')
+      .in('member_class_id', enrollmentIds)
+      .is('end_date', null);
+
+    if (frozenError) {
+      logError('getClassMembers - frozen_logs', frozenError);
+      // Continue without frozen logs rather than failing
+    }
+
+    // Create a set of frozen enrollment IDs for quick lookup
+    const frozenEnrollmentIds = new Set(
+      frozenLogs?.map((log: any) => log.member_class_id) || []
+    );
+
     // Flatten result to return just members with enrollment_date and status
     const members = data
       .map((item: any) => {
         if (!item.members) return null;
 
-        // Check if frozen
-        const isFrozen = item.frozen_logs?.some((log: any) => !log.end_date);
+        // Check if this specific enrollment is frozen
+        const isFrozen = frozenEnrollmentIds.has(item.id);
 
         // Calculate first/last payment dates
         const paymentDates =

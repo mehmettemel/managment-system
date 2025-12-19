@@ -11,7 +11,7 @@ import { ClassesContent } from '@/components/classes/ClassesContent';
 
 export default async function ClassesPage() {
   const [classesRes, instructorsRes, danceTypesRes] = await Promise.all([
-    getClasses(),
+    getClasses('all'), // Fetch all classes (active and archived)
     getInstructors(),
     getDanceTypes(),
   ]);

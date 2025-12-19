@@ -24,20 +24,27 @@ export function useMembers(status?: string, refreshTrigger?: number) {
         setLoading(true);
         const supabase = createClient();
 
+        // Fetch all members (except archived if not requested)
         let query: any = supabase
           .from('members')
-          .select('*, member_classes(*, classes(name))')
+          .select(
+            '*, member_classes(*, classes(name), frozen_logs(id, end_date))'
+          )
           .order('created_at', { ascending: false });
 
-        if (status && status !== 'all') {
-          query = query.eq('status', status);
+        // Only apply archived filter at DB level
+        if (status === 'archived') {
+          query = query.eq('status', 'archived');
+        } else if (status !== 'all') {
+          // For non-archived filters, exclude archived members
+          query = query.neq('status', 'archived');
         }
 
         const { data, error } = await query;
 
         if (error) throw error;
 
-        const membersData = (data as unknown as MemberWithClasses[]) || [];
+        let membersData = (data as unknown as MemberWithClasses[]) || [];
 
         // Fetch payment dates for all enrollments
         const enrollmentIds = membersData.flatMap(
@@ -62,6 +69,54 @@ export function useMembers(status?: string, refreshTrigger?: number) {
               });
             });
           }
+
+          // Fetch active frozen logs for all enrollments
+          const { data: frozenLogs } = await supabase
+            .from('frozen_logs')
+            .select('member_class_id')
+            .in('member_class_id', enrollmentIds)
+            .is('end_date', null);
+
+          const frozenEnrollmentIds = new Set(
+            frozenLogs?.map((log: any) => log.member_class_id) || []
+          );
+
+          // Compute dynamic status for each member based on their enrollments
+          membersData = membersData.map((member) => {
+            // Skip computation for archived members
+            if (member.status === 'archived') {
+              return { ...member, computed_status: 'archived' };
+            }
+
+            const activeEnrollments =
+              member.member_classes?.filter((mc) => mc.active) || [];
+
+            if (activeEnrollments.length === 0) {
+              // No active enrollments, keep original status
+              return { ...member, computed_status: member.status };
+            }
+
+            // Check how many active enrollments are frozen
+            const frozenActiveEnrollments = activeEnrollments.filter((mc) =>
+              frozenEnrollmentIds.has(mc.id)
+            );
+
+            // If ALL active enrollments are frozen, member is frozen
+            // If at least one active enrollment is not frozen, member is active
+            const computedStatus =
+              frozenActiveEnrollments.length === activeEnrollments.length
+                ? 'frozen'
+                : 'active';
+
+            return { ...member, computed_status: computedStatus };
+          });
+        }
+
+        // Apply status filter based on computed status
+        if (status && status !== 'all' && status !== 'archived') {
+          membersData = membersData.filter(
+            (m: any) => m.computed_status === status
+          );
         }
 
         setMembers(membersData);

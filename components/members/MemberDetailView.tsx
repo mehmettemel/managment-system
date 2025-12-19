@@ -82,15 +82,16 @@ export function MemberDetailView({
     try {
       const [memberRes, classesRes, logsRes] = await Promise.all([
         getMemberById(memberId),
-        getClasses(),
+        getClasses('all'), // Fetch all classes including archived
         getMemberLogs(memberId),
       ]);
 
       if (memberRes.data) {
         setMember(memberRes.data);
-        // Filter for active enrollments
+        // Show all enrollments where class still exists (not permanently deleted)
+        // This includes both active and archived classes
         const enrollments = (memberRes.data.member_classes.filter(
-          (mc: any) => mc.active
+          (mc: any) => mc.classes !== null
         ) || []) as any;
         setActiveEnrollments(enrollments);
       }
@@ -115,12 +116,14 @@ export function MemberDetailView({
   }, [fetchData]);
 
   const handleAddClassClick = () => {
-    // Filter out already enrolled classes
+    // Filter out already enrolled classes AND archived classes
     const enrolledClassIds = new Set(activeEnrollments.map((e) => e.class_id));
-    const available = allClasses.filter((c) => !enrolledClassIds.has(c.id));
+    const available = allClasses.filter(
+      (c) => !enrolledClassIds.has(c.id) && c.active // Only show active classes
+    );
 
     if (available.length === 0) {
-      showError('Tüm derslere kayıtlısınız');
+      showError('Tüm aktif derslere kayıtlısınız');
       return;
     }
 
@@ -226,7 +229,9 @@ export function MemberDetailView({
                 )}
                 <Group gap={4}>
                   <IconCalendar size={16} style={{ opacity: 0.7 }} />
-                  <Text size="sm">Kayıt: {formatDate(member.join_date)}</Text>
+                  <Text size="sm">
+                    Oluşturulma tarihi: {formatDate(member.join_date)}
+                  </Text>
                 </Group>
               </Group>
             </div>
@@ -288,6 +293,20 @@ export function MemberDetailView({
                         log.member_class_id === enrollment.id && !log.end_date
                     );
 
+                    // Determine status
+                    const isEnrollmentActive = enrollment.active;
+                    const isClassActive = enrollment.classes?.active;
+                    const isClassArchived = !isClassActive;
+
+                    let statusBadge;
+                    if (!isEnrollmentActive || isClassArchived) {
+                      statusBadge = <Badge color="gray">Pasif</Badge>;
+                    } else if (activeLog) {
+                      statusBadge = <Badge color="cyan">Donduruldu</Badge>;
+                    } else {
+                      statusBadge = <Badge color="green">Aktif</Badge>;
+                    }
+
                     return (
                       <Card
                         key={enrollment.id}
@@ -304,7 +323,7 @@ export function MemberDetailView({
                               size={40}
                               radius="md"
                               variant="light"
-                              color="blue"
+                              color={isEnrollmentActive && isClassActive ? "blue" : "gray"}
                             >
                               <IconCreditCard size={20} />
                             </ThemeIcon>
@@ -318,11 +337,7 @@ export function MemberDetailView({
                               </Text>
                             </div>
                           </Group>
-                          {activeLog ? (
-                            <Badge color="cyan">Donduruldu</Badge>
-                          ) : (
-                            <Badge color="green">Aktif</Badge>
-                          )}
+                          {statusBadge}
                         </Group>
 
                         <Group mt="lg" justify="space-between" align="flex-end">

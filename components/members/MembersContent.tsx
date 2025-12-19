@@ -76,25 +76,10 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
     router.replace(`${pathname}?${params.toString()}`);
   };
 
-  // ... existing code ...
-
-  // Replace SegmentedControl onChange
-  <SegmentedControl
-    value={statusFilter}
-    onChange={handleTabChange}
-    data={[
-      { label: 'Aktif', value: 'active' },
-      { label: 'Dondurulmuş', value: 'frozen' },
-      { label: 'Arşiv', value: 'archived' },
-      { label: 'Tümü', value: 'all' },
-    ]}
-  />;
   const [drawerOpened, setDrawerOpened] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedRows, setSelectedRows] = useState<MemberWithClasses[]>([]);
-
-  // ... existing handlers ...
 
   const handleDelete = (member: Member, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -230,10 +215,16 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
       label: 'Ad Soyad',
       sortable: true,
       searchable: true,
-      render: (member) => {
-        // Check if any active enrollment has overdue payment
-        const hasOverdue = member.member_classes?.some((mc) => {
+      render: (member: any) => {
+        // Check if any active and non-frozen enrollment has overdue payment
+        const hasOverdue = member.member_classes?.some((mc: any) => {
           if (!mc.active || !mc.next_payment_date) return false;
+
+          // Don't show overdue for frozen enrollments
+          // Note: frozen_logs should be populated by the hook
+          const isFrozen = mc.frozen_logs?.some((log: any) => !log.end_date);
+          if (isFrozen) return false;
+
           // Check if next payment date is before today
           const nextPayment = dayjs(mc.next_payment_date).startOf('day');
           const today = dayjs(effectiveDate).startOf('day');
@@ -262,7 +253,7 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
     },
     {
       key: 'join_date',
-      label: 'Kayıt Tarihi',
+      label: 'Oluşturulma Tarihi',
       sortable: true,
       render: (member) => formatDate(member.join_date),
     },
@@ -272,52 +263,45 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
       render: (member) => {
         const activeClasses =
           member.member_classes?.filter((mc) => mc.active) || [];
-        return (
-          <Stack gap={4}>
-            {activeClasses.map((mc) => (
-              <Group key={mc.id} gap={8} wrap="nowrap">
-                <Text size="xs" fw={600} style={{ minWidth: 80 }}>
-                  {mc.classes?.name || '-'}
-                </Text>
-              </Group>
-            ))}
-            {activeClasses.length === 0 && (
-              <Text size="xs" c="dimmed">
-                -
+
+        if (activeClasses.length === 0) {
+          return (
+            <Text size="sm" c="dimmed">
+              -
+            </Text>
+          );
+        }
+
+        const classNames = activeClasses
+          .map((mc) => mc.classes?.name || '-')
+          .join(', ');
+
+        // If there are more than 2 classes or the text is too long, use tooltip
+        if (activeClasses.length > 2 || classNames.length > 40) {
+          const fullList = activeClasses
+            .map((mc) => mc.classes?.name || '-')
+            .join(', ');
+
+          return (
+            <Tooltip label={fullList} withArrow multiline w={300}>
+              <Text size="sm" style={{ cursor: 'help' }}>
+                {activeClasses.length} ders
               </Text>
-            )}
-          </Stack>
-        );
-      },
-    },
-    {
-      key: 'enrollment_date',
-      label: 'Derse Kayıt',
-      render: (member) => {
-        const activeClasses =
-          member.member_classes?.filter((mc) => mc.active) || [];
-        return (
-          <Stack gap={4}>
-            {activeClasses.map((mc) => (
-              <Text size="xs" key={mc.id}>
-                {mc.created_at ? formatDate(mc.created_at) : '-'}
-              </Text>
-            ))}
-            {activeClasses.length === 0 && (
-              <Text size="xs" c="dimmed">
-                -
-              </Text>
-            )}
-          </Stack>
-        );
+            </Tooltip>
+          );
+        }
+
+        return <Text size="sm">{classNames}</Text>;
       },
     },
 
     {
       key: 'status',
       label: 'Durum',
-      render: (member) => (
-        <StatusBadge status={member.status as MemberStatus} />
+      render: (member: any) => (
+        <StatusBadge
+          status={(member.computed_status || member.status) as MemberStatus}
+        />
       ),
     },
     {
@@ -427,11 +411,9 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
           emptyText={
             statusFilter === 'archived'
               ? 'Arşivlenmiş üye bulunmamaktadır.'
-              : statusFilter === 'frozen'
-                ? 'Dondurulmuş statüde üye bulunmamaktadır.'
-                : statusFilter === 'active'
-                  ? 'Aktif üye bulunmamaktadır.'
-                  : 'Üye bulunamadı.'
+              : statusFilter === 'active'
+                ? 'Aktif üye bulunmamaktadır.'
+                : 'Üye bulunamadı.'
           }
           pageSize={10}
           onRowClick={(member) => handleViewDetail(member)}
@@ -441,7 +423,6 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
               onChange={handleTabChange}
               data={[
                 { label: 'Aktif', value: 'active' },
-                { label: 'Dondurulmuş', value: 'frozen' },
                 { label: 'Arşiv', value: 'archived' },
                 { label: 'Tümü', value: 'all' },
               ]}

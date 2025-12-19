@@ -29,13 +29,18 @@ import {
   IconCreditCard,
   IconUser,
   IconClock,
+  IconInfoCircle,
 } from '@tabler/icons-react';
 import {
   getMemberById,
   updateMemberClassDetails,
   terminateEnrollment,
 } from '@/actions/members';
-import { getMemberPayments, processClassPayment } from '@/actions/payments';
+import {
+  getMemberPayments,
+  getEnrollmentPayments,
+  processClassPayment,
+} from '@/actions/payments';
 import { getClassById } from '@/actions/classes';
 import { unfreezeLog } from '@/actions/freeze';
 import { TerminationModal } from '../members/TerminationModal';
@@ -130,7 +135,7 @@ export function EnrollmentDetailView({
         await Promise.all([
           getMemberById(memberId),
           getClassById(classId),
-          getMemberPayments(memberId, paymentPage, paymentPageSize),
+          getEnrollmentPayments(enrollmentId, paymentPage, paymentPageSize),
           getMemberPayments(memberId, 1, 9999),
         ]);
 
@@ -147,12 +152,9 @@ export function EnrollmentDetailView({
       }
 
       if (paginatedPaymentsRes.data) {
-        // Filter only this class payments
-        const classPayments = paginatedPaymentsRes.data.data.filter(
-          (p: PaymentWithClass) => p.member_class_id === enrollmentId
-        );
-        setPaymentHistory(classPayments);
-        setPaymentTotalRecords(classPayments.length);
+        // Payments are already filtered by enrollment_id in getEnrollmentPayments
+        setPaymentHistory(paginatedPaymentsRes.data.data);
+        setPaymentTotalRecords(paginatedPaymentsRes.data.meta.total);
       }
 
       if (allPaymentsRes.data) {
@@ -227,7 +229,17 @@ export function EnrollmentDetailView({
     });
   };
 
-  const getComputedNextDate = (enrollment: MemberClassWithDetails): string => {
+  const getComputedNextDate = (
+    enrollment: MemberClassWithDetails
+  ): string | null => {
+    // If currently frozen, don't compute next payment date
+    const activeLog = member?.frozen_logs?.find(
+      (log) => log.member_class_id === enrollment.id && !log.end_date
+    );
+    if (activeLog) {
+      return null; // Frozen, no next payment date
+    }
+
     const classPayments = allPaymentHistory.filter((p) => {
       if (p.member_class_id) {
         return p.member_class_id === enrollment.id;
@@ -308,6 +320,10 @@ export function EnrollmentDetailView({
 
   const handlePayClick = (enrollment: MemberClassWithDetails) => {
     const computedDate = getComputedNextDate(enrollment);
+    if (!computedDate) {
+      showError('Dondurulmuş derslerde ödeme alınamaz');
+      return;
+    }
     setPayModal({
       open: true,
       enrollment: { ...enrollment, next_payment_date: computedDate },
@@ -516,22 +532,36 @@ export function EnrollmentDetailView({
           </div>
         </Group>
 
-        {/* Overdue Alert */}
-        {isOverdue && computedEnrollment.overdueMonthsCount > 0 && (
+        {/* Frozen Alert */}
+        {activeLog && (
           <Alert
-            icon={<IconAlertCircle size={16} />}
-            title="Gecikmiş Ödemeler"
-            color="red"
-            variant="filled"
+            icon={<IconInfoCircle size={16} />}
+            title="Üyelik Dondurulmuş"
+            color="blue"
+            variant="light"
           >
-            <Text size="sm" c="white">
-              Bu derste{' '}
-              <strong>{computedEnrollment.overdueMonthsCount} aylık</strong>{' '}
-              gecikmiş ödeme var. İlk gecikme:{' '}
-              {formatDate(computedEnrollment.next_payment_date!)}
-            </Text>
+            Bu üyelik şu anda dondurulmuş durumdadır.
           </Alert>
         )}
+
+        {/* Overdue Alert */}
+        {isOverdue &&
+          computedEnrollment.overdueMonthsCount > 0 &&
+          computedEnrollment.next_payment_date && (
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Gecikmiş Ödemeler"
+              color="red"
+              variant="filled"
+            >
+              <Text size="sm" c="white">
+                Bu derste{' '}
+                <strong>{computedEnrollment.overdueMonthsCount} aylık</strong>{' '}
+                gecikmiş ödeme var. İlk gecikme:{' '}
+                {formatDate(computedEnrollment.next_payment_date)}
+              </Text>
+            </Alert>
+          )}
 
         {/* Main Enrollment Card */}
         <Card withBorder padding="lg" radius="md">
@@ -571,18 +601,17 @@ export function EnrollmentDetailView({
               </Group>
 
               <Group gap="xs">
-                {computedEnrollment.active ? (
+                {activeLog ? (
+                  <Badge color="blue" size="lg" variant="filled">
+                    DONDURULMUŞ
+                  </Badge>
+                ) : computedEnrollment.active ? (
                   <Badge color="green" size="lg" variant="light">
                     AKTİF
                   </Badge>
                 ) : (
                   <Badge color="gray" size="lg" variant="light">
                     PASİF
-                  </Badge>
-                )}
-                {activeLog && (
-                  <Badge color="blue" size="lg" variant="filled">
-                    DONDURULMUŞ
                   </Badge>
                 )}
               </Group>
@@ -620,19 +649,32 @@ export function EnrollmentDetailView({
                 <Text size="xs" c="dimmed" fw={700} tt="uppercase" mb={4}>
                   Sonraki Ödeme
                 </Text>
-                <Text
-                  fw={700}
-                  size="md"
-                  c={isOverdue ? 'red' : activeLog ? 'dimmed' : 'green'}
-                >
-                  {computedEnrollment.next_payment_date
-                    ? formatDate(computedEnrollment.next_payment_date)
-                    : '-'}
-                </Text>
-                {isOverdue && (
-                  <Badge size="xs" color="red" variant="filled" mt={4}>
-                    GECİKMİŞ
-                  </Badge>
+                {activeLog ? (
+                  <>
+                    <Text fw={700} size="md" c="blue">
+                      Donduruldu
+                    </Text>
+                    <Badge size="xs" color="blue" variant="light" mt={4}>
+                      DONDURULMUŞ
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <Text
+                      fw={700}
+                      size="md"
+                      c={isOverdue ? 'red' : 'green'}
+                    >
+                      {computedEnrollment.next_payment_date
+                        ? formatDate(computedEnrollment.next_payment_date)
+                        : '-'}
+                    </Text>
+                    {isOverdue && (
+                      <Badge size="xs" color="red" variant="filled" mt={4}>
+                        GECİKMİŞ
+                      </Badge>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -661,7 +703,14 @@ export function EnrollmentDetailView({
                   color="green"
                   size="md"
                   onClick={() => handlePayClick(computedEnrollment)}
-                  disabled={!!activeLog}
+                  disabled={!!activeLog || !classData?.active}
+                  title={
+                    !classData?.active
+                      ? 'Pasif derslerde ödeme alınamaz'
+                      : activeLog
+                      ? 'Dondurulmuş derslerde ödeme alınamaz'
+                      : undefined
+                  }
                 >
                   Ödeme Al
                 </Button>
@@ -671,6 +720,12 @@ export function EnrollmentDetailView({
                   color="blue"
                   size="md"
                   onClick={() => handleViewSchedule(computedEnrollment)}
+                  disabled={!!activeLog}
+                  title={
+                    activeLog
+                      ? 'Dondurulmuş derslerde ödeme planı gösterilemez'
+                      : undefined
+                  }
                 >
                   Ödeme Planı
                 </Button>
@@ -692,6 +747,8 @@ export function EnrollmentDetailView({
                     color="green"
                     size="md"
                     onClick={() => handleUnfreezeLog(activeLog.id)}
+                    disabled={!classData?.active}
+                    title={!classData?.active ? 'Pasif derslerde işlem yapılamaz' : undefined}
                   >
                     Dondurma Kaldır
                   </Button>
@@ -701,6 +758,8 @@ export function EnrollmentDetailView({
                     color="blue"
                     size="md"
                     onClick={() => handleFreezeClick(computedEnrollment)}
+                    disabled={!classData?.active}
+                    title={!classData?.active ? 'Pasif derslerde dondurma yapılamaz' : undefined}
                   >
                     Dondur
                   </Button>
@@ -711,8 +770,9 @@ export function EnrollmentDetailView({
                   color="red"
                   size="md"
                   onClick={() => handleDropClick(computedEnrollment)}
+                  disabled={!classData?.active}
                 >
-                  Dersten Çıkar
+                  {!classData?.active ? 'Pasif Ders' : 'Dersten Çıkar'}
                 </Button>
               </Group>
             </Group>

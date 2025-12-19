@@ -42,6 +42,9 @@ interface DataTableProps<T> {
   onRowClick?: (item: T) => void;
   onSelectionChange?: (selectedItems: T[]) => void;
   enableSelection?: boolean;
+  // New: Support for controlled selection with IDs
+  selectable?: boolean;
+  selectedRows?: number[];
   pageSize?: number;
   loading?: boolean;
   emptyText?: string;
@@ -65,6 +68,8 @@ export function DataTable<T extends Record<string, any>>({
   onRowClick,
   onSelectionChange,
   enableSelection = false,
+  selectable = false,
+  selectedRows: controlledSelectedRows,
   pageSize = 10,
   loading = false,
   emptyText = 'Kayıt bulunamadı',
@@ -82,8 +87,17 @@ export function DataTable<T extends Record<string, any>>({
   const [internalSortOrder, setInternalSortOrder] = useState<'asc' | 'desc'>(
     'asc'
   );
-  const [selectedRows, setSelectedRows] = useState<Set<any>>(new Set());
+  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<any>>(new Set());
   const [internalPage, setInternalPage] = useState(1);
+
+  // Use controlled or internal selection
+  const isSelectionEnabled = enableSelection || selectable;
+  const selectedRowsSet = useMemo(() => {
+    if (controlledSelectedRows) {
+      return new Set(controlledSelectedRows);
+    }
+    return internalSelectedRows;
+  }, [controlledSelectedRows, internalSelectedRows]);
 
   const currentPage = page || internalPage;
   // Use controlled sort state if provided, otherwise internal
@@ -175,54 +189,66 @@ export function DataTable<T extends Record<string, any>>({
 
   // Handle selection
   const toggleRow = (id: any) => {
-    const newSelected = new Set(selectedRows);
+    const newSelected = new Set(selectedRowsSet);
     if (newSelected.has(id)) {
       newSelected.delete(id);
     } else {
       newSelected.add(id);
     }
-    setSelectedRows(newSelected);
-    // Logic for onSelectionChange
-    if (onSelectionChange) {
-      // For server side, we might need a different strategy to get full items if they aren't all loaded.
-      // But assuming we only select from visible:
-      const selectedItems = data.filter((item) =>
-        newSelected.has(item[idField])
-      );
-      // Note: This only returns selected items FROM CURRENT PAGE if server side.
-      // For full cross-page selection state, we'd need more complex logic.
-      // For now, let's assume selection is per-page or accumulated differently.
-      // Actually, standard DataTable behavior often clears selection on page change or accumulates IDs.
-      // Let's keep it simple: strict ID match from current data.
-      onSelectionChange(selectedItems);
-    }
-  };
 
-  const toggleAll = () => {
-    if (paginatedData.every((item) => selectedRows.has(item[idField]))) {
-      // Unselect all on this page
-      const newSelected = new Set(selectedRows);
-      paginatedData.forEach((item) => newSelected.delete(item[idField]));
-      setSelectedRows(newSelected);
+    if (controlledSelectedRows) {
+      // Controlled mode - return IDs array
       if (onSelectionChange) {
-        // Re-calculate selected items list (difficult if data is partial)
-        // Sending [] might be wrong if we have other pages selected.
-        // Let's just send what we can find in 'data'.
+        onSelectionChange(Array.from(newSelected) as any);
+      }
+    } else {
+      // Uncontrolled mode - update internal state
+      setInternalSelectedRows(newSelected);
+      if (onSelectionChange) {
         const selectedItems = data.filter((item) =>
           newSelected.has(item[idField])
         );
         onSelectionChange(selectedItems);
       }
+    }
+  };
+
+  const toggleAll = () => {
+    if (paginatedData.every((item) => selectedRowsSet.has(item[idField]))) {
+      // Unselect all on this page
+      const newSelected = new Set(selectedRowsSet);
+      paginatedData.forEach((item) => newSelected.delete(item[idField]));
+
+      if (controlledSelectedRows) {
+        if (onSelectionChange) {
+          onSelectionChange(Array.from(newSelected) as any);
+        }
+      } else {
+        setInternalSelectedRows(newSelected);
+        if (onSelectionChange) {
+          const selectedItems = data.filter((item) =>
+            newSelected.has(item[idField])
+          );
+          onSelectionChange(selectedItems);
+        }
+      }
     } else {
       // Select all on this page
-      const newSelected = new Set(selectedRows);
+      const newSelected = new Set(selectedRowsSet);
       paginatedData.forEach((item) => newSelected.add(item[idField]));
-      setSelectedRows(newSelected);
-      if (onSelectionChange) {
-        const selectedItems = data.filter((item) =>
-          newSelected.has(item[idField])
-        );
-        onSelectionChange(selectedItems);
+
+      if (controlledSelectedRows) {
+        if (onSelectionChange) {
+          onSelectionChange(Array.from(newSelected) as any);
+        }
+      } else {
+        setInternalSelectedRows(newSelected);
+        if (onSelectionChange) {
+          const selectedItems = data.filter((item) =>
+            newSelected.has(item[idField])
+          );
+          onSelectionChange(selectedItems);
+        }
       }
     }
   };
@@ -261,21 +287,21 @@ export function DataTable<T extends Record<string, any>>({
           <Table horizontalSpacing="md" verticalSpacing="sm" highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                {enableSelection && (
+                {isSelectionEnabled && (
                   <Table.Th style={{ width: 40 }}>
                     <Checkbox
                       checked={
                         paginatedData.length > 0 &&
                         paginatedData.every((item) =>
-                          selectedRows.has(item[idField])
+                          selectedRowsSet.has(item[idField])
                         )
                       }
                       indeterminate={
                         paginatedData.some((item) =>
-                          selectedRows.has(item[idField])
+                          selectedRowsSet.has(item[idField])
                         ) &&
                         !paginatedData.every((item) =>
-                          selectedRows.has(item[idField])
+                          selectedRowsSet.has(item[idField])
                         )
                       }
                       onChange={headerCheckboxChange}
@@ -324,7 +350,7 @@ export function DataTable<T extends Record<string, any>>({
               {loading ? (
                 <Table.Tr>
                   <Table.Td
-                    colSpan={columns.length + (enableSelection ? 1 : 0)}
+                    colSpan={columns.length + (isSelectionEnabled ? 1 : 0)}
                     align="center"
                     py="xl"
                   >
@@ -336,7 +362,7 @@ export function DataTable<T extends Record<string, any>>({
               ) : paginatedData.length === 0 ? (
                 <Table.Tr>
                   <Table.Td
-                    colSpan={columns.length + (enableSelection ? 1 : 0)}
+                    colSpan={columns.length + (isSelectionEnabled ? 1 : 0)}
                     align="center"
                     py="xl"
                   >
@@ -352,10 +378,10 @@ export function DataTable<T extends Record<string, any>>({
                     onClick={() => onRowClick?.(item)}
                     style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                   >
-                    {enableSelection && (
+                    {isSelectionEnabled && (
                       <Table.Td onClick={(e) => e.stopPropagation()}>
                         <Checkbox
-                          checked={selectedRows.has(item[idField])}
+                          checked={selectedRowsSet.has(item[idField])}
                           onChange={() => toggleRow(item[idField])}
                         />
                       </Table.Td>

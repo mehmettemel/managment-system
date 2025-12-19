@@ -119,11 +119,8 @@ export function PaymentConfirmModal({
       if (form.values.paymentType === 'monthly') {
         form.setFieldValue('amount', newAmount);
         form.setFieldValue('description', newDesc);
-      } else if (form.values.paymentType === 'difference') {
-        // Keep description logic but don't force amount (user enters diff)
-        // Actually diff description might be custom.
-        // Let's just suggest it.
       }
+      // For custom payments, user can manually enter amount and description
     } else {
       // Clear?
     }
@@ -170,8 +167,7 @@ export function PaymentConfirmModal({
             label="Ödeme Türü"
             data={[
               { value: 'monthly', label: 'Aylık Aidat' },
-              { value: 'difference', label: 'Fark Ödemesi (Transfer)' },
-              { value: 'registration', label: 'Kayıt Ücreti' },
+              { value: 'custom', label: 'Özel Ödeme' },
             ]}
             leftSection={<IconTag size={16} />}
             {...form.getInputProps('paymentType')}

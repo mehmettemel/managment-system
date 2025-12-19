@@ -156,13 +156,14 @@ export async function freezeMembership(
       .eq('id', formData.member_id);
 
     // LOGGING
+    const now = await getServerNow();
     for (const mcId of enrollmentIdsToFreeze) {
       await addMemberLog(supabase, {
         member_id: formData.member_id,
         member_class_id: mcId,
         action_type: 'freeze',
         description: `Üyelik ${formData.is_indefinite ? 'süresiz' : 'süreli'} donduruldu.`,
-        date: start_date,
+        date: now.format('YYYY-MM-DD'),
         metadata: {
           start_date,
           end_date,

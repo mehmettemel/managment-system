@@ -271,23 +271,77 @@ interface EnrollmentCardProps {
 - Tooltip: "Gecikmiş Ödeme"
 - Aktif derslerdeki gecikmiş ödemeleri tespit eder
 
-### 1.5 Dondurma Sistemi (Freeze System)
+### 1.5 Dondurma Sistemi (Freeze System) ⭐ YENİ MİMARİ
 
 **Dosya:** `actions/freeze.ts`, `components/members/FreezeMemberDrawer.tsx`
 
+#### Ders Bazlı Dondurma (Enrollment-Based Freezing)
+
+**Yeni Mimari:** Dondurma işlemleri artık üye bazlı değil, **ders bazlı** yapılıyor.
+
+**Database Yapısı:**
+
+```typescript
+frozen_logs {
+  id: number,
+  member_id: number,              // İlişki için
+  member_class_id: number,        // HANGİ DERS donduruldu? (KRITIK)
+  start_date: string,             // Dondurma başlangıcı
+  end_date: string | null,        // null = süresiz dondurma
+  reason: string | null,
+  days_count: number | null,      // Toplam dondurma günü (unfreeze'de hesaplanır)
+  created_at: string
+}
+```
+
 #### Özellikler:
 
-- **Per-Enrollment Freeze**: Her ders kaydı ayrı ayrı dondurulabilir
+- **Per-Enrollment Freeze**: Her ders kaydı **bağımsız olarak** dondurulabilir
+  - Örnek: Salsa dersi dondurulmuş, Bachata dersi aktif olabilir
 - **Timed Freeze**: Başlangıç ve bitiş tarihi ile sınırlı dondurma
-- **Indefinite Freeze**: Bitiş tarihi olmayan dondurma
+- **Indefinite Freeze**: Bitiş tarihi olmayan dondurma (`end_date: null`)
 - **Multiple Freeze Periods**: Aynı kayıt birden fazla kez dondurulabilir
+- **Partial Freeze**: Üyenin bazı dersleri dondurulmuş, bazıları aktif olabilir
+
+#### Üye Durumu Hesaplama (Kritik Değişiklik):
+
+**Eski Sistem:** `members.status = 'frozen'` → Tüm dersler için global durum
+
+**Yeni Sistem:** Dinamik hesaplama
+
+```typescript
+// Üyenin computed_status'ü aktif derslerine göre hesaplanır
+const activeEnrollments = memberClasses.filter(mc => mc.active);
+const frozenEnrollments = activeEnrollments.filter(mc =>
+  frozen_logs.some(log =>
+    log.member_class_id === mc.id && !log.end_date
+  )
+);
+
+// TÜM aktif dersler dondurulmuşsa → frozen
+// EN AZ BİR aktif ders aktifse → active
+const computed_status =
+  frozenEnrollments.length === activeEnrollments.length
+    ? 'frozen'
+    : 'active';
+```
+
+**Avantajlar:**
+
+- Her dersin freeze durumu bağımsız
+- Partial freeze senaryoları destekleniyor
+- Üye durumu otomatik güncelleniyor
+- İşlem geçmişi her ders için ayrı
 
 #### Freeze Logic (Kritik):
 
 ```typescript
-// Frozen month check
-const isMonthFrozen = (month: Dayjs): boolean => {
-  return frozenLogs.some((log) => {
+// Bir ayın dondurulmuş olup olmadığını kontrol et
+const isMonthFrozen = (enrollment, month: Dayjs): boolean => {
+  return enrollment.frozen_logs?.some((log) => {
+    // Bu log bu enrollment'a ait mi?
+    if (log.member_class_id !== enrollment.id) return false;
+
     const freezeStart = dayjs(log.start_date).startOf('month');
     const freezeEnd = log.end_date
       ? dayjs(log.end_date).endOf('month')
@@ -302,34 +356,165 @@ const isMonthFrozen = (month: Dayjs): boolean => {
 
 - Dondurulmuş aylar payment schedule'da **atlanır**
 - Next payment date hesaplamasında frozen period'lar skip edilir
+- Dondurma süresi kadar next_payment_date ileriye kayar
 - Örnek: 3 ay ödedi, 6 ay dondurdu, çözdü → Frozen 6 ay gecikmiş gösterilmez
 
-#### Freeze Status Badge:
+#### Freeze/Unfreeze İşlemleri:
 
-- **Aktif Freeze**: Yeşil badge "Donduruldu (Başlangıç - Bitiş)"
-- **Belirsiz Freeze**: Kırmızı badge "Donduruldu (Süresiz)"
-- **Frozen Logs**: Tüm geçmiş dondurma kayıtları
+**Dondurma:**
+1. FreezeMemberDrawer'dan dersler seçilir
+2. Başlangıç ve bitiş tarihi belirlenir
+3. Seçilen her ders için `frozen_logs` kaydı oluşturulur
+4. `member_logs` tablosuna işlem kaydı eklenir ⭐ YENİ
+5. Üye status'ü otomatik güncellenir
 
-#### Unfreeze:
+**Dondurma Açma:**
+1. Aktif freeze log'a `end_date` set edilir
+2. Dondurma süresi `days_count` alanına yazılır
+3. `next_payment_date` dondurma süresi kadar ileriye kayar
+4. `member_logs` tablosuna işlem kaydı eklenir ⭐ YENİ
+5. Üye status'ü otomatik güncellenir
 
-- Aktif freeze'i sonlandırır
-- `end_date` şimdiki tarihe set edilir
-- Üye durumu `frozen` → `active` olur (eğer tüm dersler çözüldüyse)
+#### Freeze Status Göstergeleri:
 
-### 1.6 Üye Durumları (Member Status)
+**Üye Detay Sayfası:**
+- Enrollment card'da durum badge'i:
+  - 🟢 "Aktif" → Enrollment aktif ve dondurulmamış
+  - 🔵 "Dondurulmuş" → Aktif freeze log var
+  - ⚫ "Pasif" → Enrollment veya ders arşivlenmiş
+
+**Ders Sayfası (ClassMembersDrawer):**
+- Her üyenin freeze durumu ders bazında gösterilir
+- Filtreleme: Aktif, Dondurulmuş, Tümü
+
+### 1.6 İşlem Geçmişi (Activity Logs) ⭐ YENİ
+
+**Dosya:** `components/members/MemberHistoryTable.tsx`
+
+**Tablo:** `member_logs`
+
+#### Özellikler:
+
+- Her işlem otomatik olarak kaydedilir
+- Ders bazında filtreleme
+- Zaman damgalı kayıtlar
+- Metadata ile detaylı bilgi
+
+#### Kaydedilen İşlemler:
+
+```typescript
+{
+  member_id: number,
+  member_class_id: number | null,   // Hangi derse ait?
+  action_type: 'enrollment' | 'payment' | 'freeze' | 'unfreeze' | 'termination',
+  description: string,               // "Salsa Başlangıç derse kayıt oluşturuldu"
+  date: string,                      // İşlem tarihi
+  metadata: JSON,                    // Ek detaylar
+  created_at: string                 // Log oluşturma zamanı
+}
+```
+
+#### Action Types:
+
+1. **enrollment**: Yeni ders kaydı
+   - Metadata: `{ class_id: number }`
+2. **payment**: Ödeme alındı
+   - Metadata: `{ amount, payment_method, period_start }`
+3. **freeze**: Dondurma işlemi
+   - Metadata: `{ start_date, end_date, reason, is_indefinite }`
+4. **unfreeze**: Dondurma açma
+   - Metadata: `{ original_log_id, effective_days, start_date }`
+5. **termination**: Ders sonlandırma
+   - Metadata: `{ reason }`
+
+#### UI Özellikleri:
+
+- Accordion tabanlı detay gösterimi
+- Ders badge'leri ile görsel ayırım
+- Metadata JSON görüntüleme
+- Zaman sıralaması (yeniden eskiye)
+
+### 1.7 Arşivleme Sistemi (Archive System) ⭐ YENİ
+
+#### Üye Arşivleme:
+
+**Özellikler:**
+- Soft delete (veriler korunur)
+- Tab bazlı görünüm (Aktif / Arşiv / Tümü)
+- Arşivden geri alma
+- Kalıcı silme (sadece arşivdeyken)
+
+**Kullanıcı Akışı:**
+1. Üyeler listesinde "Arşivle" butonu
+2. Onay modalı
+3. `members.status = 'archived'`
+4. Arşiv sekmesinde görünür
+5. Kalıcı silme opsiyonu (onay gerektirir)
+
+#### Ders Arşivleme:
+
+**Özellikler:**
+- Ders arşivlendiğinde **TÜM enrollment'lar pasif olur**
+- Ödeme geçmişi korunur
+- Arşivlenmiş derslere yeni kayıt yapılamaz
+- Üye detayda pasif olarak görünür
+
+**Kullanıcı Akışı:**
+1. Dersler listesinde "Arşivle" butonu
+2. Uyarı: "Bu derse kayıtlı tüm üyelerin kayıtları pasif olacak"
+3. `classes.active = false`
+4. `member_classes.active = false` (bu dersin tüm kayıtları)
+5. Arşiv sekmesinde görünür
+
+**Geri Alma:**
+- Ders geri alınırsa sadece ders aktif olur
+- Üye kayıtları manuel olarak yeniden eklenmeli
+
+### 1.8 Üye Durumları (Member Status)
 
 **Type:** `'active' | 'frozen' | 'archived'`
 
-- **active**: En az bir aktif ders kaydı var
-- **frozen**: Tüm aktif ders kayıtları dondurulmuş
+**Database:** `members.status` (static field)
+**Runtime:** `computed_status` (dinamik hesaplama)
+
+#### Status Mantığı:
+
+- **active**: En az bir aktif VE dondurulmamış ders kaydı var
+- **frozen**: TÜM aktif ders kayıtları dondurulmuş
 - **archived**: Üye arşivlenmiş (soft delete)
 
 **Durum Geçişleri:**
 
 - Yeni üye → `active`
 - Tüm dersler freeze → `frozen` (otomatik)
+- En az bir ders unfreeze → `active` (otomatik)
 - Arşivle → `archived`
 - Geri al → `active`
+
+#### Computed Status (Dinamik):
+
+```typescript
+// Frontend'de dinamik hesaplama
+const computed_status = (() => {
+  if (member.status === 'archived') return 'archived';
+
+  const activeEnrollments = member.member_classes?.filter(mc => mc.active);
+  if (!activeEnrollments?.length) return member.status;
+
+  const frozenCount = activeEnrollments.filter(mc =>
+    frozen_logs.some(log =>
+      log.member_class_id === mc.id && !log.end_date
+    )
+  ).length;
+
+  return frozenCount === activeEnrollments.length ? 'frozen' : 'active';
+})();
+```
+
+**Kullanım:**
+- Üye listesinde `computed_status` gösterilir
+- Filtreleme `computed_status`'e göre yapılır
+- Database'de `members.status` referans olarak kalır
 
 ---
 
@@ -343,32 +528,79 @@ const isMonthFrozen = (month: Dayjs): boolean => {
 
 - **Multi-Month Payments**: Tek seferde birden fazla ay ödemesi alabilme
 - **Individual Records**: Her ay ayrı bir payment kaydı olarak saklanır
-- **Payment Types**: Nakit, Kredi Kartı, Havale
-- **Auto Period Selection**: Unpaid periods otomatik seçilir
-- **Amount Calculation**: Seçilen period'ların toplam tutarı
+- **Payment Methods**: Nakit, Kredi Kartı, Havale/EFT
+- **Auto Period Selection**: Ödenmemiş periyotlar otomatik seçilir
+- **Amount Calculation**: Seçilen periyotların toplam tutarı
+
+#### Ödeme Türleri (Payment Types) ⭐ SADELEŞME
+
+**Mevcut Türler:**
+
+1. **monthly** (Aylık Aidat): Standart aylık ödemeler
+2. **custom** (Özel Ödeme): Esnek tutar/açıklama, aylık aidatın dışında ödemeler
+3. **refund** (İade): Geri ödeme kayıtları
+
+**Kaldırılan Türler:**
+- ~~registration~~ (Kayıt Ücreti) → Artık kullanılmıyor
+- ~~difference~~ (Fark Ödemesi) → Artık kullanılmıyor
+
+**Type Definition:**
+
+```typescript
+export type PaymentType = 'monthly' | 'custom' | 'refund';
+```
+
+**Kullanım:**
+
+```typescript
+// Aylık aidat
+{
+  payment_type: 'monthly',
+  amount: 1500,
+  description: 'Ocak 2025 Ödemesi'
+}
+
+// Özel ödeme
+{
+  payment_type: 'custom',
+  amount: 500,
+  description: 'Kıyafet ücreti'
+}
+
+// İade
+{
+  payment_type: 'refund',
+  amount: -1500,
+  description: 'Ocak ayı iadesi'
+}
+```
 
 **Period Selection:**
 
-- Radio buttons ile ay seçimi
-- Her period için bilgi: Tarih, Tutar, Durum (Paid/Unpaid/Overdue)
+- Checkbox ile çoklu ay seçimi
+- Her periyot için bilgi: Tarih, Tutar, Durum (Paid/Unpaid/Overdue)
 - Ödenmemiş aylar vurgulanır
 - Gecikmiş aylar kırmızı ile işaretlenir
 
 **Process Flow:**
 
 1. Üye detay sayfasından "Ödeme Al" veya enrollment card'dan "Ödeme Ekle"
-2. Modal açılır, ödenmemiş period'lar listelenir
-3. Kaç ay ödeyeceği seçilir (1, 2, 3+ ay)
-4. Ödeme yöntemi seçilir
-5. Not eklenebilir (opsiyonel)
-6. "Ödemeyi Kaydet" → Her ay için ayrı payment kaydı oluşturulur
-7. Next payment date otomatik güncellenir
+2. Modal açılır, ödenmemiş periyotlar listelenir
+3. Ödeme türü seçilir (Aylık Aidat / Özel Ödeme)
+4. Kaç ay ödeyeceği seçilir (1, 2, 3+ ay)
+5. Tutar otomatik hesaplanır (değiştirilebilir)
+6. Ödeme yöntemi seçilir
+7. Açıklama eklenebilir (opsiyonel)
+8. "Ödeme Al" → Her ay için ayrı payment kaydı oluşturulur
+9. `member_logs` tablosuna işlem kaydı eklenir ⭐ YENİ
+10. Next payment date otomatik güncellenir
 
 **Validation:**
 
-- En az 1 period seçilmeli
+- En az 1 periyot seçilmeli
 - Ödeme yöntemi seçilmeli
 - Total amount > 0 olmalı
+- Payment type seçilmeli
 
 ### 2.2 Payment Schedule (Ödeme Takvimi)
 
@@ -542,19 +774,41 @@ const getComputedNextDate = (enrollment) => {
   - Ad soyad
   - Kayıt tarihi (enrollment date)
   - Ödeme durumu
+  - Freeze durumu (ders bazında)
   - Aktif/pasif durumu
 - Üye detayına yönlendirme
+- Filtreleme: Aktif, Dondurulmuş, Tümü
 
 **Statistics:**
 
 - Toplam üye sayısı
 - Aktif üye sayısı
+- Dondurulmuş üye sayısı
 - Toplam aylık gelir
 
-### 3.3 Ders Geçişi & Migration
+### 3.3 Ders Yönetimi İyileştirmeleri ⭐ YENİ
 
-**Mevcut:** Bireysel transfer (member detail view'dan)
-**Planlanan:** Bulk migration (tüm sınıfı taşıma)
+#### Arşivleme & Geri Alma
+
+**Özellikler:**
+
+- Tab bazlı görünüm: Aktif / Arşiv / Tümü
+- Ders arşivlendiğinde **tüm enrollment'lar pasif** olur
+- Arşivden geri alma (ders aktif olur, üye kayıtları manuel)
+- Kalıcı silme (kayıtsız arşiv dersler)
+- Toplu silme (arşiv sekmesinde checkbox ile)
+
+**Kaldırılan Özellikler:**
+
+- ~~Bulk Migration (Taşı ve Arşivle)~~ → Karmaşıklığı azaltmak için kaldırıldı
+- ~~ClassMigrateModal~~ → Artık kullanılmıyor
+
+**Neden Kaldırıldı?**
+
+- Her üyenin farklı ödeme planı olabiliyor
+- Toplu taşıma işlemi karmaşıklığa sebep oluyordu
+- Bireysel yönetim daha esnek
+- Arşivleme + Manuel yeniden kayıt daha kontrollü
 
 ---
 

@@ -38,6 +38,80 @@ dayjs.locale('tr');
 /**
  * Get all payments for a member (with class info)
  */
+/**
+ * Get enrollment payments with pagination
+ */
+export async function getEnrollmentPayments(
+  enrollmentId: number,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<
+  ApiResponse<{
+    data: Payment[];
+    meta: { total: number; page: number; pageSize: number };
+  }>
+> {
+  try {
+    const supabase = await createClient();
+
+    // Get total count for pagination
+    const { count, error: countError } = await supabase
+      .from('payments')
+      .select('*', { count: 'exact', head: true })
+      .eq('member_class_id', enrollmentId);
+
+    if (countError) {
+      logError('getEnrollmentPayments - count', countError);
+      return errorResponse(handleSupabaseError(countError));
+    }
+
+    // Calculate pagination range
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    // Fetch paginated data
+    const { data, error } = await supabase
+      .from('payments')
+      .select(
+        `
+        *,
+        classes (
+          id,
+          name
+        ),
+        member_classes (
+          active
+        ),
+        members (
+          id,
+          first_name,
+          last_name
+        )
+      `
+      )
+      .eq('member_class_id', enrollmentId)
+      .order('payment_date', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      logError('getEnrollmentPayments', error);
+      return errorResponse(handleSupabaseError(error));
+    }
+
+    return successResponse({
+      data: (data as Payment[]) || [],
+      meta: {
+        total: count || 0,
+        page,
+        pageSize,
+      },
+    });
+  } catch (error) {
+    logError('getEnrollmentPayments', error);
+    return errorResponse(handleSupabaseError(error));
+  }
+}
+
 export async function getMemberPayments(
   memberId: number,
   page: number = 1,

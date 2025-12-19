@@ -44,7 +44,7 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { label: 'Dashboard', icon: <IconHome size={20} />, href: '/' },
   { label: 'Üyeler', icon: <IconUsers size={20} />, href: '/members' },
-  { label: 'Ödemeler', icon: <IconCreditCard size={20} />, href: '/payments' },
+  { label: 'Finans', icon: <IconCreditCard size={20} />, href: '/finance' },
   { label: 'Dersler', icon: <IconSchool size={20} />, href: '/classes' },
   {
     label: 'Eğitmenler',
@@ -101,9 +101,9 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
         : pathname.startsWith(item.href) &&
           item.href !== '#' &&
           !item.href.startsWith('#') &&
-          // Special case: /payments should not match /payments/instructors
+          // Special case: /finance should not match /payments/instructors
           !(
-            item.href === '/payments' &&
+            item.href === '/finance' &&
             pathname.startsWith('/payments/instructors')
           );
     // Check if any child is active to open parent

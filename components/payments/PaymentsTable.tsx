@@ -14,8 +14,14 @@ import { TruncatedTooltip } from '@/components/shared/TruncatedTooltip';
 
 // Extend Payment type to include joined relations
 interface PaymentWithRelations extends Payment {
+  id?: number;
   members?: { id: number; first_name: string; last_name: string } | null;
   classes?: { id: number; name: string } | null;
+  payment_date?: string;
+  amount?: number;
+  payment_method?: string;
+  description?: string;
+  period_start?: string | null;
 }
 
 export function PaymentsTable() {

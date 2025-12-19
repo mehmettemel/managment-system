@@ -6,9 +6,10 @@ import {
   Text,
   Group,
   Button,
-  Collapse,
   Box,
   Card,
+  Pagination,
+  Stack,
 } from '@mantine/core';
 import { MemberLog } from '@/types';
 import { formatDate } from '@/utils/date-helpers';
@@ -23,8 +24,11 @@ interface MemberHistoryTableProps {
   logs: MemberLog[];
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function MemberHistoryTable({ logs }: MemberHistoryTableProps) {
   const [expandedRows, setExpandedRows] = useState<number[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const toggleRow = (id: number) => {
     setExpandedRows((prev) =>
@@ -59,20 +63,27 @@ export function MemberHistoryTable({ logs }: MemberHistoryTableProps) {
     );
   }
 
+  // Pagination calculations
+  const totalPages = Math.ceil(logs.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedLogs = logs.slice(startIndex, endIndex);
+
   return (
-    <Card withBorder padding="sm" radius="md">
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Tarih</Table.Th>
-            <Table.Th>Ders</Table.Th>
-            <Table.Th>İşlem</Table.Th>
-            <Table.Th>Açıklama</Table.Th>
-            <Table.Th></Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {logs.map((log) => (
+    <Stack gap="md">
+      <Card withBorder padding="sm" radius="md">
+        <Table>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Tarih</Table.Th>
+              <Table.Th>Ders</Table.Th>
+              <Table.Th>İşlem</Table.Th>
+              <Table.Th>Açıklama</Table.Th>
+              <Table.Th></Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {paginatedLogs.map((log) => (
             <>
               <Table.Tr key={log.id}>
                 <Table.Td>
@@ -144,5 +155,21 @@ export function MemberHistoryTable({ logs }: MemberHistoryTableProps) {
         </Table.Tbody>
       </Table>
     </Card>
+
+    {totalPages > 1 && (
+      <Group justify="center">
+        <Pagination
+          total={totalPages}
+          value={currentPage}
+          onChange={setCurrentPage}
+          size="sm"
+        />
+        <Text size="xs" c="dimmed">
+          {startIndex + 1}-{Math.min(endIndex, logs.length)} / {logs.length}{' '}
+          kayıt
+        </Text>
+      </Group>
+    )}
+  </Stack>
   );
 }

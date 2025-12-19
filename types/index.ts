@@ -26,6 +26,7 @@ export type DanceType = Tables<'dance_types'>;
 export type InstructorRate = Tables<'instructor_rates'>;
 export type InstructorLedger = Tables<'instructor_ledger'>;
 export type InstructorPayout = Tables<'instructor_payouts'>;
+export type Expense = Tables<'expenses'>;
 
 // Insert types
 export type InstructorInsert = Inserts<'instructors'>;
@@ -38,6 +39,7 @@ export type DanceTypeInsert = Inserts<'dance_types'>;
 export type InstructorRateInsert = Inserts<'instructor_rates'>;
 export type InstructorLedgerInsert = Inserts<'instructor_ledger'>;
 export type InstructorPayoutInsert = Inserts<'instructor_payouts'>;
+export type ExpenseInsert = Inserts<'expenses'>;
 
 // Update types
 export type InstructorUpdate = Updates<'instructors'>;
@@ -50,6 +52,7 @@ export type DanceTypeUpdate = Updates<'dance_types'>;
 export type InstructorRateUpdate = Updates<'instructor_rates'>;
 export type InstructorLedgerUpdate = Updates<'instructor_ledger'>;
 export type InstructorPayoutUpdate = Updates<'instructor_payouts'>;
+export type ExpenseUpdate = Updates<'expenses'>;
 
 // Extended types with relations
 export type MemberWithClasses = Member & {
@@ -75,6 +78,15 @@ export type InstructorPayoutWithDetails = InstructorPayout & {
   } | null;
 };
 
+// Expense with member info
+export interface ExpenseWithMember extends Expense {
+  members?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+  } | null;
+}
+
 // Extended member class with class details
 export interface MemberClassWithDetails {
   id: number;
@@ -92,8 +104,17 @@ export interface MemberClassWithDetails {
 
 // Payment with class info
 export interface PaymentWithClass extends Payment {
+  id?: number;
   classes?: Class | null;
   member_classes?: { active: boolean } | null;
+  member_class_id?: number | null;
+  class_id?: number | null;
+  period_start?: string | null;
+  period_end?: string | null;
+  amount?: number;
+  payment_date?: string;
+  payment_method?: string;
+  description?: string;
 }
 
 // Member Class Registration Data
@@ -206,7 +227,7 @@ export type MemberStatus = 'active' | 'frozen' | 'archived';
 // Payment Method and Type definitions
 export type PaymentMethod = 'Nakit' | 'Kredi Kartı' | 'Havale' | 'Diğer';
 
-export type PaymentType = 'monthly' | 'difference' | 'refund' | 'registration';
+export type PaymentType = 'monthly' | 'custom' | 'refund';
 
 // Extended Payment Interface override (optional if DB types not updated yet)
 // We rely on Tables<'payments'> usually, but for strong typing in app:
@@ -224,3 +245,28 @@ export type DayOfWeek =
   | 'Cuma'
   | 'Cumartesi'
   | 'Pazar';
+
+// Expense categories
+export type ExpenseCategory =
+  | 'Kantin'
+  | 'Temizlik'
+  | 'Kira'
+  | 'Elektrik'
+  | 'Su'
+  | 'İnternet'
+  | 'Bakım-Onarım'
+  | 'Maaş'
+  | 'Malzeme'
+  | 'Para İadesi'
+  | 'Diğer';
+
+// Expense form data
+export interface ExpenseFormData {
+  amount: number;
+  category: ExpenseCategory;
+  description: string;
+  date: string;
+  receipt_number?: string;
+  member_id?: number;
+  member_class_id?: number;
+}
