@@ -22,7 +22,12 @@ import {
   IconSearch,
 } from '@tabler/icons-react';
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
-import { getExpenses, deleteExpense, deleteExpenses, getAllExpenses } from '@/actions/expenses';
+import {
+  getExpenses,
+  deleteExpense,
+  deleteExpenses,
+  getAllExpenses,
+} from '@/actions/expenses';
 import { Expense, ExpenseCategory } from '@/types';
 import { formatCurrency } from '@/utils/formatters';
 import dayjs from 'dayjs';
@@ -78,7 +83,9 @@ export function ExpensesContent() {
     try {
       const response = await getExpenses(page, pageSize, {
         category: selectedCategory || undefined,
-        startDate: startDate ? dayjs(startDate).format('YYYY-MM-DD') : undefined,
+        startDate: startDate
+          ? dayjs(startDate).format('YYYY-MM-DD')
+          : undefined,
         endDate: endDate ? dayjs(endDate).format('YYYY-MM-DD') : undefined,
         searchTerm: searchTerm || undefined,
       });
@@ -139,7 +146,9 @@ export function ExpensesContent() {
   const handleDelete = async (id: number) => {
     modals.openConfirmModal({
       title: 'Gider Sil',
-      children: <Text size="sm">Bu gideri silmek istediğinizden emin misiniz?</Text>,
+      children: (
+        <Text size="sm">Bu gideri silmek istediğinizden emin misiniz?</Text>
+      ),
       labels: { confirm: 'Sil', cancel: 'İptal' },
       confirmProps: { color: 'red' },
       onConfirm: async () => {
@@ -213,7 +222,9 @@ export function ExpensesContent() {
       setLoading(true);
       const response = await getAllExpenses({
         category: selectedCategory || undefined,
-        startDate: startDate ? dayjs(startDate).format('YYYY-MM-DD') : undefined,
+        startDate: startDate
+          ? dayjs(startDate).format('YYYY-MM-DD')
+          : undefined,
         endDate: endDate ? dayjs(endDate).format('YYYY-MM-DD') : undefined,
         searchTerm: searchTerm || undefined,
       });
@@ -240,7 +251,9 @@ export function ExpensesContent() {
 
       // Create and download file
       const csvContent = csvRows.join('\n');
-      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob(['\ufeff' + csvContent], {
+        type: 'text/csv;charset=utf-8;',
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -417,7 +430,7 @@ export function ExpensesContent() {
           onSort={handleSort}
           selectable
           selectedRows={selectedRows}
-          onSelectionChange={setSelectedRows}
+          onSelectionChange={(rows: any[]) => setSelectedRows(rows)}
         />
       </Stack>
 

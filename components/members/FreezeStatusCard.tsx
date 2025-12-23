@@ -6,21 +6,24 @@ import {
   IconCalendar,
   IconAlertTriangle,
 } from '@tabler/icons-react';
-import { Member, FrozenLog } from '@/types';
+import { Member, FrozenLog, MemberClassWithDetails } from '@/types';
 import { formatDate } from '@/utils/date-helpers';
 import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/tr';
-import { cancelFutureFreeze } from '@/actions/freeze';
+import { cancelFutureFreeze, unfreezeLog } from '@/actions/freeze';
 import { showSuccess, showError } from '@/utils/notifications';
 import { useState } from 'react';
 
+dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.locale('tr');
 
 interface FreezeStatusCardProps {
   member: Member;
   logs: FrozenLog[]; // All logs (active/future included)
+  enrollments: MemberClassWithDetails[]; // Active enrollments
   effectiveDate: string;
   onUnfreezeClick: () => void;
 }
@@ -28,31 +31,56 @@ interface FreezeStatusCardProps {
 export function FreezeStatusCard({
   member,
   logs,
+  enrollments,
   effectiveDate,
   onUnfreezeClick,
 }: FreezeStatusCardProps) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<{ [key: number]: boolean }>({});
 
-  // Filter logs relative to effectiveDate
-  // Active freeze: status is 'frozen' OR (start <= today && (end == null || end > today))
-  // Future freeze: start > today
+  // Group logs by enrollment and filter by time
+  const today = dayjs(effectiveDate);
 
-  // Find Active Log
-  const activeLog = logs.find((log) => {
-    // Logic must align with backend "active" determination
-    // Simple check: If member.status is frozen, the latest log starting <= today is likely the active one.
-    // Or if start_date <= today and (end_date null or > today)
-    const start = dayjs(log.start_date);
-    const end = log.end_date ? dayjs(log.end_date) : null;
-    const today = dayjs(effectiveDate);
+  // Active frozen enrollments
+  const activeFrozenEnrollments = enrollments
+    .map((enrollment) => {
+      const activeLog = logs.find((log) => {
+        if (log.member_class_id !== enrollment.id) return false;
 
-    return start.isSameOrBefore(today) && (!end || end.isAfter(today));
-  });
+        const startDate = dayjs(log.start_date);
+        const endDate = log.end_date ? dayjs(log.end_date) : null;
 
-  // Find Future Logs
-  const futureLogs = logs.filter((log) => {
-    return dayjs(log.start_date).isAfter(dayjs(effectiveDate));
-  });
+        const afterStart = today.isSameOrAfter(startDate, 'day');
+        const beforeEnd = endDate ? today.isSameOrBefore(endDate, 'day') : true;
+
+        return afterStart && beforeEnd;
+      });
+      return { enrollment, log: activeLog };
+    })
+    .filter((item) => item.log);
+
+  // Future frozen enrollments
+  const futureFrozenEnrollments = enrollments
+    .map((enrollment) => {
+      const futureLogs = logs.filter(
+        (log) =>
+          log.member_class_id === enrollment.id &&
+          dayjs(log.start_date).isAfter(today)
+      );
+      return { enrollment, logs: futureLogs };
+    })
+    .filter((item) => item.logs.length > 0);
+
+  const handleUnfreeze = async (logId: number) => {
+    setLoading({ ...loading, [logId]: true });
+    const result = await unfreezeLog(logId);
+    if (result.error) {
+      showError(result.error);
+    } else {
+      showSuccess('Ders dondurması kaldırıldı');
+      window.location.reload();
+    }
+    setLoading({ ...loading, [logId]: false });
+  };
 
   const handleCancelFuture = async (logId: number) => {
     if (
@@ -61,96 +89,106 @@ export function FreezeStatusCard({
       )
     )
       return;
-    setLoading(true);
+    setLoading({ ...loading, [logId]: true });
     const result = await cancelFutureFreeze(logId);
     if (result.error) {
       showError(result.error);
     } else {
-      showSuccess('Dondurma planı iptal edildi.');
-      // Ideally trigger refresh here, but component might remount or parent handles it?
-      // We need a way to refresh parent data.
-      window.location.reload(); // Hard refresh for safety or pass callback
+      showSuccess('Dondurma planı iptal edildi');
+      window.location.reload();
     }
-    setLoading(false);
+    setLoading({ ...loading, [logId]: false });
   };
 
-  if (member.status !== 'frozen' && futureLogs.length === 0) return null;
+  if (
+    activeFrozenEnrollments.length === 0 &&
+    futureFrozenEnrollments.length === 0
+  )
+    return null;
 
   return (
     <Stack gap="md">
-      {/* Active Freeze Banner */}
-      {member.status === 'frozen' && (
+      {/* Active Frozen Classes */}
+      {activeFrozenEnrollments.map(({ enrollment, log }) => (
         <Alert
+          key={`active-${enrollment.id}`}
           variant="light"
           color="blue"
-          title="Üyelik Dondurulmuş"
+          title={`${enrollment.classes?.name} - Ders Donduruldu`}
           icon={<IconSnowflake />}
         >
           <Stack gap="xs">
             <Text size="sm">
-              Bu üyelik{' '}
-              <b>
-                {activeLog
-                  ? formatDate(activeLog.start_date)
-                  : 'bilinmeyen tarihte'}
-              </b>{' '}
+              Bu ders <b>{log ? formatDate(log.start_date) : '-'}</b> tarihinde
               donduruldu.
             </Text>
-            {activeLog?.end_date && (
+            {log?.end_date ? (
               <Text size="sm">
-                Otomatik açılış tarihi: <b>{formatDate(activeLog.end_date)}</b>
+                Otomatik açılış tarihi: <b>{formatDate(log.end_date)}</b>
+              </Text>
+            ) : (
+              <Text size="sm" c="dimmed">
+                Süresiz dondurma (manuel açılış gerekli)
               </Text>
             )}
-            {activeLog?.reason && (
+            {log?.reason && (
               <Text size="sm" c="dimmed">
-                Sebep: {activeLog.reason}
+                Sebep: {log.reason}
               </Text>
             )}
             <Button
               size="xs"
               variant="white"
               color="blue"
-              onClick={onUnfreezeClick}
+              onClick={() => log && handleUnfreeze(log.id)}
+              loading={log ? loading[log.id] : false}
               mt="xs"
               style={{ width: 'fit-content' }}
             >
-              Üyeliği Şimdi Aktifleştir
+              Dersi Şimdi Aktifleştir
             </Button>
           </Stack>
         </Alert>
-      )}
+      ))}
 
       {/* Future Freeze Warnings */}
-      {futureLogs.map((log) => (
-        <Alert
-          key={log.id}
-          variant="light"
-          color="orange"
-          title="Planlanmış Dondurma İşlemi"
-          icon={<IconCalendar />}
-        >
-          <Group justify="space-between" align="flex-start">
-            <div>
-              <Text size="sm">
-                Bu üyelik <b>{formatDate(log.start_date)}</b> tarihinde otomatik
-                olarak dondurulacak.
-              </Text>
-              {log.end_date && (
-                <Text size="sm">Bitiş: {formatDate(log.end_date)}</Text>
-              )}
-            </div>
-            <Button
-              size="xs"
-              color="orange"
-              variant="subtle"
-              loading={loading}
-              onClick={() => handleCancelFuture(log.id)}
-            >
-              İptal Et
-            </Button>
-          </Group>
-        </Alert>
-      ))}
+      {futureFrozenEnrollments.map(({ enrollment, logs: futureLogs }) =>
+        futureLogs.map((log) => (
+          <Alert
+            key={`future-${log.id}`}
+            variant="light"
+            color="orange"
+            title={`${enrollment.classes?.name} - Planlanmış Dondurma`}
+            icon={<IconCalendar />}
+          >
+            <Group justify="space-between" align="flex-start">
+              <div>
+                <Text size="sm">
+                  Bu ders <b>{formatDate(log.start_date)}</b> tarihinde otomatik
+                  olarak dondurulacak.
+                </Text>
+                {log.end_date && (
+                  <Text size="sm">Bitiş: {formatDate(log.end_date)}</Text>
+                )}
+                {log.reason && (
+                  <Text size="sm" c="dimmed">
+                    Sebep: {log.reason}
+                  </Text>
+                )}
+              </div>
+              <Button
+                size="xs"
+                color="orange"
+                variant="subtle"
+                loading={loading[log.id]}
+                onClick={() => handleCancelFuture(log.id)}
+              >
+                İptal Et
+              </Button>
+            </Group>
+          </Alert>
+        ))
+      )}
     </Stack>
   );
 }

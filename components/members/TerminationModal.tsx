@@ -37,6 +37,7 @@ export function TerminationModal({
       terminationDate: new Date(),
       financialAction: 'settled',
       refundAmount: 0,
+      debtAmount: 0,
     },
   });
 
@@ -79,6 +80,8 @@ export function TerminationModal({
                   placeholder="İade Tutarı"
                   leftSection="₺"
                   min={0}
+                  thousandSeparator="."
+                  decimalSeparator=","
                   {...form.getInputProps('refundAmount')}
                 />
               )}
@@ -95,6 +98,8 @@ export function TerminationModal({
                   placeholder="Borç Tutarı"
                   leftSection="₺"
                   min={0}
+                  thousandSeparator="."
+                  decimalSeparator=","
                   {...form.getInputProps('debtAmount')}
                 />
               )}

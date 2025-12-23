@@ -17,12 +17,13 @@ import {
   NumberInput,
   Checkbox,
   Alert,
+  Radio,
 } from '@mantine/core';
 import { TimeInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { createClass, updateClass } from '@/actions/classes';
 import { showSuccess, showError } from '@/utils/notifications';
-import type { Class, ClassInsert, Instructor, DanceType } from '@/types';
+import type { Class, Instructor, DanceType } from '@/types';
 import { IconClock, IconAlertCircle } from '@tabler/icons-react';
 
 interface ClassDrawerProps {
@@ -44,8 +45,14 @@ export function ClassDrawer({
 }: ClassDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [updateExistingPrices, setUpdateExistingPrices] = useState(false);
-  const [previousInstructorId, setPreviousInstructorId] = useState<number | null>(null);
-  const [instructorChangeDetected, setInstructorChangeDetected] = useState(false);
+  const [previousInstructorId, setPreviousInstructorId] = useState<
+    number | null
+  >(null);
+  const [instructorChangeDetected, setInstructorChangeDetected] =
+    useState(false);
+  const [commissionType, setCommissionType] = useState<
+    'default' | 'specialty' | 'custom'
+  >('default');
 
   const form = useForm({
     initialValues: {
@@ -59,16 +66,14 @@ export function ClassDrawer({
       instructor_commission_rate: null,
     },
     validate: {
-      name: (value) => (value.trim().length < 2 ? 'Ders adı gerekli' : null),
-      instructor_id: (value) => (!value ? 'Eğitmen seçimi zorunludur' : null),
-      start_time: (value) => (!value ? 'Başlangıç saati zorunludur' : null),
+      price_monthly: (value) => (value <= 0 ? 'Aylık ücret 0 TL olamaz' : null),
     },
   });
 
   useEffect(() => {
     if (opened) {
       if (classItem) {
-        // Editing existing class - use type assertion for new fields until types are regenerated
+        // Editing possible existing class
         const item = classItem as any;
         form.setValues({
           name: item.name || '',
@@ -80,10 +85,34 @@ export function ClassDrawer({
           price_monthly: item.price_monthly || 0,
           instructor_commission_rate: item.instructor_commission_rate || null,
         });
-        // Remember the original instructor
+
+        // Determine commission type
+        if (item.instructor_commission_rate === null) {
+          setCommissionType('default');
+        } else {
+          // Check if it matches specialty
+          const instr = instructors.find((i) => i.id === item.instructor_id);
+          // Use Number() to ensure type safety for IDs and Rates
+          const specRate = instr?.instructor_rates?.find(
+            (r) => Number(r.dance_type_id) === Number(item.dance_type_id)
+          )?.rate;
+
+          if (
+            specRate !== undefined &&
+            Math.abs(
+              Number(specRate) - Number(item.instructor_commission_rate)
+            ) < 0.01
+          ) {
+            setCommissionType('specialty');
+          } else {
+            // custom logic or legacy
+            setCommissionType('custom');
+          }
+        }
+
         setPreviousInstructorId(item.instructor_id);
       } else {
-        // Creating new class - reset to initial values
+        // Creating new class
         form.setValues({
           name: '',
           instructor_id: null,
@@ -92,21 +121,21 @@ export function ClassDrawer({
           start_time: '19:00',
           duration_minutes: 60,
           price_monthly: 0,
-          instructor_commission_rate: null,
+          instructor_commission_rate: null, // Default
         });
+        setCommissionType('default');
         setPreviousInstructorId(null);
       }
       setInstructorChangeDetected(false);
     }
-  }, [opened, classItem]);
+  }, [opened, classItem]); // Instructors stable
 
-  // Detect instructor change and show smart suggestions
+  // Detect instructor change
   useEffect(() => {
     if (!classItem || !previousInstructorId) return;
 
     const currentInstructorId = form.values.instructor_id;
 
-    // Instructor changed
     if (currentInstructorId && currentInstructorId !== previousInstructorId) {
       setInstructorChangeDetected(true);
     } else {
@@ -117,22 +146,42 @@ export function ClassDrawer({
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
     try {
-      // Ensure specific types for numbers
+      // Determine final rate logic
+      let finalCommissionRate: number | null = null;
+
+      if (commissionType === 'default') {
+        finalCommissionRate = null;
+      } else if (commissionType === 'specialty') {
+        const instr = instructors.find((i) => i.id === values.instructor_id);
+        const specRate = instr?.instructor_rates?.find(
+          (r) => Number(r.dance_type_id) === Number(values.dance_type_id)
+        )?.rate;
+        finalCommissionRate = specRate !== undefined ? specRate : null;
+      } else if (commissionType === 'custom') {
+        finalCommissionRate = values.instructor_commission_rate;
+      }
+
       const payload: any = {
         name: values.name,
-        instructor_id: values.instructor_id ? Number(values.instructor_id) : null,
-        dance_type_id: values.dance_type_id ? Number(values.dance_type_id) : null,
+        instructor_id: values.instructor_id
+          ? Number(values.instructor_id)
+          : null,
+        dance_type_id: values.dance_type_id
+          ? Number(values.dance_type_id)
+          : null,
         day_of_week: values.day_of_week,
         start_time: values.start_time,
         duration_minutes: Number(values.duration_minutes),
         price_monthly: Number(values.price_monthly),
-        instructor_commission_rate: values.instructor_commission_rate
-          ? Number(values.instructor_commission_rate)
-          : null,
+        instructor_commission_rate: finalCommissionRate,
       };
 
       if (classItem) {
-        const result = await updateClass(classItem.id, payload, updateExistingPrices);
+        const result = await updateClass(
+          classItem.id,
+          payload,
+          updateExistingPrices
+        );
         if (result.error) {
           showError(result.error);
         } else {
@@ -173,7 +222,6 @@ export function ClassDrawer({
     label: `${inst.first_name} ${inst.last_name}`,
   }));
 
-  // Get instructor details for commission info
   const getPreviousInstructor = () =>
     instructors.find((i) => i.id === previousInstructorId);
   const getCurrentInstructor = () =>
@@ -182,16 +230,15 @@ export function ClassDrawer({
   const handleUseNewInstructorDefault = () => {
     const newInstructor = getCurrentInstructor();
     if (newInstructor) {
-      form.setFieldValue(
-        'instructor_commission_rate',
-        newInstructor.default_commission_rate || null
-      );
+      // Logic handled in submit, but we can set form for custom visualization or reset
+      setCommissionType('default');
       setInstructorChangeDetected(false);
     }
   };
 
   const handleKeepCurrentRate = () => {
-    // Keep the current rate as is
+    // Force to custom to preserve the numeric value
+    setCommissionType('custom');
     setInstructorChangeDetected(false);
   };
 
@@ -248,59 +295,114 @@ export function ClassDrawer({
             }
           />
 
-          {instructorChangeDetected && (() => {
-            const prevInstructor = getPreviousInstructor();
-            const newInstructor = getCurrentInstructor();
-            const currentRate = (classItem as any)?.instructor_commission_rate;
-            const newDefaultRate = newInstructor?.default_commission_rate;
+          {instructorChangeDetected &&
+            (() => {
+              const prevInstructor = getPreviousInstructor();
+              const newInstructor = getCurrentInstructor();
+              const currentRate = (classItem as any)
+                ?.instructor_commission_rate;
+              const newDefaultRate = newInstructor?.default_commission_rate;
+
+              return (
+                <Alert
+                  icon={<IconAlertCircle size={16} />}
+                  title="Eğitmen Değişikliği Tespit Edildi"
+                  color="blue"
+                >
+                  <Stack gap="xs">
+                    <Text size="sm">
+                      <strong>Eski Eğitmen:</strong>{' '}
+                      {prevInstructor?.first_name} {prevInstructor?.last_name}
+                      <br />
+                      {currentRate !== null && currentRate !== undefined && (
+                        <>Bu derste özel komisyon: %{currentRate}</>
+                      )}
+                    </Text>
+                    <Text size="sm">
+                      <strong>Yeni Eğitmen:</strong> {newInstructor?.first_name}{' '}
+                      {newInstructor?.last_name}
+                      <br />
+                      Varsayılan komisyon: %{newDefaultRate ?? 0}
+                    </Text>
+                    <Text size="sm" c="dimmed">
+                      Komisyon oranını nasıl güncellemek istersiniz?
+                    </Text>
+                    <Group gap="xs">
+                      <Button
+                        size="xs"
+                        variant="light"
+                        onClick={handleUseNewInstructorDefault}
+                      >
+                        Yeni varsayılanı kullan (%{newDefaultRate ?? 0})
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        color="gray"
+                        onClick={handleKeepCurrentRate}
+                      >
+                        Mevcut oranı koru
+                        {currentRate !== null && currentRate !== undefined
+                          ? ` (%${currentRate})`
+                          : ''}
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Alert>
+              );
+            })()}
+
+          {/* New Commission Selection Logic */}
+          {(() => {
+            const instr = instructors.find(
+              (i) => i.id === form.values.instructor_id
+            );
+            const danceType = danceTypes.find(
+              (dt) => dt.id === form.values.dance_type_id
+            );
+            const defaultRate = instr?.default_commission_rate ?? 30;
+            const specialtyRate = instr?.instructor_rates?.find(
+              (r) => r.dance_type_id === form.values.dance_type_id
+            )?.rate;
 
             return (
-              <Alert
-                icon={<IconAlertCircle size={16} />}
-                title="Eğitmen Değişikliği Tespit Edildi"
-                color="blue"
-              >
-                <Stack gap="xs">
-                  <Text size="sm">
-                    <strong>Eski Eğitmen:</strong> {prevInstructor?.first_name}{' '}
-                    {prevInstructor?.last_name}
-                    <br />
-                    {currentRate !== null && currentRate !== undefined && (
-                      <>Bu derste özel komisyon: %{currentRate}</>
+              <Stack gap={4}>
+                <Text size="sm" fw={500}>
+                  Eğitmen Komisyonu
+                </Text>
+                <Radio.Group
+                  value={commissionType}
+                  onChange={(val: any) => setCommissionType(val)}
+                >
+                  <Stack gap="xs" mt="xs">
+                    <Radio
+                      value="default"
+                      label={`Varsayılan Komisyon (%${defaultRate})`}
+                    />
+                    {specialtyRate !== undefined && (
+                      <Radio
+                        value="specialty"
+                        label={`Uzmanlık: ${danceType?.name ?? 'Seçili Dans'} (%${specialtyRate})`}
+                      />
                     )}
-                  </Text>
-                  <Text size="sm">
-                    <strong>Yeni Eğitmen:</strong> {newInstructor?.first_name}{' '}
-                    {newInstructor?.last_name}
-                    <br />
-                    Varsayılan komisyon: %
-                    {newDefaultRate ?? 0}
-                  </Text>
-                  <Text size="sm" c="dimmed">
-                    Komisyon oranını nasıl güncellemek istersiniz?
-                  </Text>
-                  <Group gap="xs">
-                    <Button
-                      size="xs"
-                      variant="light"
-                      onClick={handleUseNewInstructorDefault}
-                    >
-                      Yeni varsayılanı kullan (%{newDefaultRate ?? 0})
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="light"
-                      color="gray"
-                      onClick={handleKeepCurrentRate}
-                    >
-                      Mevcut oranı koru
-                      {currentRate !== null && currentRate !== undefined
-                        ? ` (%${currentRate})`
-                        : ''}
-                    </Button>
-                  </Group>
-                </Stack>
-              </Alert>
+                    {commissionType === 'custom' && (
+                      <Radio
+                        value="custom"
+                        label={`Özel Tanımlı (%${form.values.instructor_commission_rate})`}
+                        disabled // Cannot switch INTO custom, only preserve
+                      />
+                    )}
+                  </Stack>
+                </Radio.Group>
+                <Text size="xs" c="dimmed" mt={4}>
+                  {commissionType === 'default' &&
+                    `Eğitmenin varsayılan komisyon oranı kullanılır (%${defaultRate}).`}
+                  {commissionType === 'specialty' &&
+                    `Bu dans türü için tanımlı uzmanlık oranı kullanılır (%${specialtyRate}).`}
+                  {commissionType === 'custom' &&
+                    `Bu ders için manuel tanımlanmış özel oran korunuyor (%${form.values.instructor_commission_rate}).`}
+                </Text>
+              </Stack>
             );
           })()}
 
@@ -319,9 +421,10 @@ export function ClassDrawer({
                 ? String(form.values.dance_type_id)
                 : null
             }
-            onChange={(val) =>
-              form.setFieldValue('dance_type_id', val ? Number(val) : null)
-            }
+            onChange={(val) => {
+              const newVal = val ? Number(val) : null;
+              form.setFieldValue('dance_type_id', newVal);
+            }}
           />
 
           <Select
@@ -356,36 +459,29 @@ export function ClassDrawer({
             {...form.getInputProps('price_monthly')}
           />
 
-          <NumberInput
-            label="Eğitmen Komisyon Oranı (%)"
-            description="Bu ders için özel komisyon oranı (boş bırakılırsa eğitmenin varsayılan oranı kullanılır)"
-            min={0}
-            max={100}
-            step={5}
-            leftSection="%"
-            placeholder="Varsayılan oranı kullan"
-            {...form.getInputProps('instructor_commission_rate')}
-          />
-
-          {classItem && form.values.price_monthly !== classItem.price_monthly && (
-            <Alert
-              icon={<IconAlertCircle size={16} />}
-              title="Fiyat Değişikliği"
-              color="orange"
-            >
-              <Stack gap="xs">
-                <Text size="sm">
-                  Dersin fiyatını değiştiriyorsunuz. Mevcut üyelerin fiyatını da güncellemek ister misiniz?
-                </Text>
-                <Checkbox
-                  label="Mevcut üyelerin fiyatını da güncelle"
-                  description="Aktif olarak bu derse kayıtlı tüm üyelerin aylık ödemesi yeni fiyata güncellenecek"
-                  checked={updateExistingPrices}
-                  onChange={(e) => setUpdateExistingPrices(e.currentTarget.checked)}
-                />
-              </Stack>
-            </Alert>
-          )}
+          {classItem &&
+            form.values.price_monthly !== classItem.price_monthly && (
+              <Alert
+                icon={<IconAlertCircle size={16} />}
+                title="Fiyat Değişikliği"
+                color="orange"
+              >
+                <Stack gap="xs">
+                  <Text size="sm">
+                    Dersin fiyatını değiştiriyorsunuz. Mevcut üyelerin fiyatını
+                    da güncellemek ister misiniz?
+                  </Text>
+                  <Checkbox
+                    label="Mevcut üyelerin fiyatını da güncelle"
+                    description="Aktif olarak bu derse kayıtlı tüm üyelerin aylık ödemesi yeni fiyata güncellenecek"
+                    checked={updateExistingPrices}
+                    onChange={(e) =>
+                      setUpdateExistingPrices(e.currentTarget.checked)
+                    }
+                  />
+                </Stack>
+              </Alert>
+            )}
 
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose}>

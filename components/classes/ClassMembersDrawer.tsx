@@ -302,11 +302,29 @@ export function ClassMembersDrawer({
                     ? `${classItem.instructors.first_name} ${classItem.instructors.last_name}`
                     : 'Eğitmen Yok'}
                 </Text>
-                {classItem.instructors?.default_commission_rate != null && (
-                  <Badge variant="outline" color="gray" size="sm">
-                    %{classItem.instructors.default_commission_rate} Komisyon
-                  </Badge>
-                )}
+                {
+                  /* Commission Display Logic */
+                  (() => {
+                    const specificRate = classItem.instructor_commission_rate;
+                    const defaultRate =
+                      classItem.instructors?.default_commission_rate;
+                    const displayRate = specificRate ?? defaultRate;
+                    const isSpecific = specificRate !== null;
+
+                    if (displayRate != null) {
+                      return (
+                        <Badge
+                          variant="outline"
+                          color={isSpecific ? 'blue' : 'gray'}
+                          size="sm"
+                        >
+                          %{displayRate} Komisyon
+                        </Badge>
+                      );
+                    }
+                    return null;
+                  })()
+                }
               </Group>
             </Group>
           </Card>

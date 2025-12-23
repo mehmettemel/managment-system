@@ -32,6 +32,7 @@ import {
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { GlobalSearch } from '@/components/shared/GlobalSearch';
 import { usePathname, useRouter } from 'next/navigation';
+import { logout } from '@/actions/auth';
 
 interface NavItem {
   label: string;
@@ -211,7 +212,7 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
             <NavLink
               label="Çıkış Yap"
               leftSection={<IconLogout size={20} />}
-              onClick={() => console.log('Logout')}
+              onClick={() => logout()}
               variant="subtle"
               c="red"
             />

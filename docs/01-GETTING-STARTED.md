@@ -42,14 +42,25 @@ Projenin kök dizininde `.env.local` adlı bir dosya oluşturun:
 cp .env.local.example .env.local
 ```
 
-`.env.local` dosyasını açın ve Supabase proje bilgilerinizi girin:
+`.env.local` dosyasını açın ve aşağıdaki bilgileri girin:
 
 ```env
+# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Admin Authentication
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your-secure-password-here
 ```
 
-> Bu bilgileri [Supabase Dashboard](https://supabase.com/dashboard) -> Project Settings -> API kısmından alabilirsiniz.
+**Supabase Bilgileri:**
+- Bu bilgileri [Supabase Dashboard](https://supabase.com/dashboard) -> Project Settings -> API kısmından alabilirsiniz.
+
+**Admin Giriş Bilgileri:**
+- `ADMIN_EMAIL`: Sisteme giriş yapmak için kullanacağınız email adresi
+- `ADMIN_PASSWORD`: Güçlü bir şifre belirleyin (minimum 8 karakter önerilir)
+- ⚠️ **ÖNEMLİ:** Production ortamında mutlaka güçlü ve benzersiz bir şifre kullanın!
 
 ### 4. Veritabanını Hazırlayın
 

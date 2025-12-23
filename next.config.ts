@@ -1,7 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // TypeScript errors are now resolved
+  // Production için TypeScript hatalarını kontrol et
+  // ignoreBuildErrors: false, // Default olarak zaten false
 };
 
 export default nextConfig;

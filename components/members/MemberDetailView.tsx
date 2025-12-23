@@ -50,6 +50,11 @@ import { FreezeStatusCard } from './FreezeStatusCard';
 import { showSuccess, showError } from '@/utils/notifications';
 import { AddEnrollmentModal } from './AddEnrollmentModal';
 import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 interface MemberDetailViewProps {
   memberId: number;
@@ -91,7 +96,7 @@ export function MemberDetailView({
         // Show all enrollments where class still exists (not permanently deleted)
         // This includes both active and archived classes
         const enrollments = (memberRes.data.member_classes.filter(
-          (mc: any) => mc.classes !== null
+          (mc: any) => mc.classes !== null && mc.active
         ) || []) as any;
         setActiveEnrollments(enrollments);
       }
@@ -250,6 +255,7 @@ export function MemberDetailView({
           <FreezeStatusCard
             member={member}
             logs={member.frozen_logs || []}
+            enrollments={activeEnrollments}
             effectiveDate={effectiveDate}
             onUnfreezeClick={handleUnfreezeAll}
           />
@@ -288,21 +294,41 @@ export function MemberDetailView({
               ) : (
                 <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
                   {activeEnrollments.map((enrollment) => {
-                    const activeLog = member.frozen_logs?.find(
-                      (log) =>
-                        log.member_class_id === enrollment.id && !log.end_date
-                    );
+                    const activeLog = member.frozen_logs?.find((log) => {
+                      if (log.member_class_id !== enrollment.id) return false;
+
+                      const today = dayjs(effectiveDate);
+                      const startDate = dayjs(log.start_date);
+                      const endDate = log.end_date ? dayjs(log.end_date) : null;
+
+                      const afterStart = today.isSameOrAfter(startDate, 'day');
+                      const beforeEnd = endDate
+                        ? today.isSameOrBefore(endDate, 'day')
+                        : true;
+
+                      return afterStart && beforeEnd;
+                    });
 
                     // Determine status
                     const isEnrollmentActive = enrollment.active;
                     const isClassActive = enrollment.classes?.active;
                     const isClassArchived = !isClassActive;
 
+                    // Check for overdue
+                    const nextPayment = enrollment.next_payment_date
+                      ? dayjs(enrollment.next_payment_date).startOf('day')
+                      : null;
+                    const today = dayjs(effectiveDate).startOf('day');
+                    const isOverdue =
+                      nextPayment && nextPayment.isBefore(today);
+
                     let statusBadge;
                     if (!isEnrollmentActive || isClassArchived) {
                       statusBadge = <Badge color="gray">Pasif</Badge>;
                     } else if (activeLog) {
                       statusBadge = <Badge color="cyan">Donduruldu</Badge>;
+                    } else if (isOverdue) {
+                      statusBadge = <Badge color="red">Gecikmiş Ödeme</Badge>;
                     } else {
                       statusBadge = <Badge color="green">Aktif</Badge>;
                     }
@@ -323,7 +349,11 @@ export function MemberDetailView({
                               size={40}
                               radius="md"
                               variant="light"
-                              color={isEnrollmentActive && isClassActive ? "blue" : "gray"}
+                              color={
+                                isEnrollmentActive && isClassActive
+                                  ? 'blue'
+                                  : 'gray'
+                              }
                             >
                               <IconCreditCard size={20} />
                             </ThemeIcon>

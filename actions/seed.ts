@@ -15,7 +15,8 @@ export async function seedDatabase() {
   try {
     // 1. CLEANUP
     console.log('Cleaning old data...');
-    // Delete in order of dependencies
+    // Delete in order of dependencies (child first)
+    await supabase.from('expenses').delete().neq('id', 0);
     await supabase.from('payments').delete().neq('id', 0);
     await supabase.from('member_logs').delete().neq('id', 0);
     await supabase.from('frozen_logs').delete().neq('id', 0);
@@ -26,8 +27,23 @@ export async function seedDatabase() {
     await supabase.from('instructor_rates').delete().neq('id', 0);
     await supabase.from('classes').delete().neq('id', 0);
     await supabase.from('instructors').delete().neq('id', 0);
+    await supabase.from('dance_types').delete().neq('id', 0);
 
-    // 2. INSTRUCTORS
+    // 2. DANCE TYPES
+    const danceTypes = [
+      { name: 'Salsa' },
+      { name: 'Bachata' },
+      { name: 'Kizomba' },
+      { name: 'Tango' },
+    ];
+    const { data: dTypes } = await supabase
+      .from('dance_types')
+      .insert(danceTypes)
+      .select();
+    if (!dTypes) throw new Error('Failed to seed dance types');
+    const [dtSalsa, dtBachata, dtKizomba, dtTango] = dTypes;
+
+    // 3. INSTRUCTORS & RATES
     const instructors = [
       {
         first_name: 'Ezgi',
@@ -35,6 +51,7 @@ export async function seedDatabase() {
         specialty: 'Salsa',
         phone: '5550000001',
         active: true,
+        default_commission_rate: 20, // Default 20%
       },
       {
         first_name: 'Cem',
@@ -42,6 +59,7 @@ export async function seedDatabase() {
         specialty: 'Bachata',
         phone: '5550000002',
         active: true,
+        default_commission_rate: 25, // Default 25%
       },
     ];
     const { data: insts } = await supabase
@@ -51,38 +69,72 @@ export async function seedDatabase() {
     if (!insts) throw new Error('Failed to seed instructors');
     const [instEzgi, instCem] = insts;
 
-    // 3. CLASSES
+    // Insert Specialty Rates
+    await supabase.from('instructor_rates').insert([
+      {
+        instructor_id: instEzgi.id,
+        dance_type_id: dtSalsa.id,
+        rate: 30, // Ezgi gets 30% for Salsa (Specialty)
+      },
+      {
+        instructor_id: instCem.id,
+        dance_type_id: dtBachata.id,
+        rate: 35, // Cem gets 35% for Bachata (Specialty)
+      },
+      {
+        instructor_id: instCem.id,
+        dance_type_id: dtKizomba.id,
+        rate: 30, // Cem gets 30% for Kizomba
+      },
+    ]);
+
+    // 4. CLASSES
     const classes = [
       {
         name: 'Salsa Başlangıç',
         instructor_id: instEzgi.id,
+        dance_type_id: dtSalsa.id,
         day_of_week: 'Salı',
         start_time: '19:30',
+        duration_minutes: 60,
         price_monthly: 1500,
+        instructor_commission_rate: 30, // Using Specialty Rate (Salsa)
         active: true,
       },
       {
         name: 'Bachata Orta',
         instructor_id: instCem.id,
+        dance_type_id: dtBachata.id,
         day_of_week: 'Perşembe',
         start_time: '20:30',
+        duration_minutes: 60,
         price_monthly: 1800,
+        instructor_commission_rate: 35, // Using Specialty Rate (Bachata)
         active: true,
       },
       {
         name: 'Kizomba Advanced',
         instructor_id: instCem.id,
+        dance_type_id: dtKizomba.id, // Explicitly linked
         day_of_week: 'Cuma',
         start_time: '21:00',
+        duration_minutes: 90,
         price_monthly: 2000,
+        instructor_commission_rate: null, // Using Default (25%) -> Null usually implies default fetching logic, or we store the actual rate?
+        // In our recent logic, if 'default' is selected, we store NULL.
+        // If 'specialty' is selected, we store THAT rate value hardcoded.
+        // Let's assume user selected 'Default' here to test that flow.
         active: true,
       },
       {
         name: 'Tango Gece (Arşiv)',
         instructor_id: instEzgi.id,
+        dance_type_id: dtTango.id,
         day_of_week: 'Cumartesi',
         start_time: '22:00',
+        duration_minutes: 120,
         price_monthly: 2200,
+        instructor_commission_rate: 20, // Manual custom rate (same as default but explicit)
         active: false, // Archived class
       },
     ];
@@ -93,11 +145,10 @@ export async function seedDatabase() {
     if (!cls) throw new Error('Failed to seed classes');
     const [salsaClass, bachataClass, kizombaClass, tangoClass] = cls;
 
-    // 4. MEMBERS & SCENARIOS
+    // 5. MEMBERS & SCENARIOS
     console.log('Creating scenarios...');
 
     // Scenario 1: Ahmet Standart (Active, Paid)
-    // Joined 3 months ago. Paid up to next month.
     await createMemberScenario(supabase, {
       firstName: 'Ahmet',
       lastName: 'Standart',
@@ -108,13 +159,12 @@ export async function seedDatabase() {
         {
           classId: salsaClass.id,
           price: 1500,
-          paidMonths: 4, // Paid 3 past + 1 current/future
+          paidMonths: 4,
         },
       ],
     });
 
     // Scenario 2: Ayşe Yeni (Active, New Joiner)
-    // Joined today. Paid 1 month (Current).
     await createMemberScenario(supabase, {
       firstName: 'Ayşe',
       lastName: 'Yeni',
@@ -131,8 +181,6 @@ export async function seedDatabase() {
     });
 
     // Scenario 3: Mehmet Gecikmiş (Active, Overdue 10 Days)
-    // Joined 2 months ago. Paid first month. Second month overdue.
-    // Due date was start of this month.
     await createMemberScenario(supabase, {
       firstName: 'Mehmet',
       lastName: 'Gecikmiş',
@@ -143,13 +191,12 @@ export async function seedDatabase() {
         {
           classId: salsaClass.id,
           price: 1500,
-          paidMonths: 1,
+          paidMonths: 1, // Paid 1st month, 2nd is due
         },
       ],
     });
 
-    // Scenario 4: Veli Çokgeç (Active, Long Overdue 3 Months)
-    // Joined 5 months ago. Paid 2 months. 3 Months debt.
+    // Scenario 4: Veli Çokgeç (Active, Long Overdue)
     await createMemberScenario(supabase, {
       firstName: 'Veli',
       lastName: 'Çokgeç',
@@ -160,69 +207,47 @@ export async function seedDatabase() {
         {
           classId: bachataClass.id,
           price: 1800,
-          paidMonths: 2,
+          paidMonths: 2, // 3 months overdue
         },
       ],
     });
 
     // Scenario 5: Zeynep Donuk (Frozen)
-    // Joined 4 months ago. Paid 2 months. Frozen 1 month ago for 2 months.
     const zeynep = await createMemberScenario(supabase, {
       firstName: 'Zeynep',
       lastName: 'Donuk',
       phone: '5320000005',
       status: 'frozen',
       joinMonthOffset: -4,
-      enrollments: [
-        {
-          classId: kizombaClass.id,
-          price: 2000,
-          paidMonths: 2,
-        },
-      ],
+      enrollments: [{ classId: kizombaClass.id, price: 2000, paidMonths: 2 }],
     });
-
-    // Get Zeynep's enrollment
-    const { data: zeynepEnrollment } = await supabase
+    // Add Frozen Log
+    const { data: zEnr } = await supabase
       .from('member_classes')
       .select('id')
       .eq('member_id', zeynep.id)
-      .eq('class_id', kizombaClass.id)
       .single();
-
-    if (zeynepEnrollment) {
-      const freezeStartDate = dayjs().subtract(1, 'month').format('YYYY-MM-DD');
-      const freezeEndDate = dayjs().add(1, 'month').format('YYYY-MM-DD');
-
-      // Add Frozen Log
+    if (zEnr) {
+      const start = dayjs().subtract(1, 'month').format('YYYY-MM-DD');
+      const end = dayjs().add(1, 'month').format('YYYY-MM-DD');
       await supabase.from('frozen_logs').insert({
         member_id: zeynep.id,
-        member_class_id: zeynepEnrollment.id,
-        start_date: freezeStartDate,
-        end_date: freezeEndDate,
-        reason: 'Testing Frozen State',
-        created_at: dayjs().subtract(1, 'month').toISOString(),
+        member_class_id: zEnr.id,
+        start_date: start,
+        end_date: end,
+        reason: 'Simülasyon Dondurma',
       });
-
-      // Add freeze log to member_logs
       await supabase.from('member_logs').insert({
         member_id: zeynep.id,
-        member_class_id: zeynepEnrollment.id,
+        member_class_id: zEnr.id,
         action_type: 'freeze',
-        description: 'Üyelik süreli donduruldu',
-        date: freezeStartDate,
-        metadata: {
-          start_date: freezeStartDate,
-          end_date: freezeEndDate,
-          reason: 'Testing Frozen State',
-          is_indefinite: false,
-        },
-        created_at: freezeStartDate,
+        description: 'Üyelik donduruldu',
+        date: start,
+        metadata: { start_date: start, end_date: end },
       });
     }
 
-    // Scenario 6: Can Legacy (Legacy Price)
-    // Joined 6 months ago. Pays 1000 TL instead of 1500. Paid up.
+    // Scenario 6: Can Legacy (Custom Price)
     await createMemberScenario(supabase, {
       firstName: 'Can',
       lastName: 'Legacy',
@@ -233,222 +258,101 @@ export async function seedDatabase() {
         {
           classId: salsaClass.id,
           price: 1500,
-          customPrice: 1000,
+          customPrice: 1000, // Locked legacy price
           paidMonths: 7,
         },
       ],
     });
 
-    // Scenario 7: Burak Eski (Archived Member with Archived Class)
-    // Joined 1 year ago. Left 6 months ago. Also has archived Tango class enrollment.
+    // Scenario 7: Burak Borçlu (Terminated with Debt) - NEW SCENARIO
+    // Joined 3 months ago. Paid 1 month. Terminated yesterday with Debt.
     const burak = await createMemberScenario(supabase, {
       firstName: 'Burak',
-      lastName: 'Eski',
+      lastName: 'Borçlu',
       phone: '5320000007',
       status: 'archived',
-      joinMonthOffset: -12,
-      enrollments: [
-        {
-          classId: salsaClass.id,
-          price: 1500,
-          paidMonths: 6,
-          active: false,
-        },
-      ],
-    });
-
-    // Add archived Tango enrollment for Burak (class is also archived)
-    const tangoJoinDate = dayjs().subtract(8, 'month').format('YYYY-MM-DD');
-    const { data: burakTango } = await supabase
-      .from('member_classes')
-      .insert({
-        member_id: burak.id,
-        class_id: tangoClass.id,
-        active: false,
-        price: 2200,
-        custom_price: 2200,
-        payment_interval: 1,
-        next_payment_date: dayjs(tangoJoinDate)
-          .add(3, 'month')
-          .format('YYYY-MM-DD'),
-        first_payment_date: tangoJoinDate,
-        created_at: tangoJoinDate,
-      })
-      .select()
-      .single();
-
-    if (burakTango) {
-      // Create enrollment log for Tango
-      await supabase.from('member_logs').insert({
-        member_id: burak.id,
-        member_class_id: burakTango.id,
-        action_type: 'enrollment',
-        description: 'Tango Gece (Arşiv) derse kayıt oluşturuldu',
-        date: tangoJoinDate,
-        metadata: { class_id: tangoClass.id },
-        created_at: tangoJoinDate,
-      });
-
-      // Add 3 months of payments for Tango
-      const tangoPayments = [];
-      const tangoLogs = [];
-      for (let i = 0; i < 3; i++) {
-        const pStart = dayjs(tangoJoinDate).add(i, 'month');
-        const paymentDate = pStart.format('YYYY-MM-DD');
-
-        tangoPayments.push({
-          member_id: burak.id,
-          class_id: tangoClass.id,
-          member_class_id: burakTango.id,
-          amount: 2200,
-          payment_date: paymentDate,
-          period_start: paymentDate,
-          period_end: pStart.add(1, 'month').format('YYYY-MM-DD'),
-          payment_method: 'Nakit',
-          payment_type: 'monthly',
-          description: `${pStart.format('MMMM YYYY')} Ödemesi`,
-        });
-
-        tangoLogs.push({
-          member_id: burak.id,
-          member_class_id: burakTango.id,
-          action_type: 'payment',
-          description: `${pStart.format('MMMM YYYY')} ödemesi alındı`,
-          date: paymentDate,
-          metadata: {
-            amount: 2200,
-            payment_method: 'Nakit',
-            period_start: paymentDate,
-          },
-          created_at: paymentDate,
-        });
-      }
-
-      await supabase.from('payments').insert(tangoPayments);
-      await supabase.from('member_logs').insert(tangoLogs);
-    }
-
-    // Scenario 8: Aslı Gelecek (Future Freeze Test Subject)
-    // Active, Paid. User should test freezing her in simulation.
-    await createMemberScenario(supabase, {
-      firstName: 'Aslı',
-      lastName: 'Gelecek',
-      phone: '5320000008',
-      status: 'active',
-      joinMonthOffset: -1,
-      enrollments: [
-        {
-          classId: kizombaClass.id,
-          price: 2000,
-          paidMonths: 2,
-        },
-      ],
-    });
-
-    // Scenario 9: Osman Dönüş (Re-join / Clean Slate)
-    // Joined 2 years ago, left 1 year ago. Joined again TODAY (active).
-    const osman = await createMemberScenario(supabase, {
-      firstName: 'Osman',
-      lastName: 'Dönüş',
-      phone: '5320000009',
-      status: 'active',
-      joinMonthOffset: -24,
-      enrollments: [
-        // Old enrollment (Inactive)
-        {
-          classId: salsaClass.id,
-          price: 1500,
-          paidMonths: 12,
-          active: false,
-        },
-        // New enrollment (Active) - Joined Today
-        // Actually createMemberScenario doesn't support creating a second enrollment with different start date easily.
-        // It uses joinMonthOffset for all.
-        // We will manually insert the second enrollment below.
-      ],
-    });
-    // Add new enrollment for Osman manually
-    const osmanNewDate = dayjs().format('YYYY-MM-DD');
-    await supabase.from('member_classes').insert({
-      member_id: osman.id,
-      class_id: salsaClass.id,
-      active: true,
-      price: 1500,
-      custom_price: 1500,
-      payment_interval: 1,
-      next_payment_date: osmanNewDate, // Next payment is Today
-      first_payment_date: osmanNewDate,
-      created_at: osmanNewDate, // Started today
-    });
-
-    // Scenario 10: Ece Sabit (Grandfathering)
-    // Joined 4 months ago. Price locked at 1000 TL (Current 1500).
-    await createMemberScenario(supabase, {
-      firstName: 'Ece',
-      lastName: 'Sabit',
-      phone: '5320000010',
-      status: 'active',
-      joinMonthOffset: -4,
-      enrollments: [
-        {
-          classId: salsaClass.id, // Current price 1500
-          price: 1500,
-          customPrice: 1000, // Locked price
-          paidMonths: 4, // Paid up to today. Next payment due today/tomorrow.
-        },
-      ],
-    });
-
-    // Scenario 11: Kaan Karma (Partial Freeze)
-    // Active in Salsa and Bachata. Only Salsa is Frozen.
-    const kaan = await createMemberScenario(supabase, {
-      firstName: 'Kaan',
-      lastName: 'Karma',
-      phone: '5320000011',
-      status: 'active', // Global status active because partial freeze
       joinMonthOffset: -3,
       enrollments: [
-        { classId: salsaClass.id, price: 1500, paidMonths: 3 },
-        { classId: bachataClass.id, price: 1800, paidMonths: 3 },
+        {
+          classId: bachataClass.id,
+          price: 1800,
+          paidMonths: 1,
+          active: false,
+        },
       ],
     });
-    // Freeze Salsa Only
-    // Need member_class_id for Salsa. Fetch it.
-    const { data: kaanSalsa } = await supabase
+    // Add Termination Debt Expense manually
+    const termDate = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+    const { data: bEnr } = await supabase
       .from('member_classes')
       .select('id')
-      .eq('member_id', kaan.id)
-      .eq('class_id', salsaClass.id)
+      .eq('member_id', burak.id)
       .single();
-
-    if (kaanSalsa) {
-      const freezeStartDate = dayjs().subtract(5, 'day').format('YYYY-MM-DD');
-
-      await supabase.from('frozen_logs').insert({
-        member_id: kaan.id,
-        member_class_id: kaanSalsa.id,
-        start_date: freezeStartDate,
-        end_date: null,
-        reason: 'Partial Freeze Test',
-        created_at: freezeStartDate,
+    if (bEnr) {
+      // Create Debt Expense
+      await supabase.from('expenses').insert({
+        amount: 2500, // Random debt amount
+        category: 'Diğer',
+        description: `Ders Ayrılış - Tahsil Edilemeyen Borç (Burak Borçlu)`,
+        date: termDate,
+        member_id: burak.id,
+        member_class_id: bEnr.id,
       });
-
-      // Add freeze log to member_logs
+      // Log termination
       await supabase.from('member_logs').insert({
-        member_id: kaan.id,
-        member_class_id: kaanSalsa.id,
-        action_type: 'freeze',
-        description: 'Üyelik süresiz donduruldu',
-        date: freezeStartDate,
-        metadata: {
-          start_date: freezeStartDate,
-          end_date: null,
-          reason: 'Partial Freeze Test',
-          is_indefinite: true,
-        },
-        created_at: freezeStartDate,
+        member_id: burak.id,
+        member_class_id: bEnr.id,
+        action_type: 'termination',
+        description: 'Ders sonlandırıldı. Borçlu ayrıldı: 2500 TL',
+        date: termDate,
+        metadata: { financialAction: 'debt', debtAmount: 2500 },
       });
     }
+
+    // 6. EXPENSES (Operational)
+    console.log('Generating expenses...');
+    const expenseData = [];
+    const categories = [
+      'Kira',
+      'Elektrik',
+      'Su',
+      'İnternet',
+      'Temizlik',
+      'Maaş',
+    ] as const;
+
+    // Generate expenses for last 3 months
+    for (let i = 0; i < 3; i++) {
+      const month = dayjs().subtract(i, 'month');
+      // Rent
+      expenseData.push({
+        category: 'Kira',
+        amount: 15000,
+        description: `${month.format('MMMM YYYY')} Kira Ödemesi`,
+        date: month.date(1).format('YYYY-MM-DD'),
+        member_id: null,
+        member_class_id: null,
+      });
+      // Electricity
+      expenseData.push({
+        category: 'Elektrik',
+        amount: Math.floor(Math.random() * 1000) + 500,
+        description: `${month.format('MMMM YYYY')} Elektrik Faturası`,
+        date: month.date(15).format('YYYY-MM-DD'),
+        member_id: null,
+        member_class_id: null,
+      });
+      // Cleaning
+      expenseData.push({
+        category: 'Temizlik',
+        amount: 2000,
+        description: `${month.format('MMMM YYYY')} Temizlik Malzemeleri`,
+        date: month.date(10).format('YYYY-MM-DD'),
+        member_id: null,
+        member_class_id: null,
+      });
+    }
+    await supabase.from('expenses').insert(expenseData);
 
     revalidatePath('/');
     console.log('✅ Database seeded successfully!');
@@ -517,7 +421,7 @@ async function createMemberScenario(
         active: enr.active ?? true,
         price: enr.price,
         custom_price: enr.customPrice,
-        payment_interval: 1,
+        payment_interval: 1, // Default to 1 month
         next_payment_date: nextPaymentDate,
         first_payment_date: firstPaymentDate,
         created_at: joinDate,

@@ -97,10 +97,7 @@ export function FreezeMemberDrawer({
       // Calculate daily rate
       // Price covers 'payment_interval' months
       const intervalMonths = enrollment.payment_interval || 1;
-      const totalPrice =
-        enrollment.custom_price !== null
-          ? enrollment.custom_price
-          : enrollment.price || 0;
+      const totalPrice = enrollment.custom_price || 0;
 
       const monthlyPrice = totalPrice / intervalMonths;
       const dailyPrice = monthlyPrice / 30; // Approximation

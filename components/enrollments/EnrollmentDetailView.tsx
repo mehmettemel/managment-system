@@ -30,6 +30,7 @@ import {
   IconUser,
   IconClock,
   IconInfoCircle,
+  IconSnowflake,
 } from '@tabler/icons-react';
 import {
   getMemberById,
@@ -233,9 +234,18 @@ export function EnrollmentDetailView({
     enrollment: MemberClassWithDetails
   ): string | null => {
     // If currently frozen, don't compute next payment date
-    const activeLog = member?.frozen_logs?.find(
-      (log) => log.member_class_id === enrollment.id && !log.end_date
-    );
+    const activeLog = member?.frozen_logs?.find((log) => {
+      if (log.member_class_id !== enrollment.id) return false;
+
+      const today = dayjs(effectiveDate);
+      const startDate = dayjs(log.start_date);
+      const endDate = log.end_date ? dayjs(log.end_date) : null;
+
+      const afterStart = today.isSameOrAfter(startDate, 'day');
+      const beforeEnd = endDate ? today.isSameOrBefore(endDate, 'day') : true;
+
+      return afterStart && beforeEnd;
+    });
     if (activeLog) {
       return null; // Frozen, no next payment date
     }
@@ -369,6 +379,7 @@ export function EnrollmentDetailView({
       terminationDate: values.terminationDate,
       financialAction: values.financialAction,
       refundAmount: values.refundAmount,
+      debtAmount: values.debtAmount,
     });
 
     if (result.error) {
@@ -477,9 +488,19 @@ export function EnrollmentDetailView({
     overdueMonthsCount: getOverdueMonthsCount(enrollment),
   };
 
-  const activeLog = member.frozen_logs?.find(
-    (log) => log.member_class_id === enrollment.id && !log.end_date
-  );
+  const activeLog = member.frozen_logs?.find((log) => {
+    if (log.member_class_id !== enrollment.id) return false;
+
+    const today = dayjs(effectiveDate);
+    const startDate = dayjs(log.start_date);
+    const endDate = log.end_date ? dayjs(log.end_date) : null;
+
+    // Check if today is within the freeze period
+    const afterStart = today.isSameOrAfter(startDate, 'day');
+    const beforeEnd = endDate ? today.isSameOrBefore(endDate, 'day') : true;
+
+    return afterStart && beforeEnd;
+  });
 
   const enrollmentFrozenLogs =
     member.frozen_logs?.filter(
@@ -535,12 +556,39 @@ export function EnrollmentDetailView({
         {/* Frozen Alert */}
         {activeLog && (
           <Alert
-            icon={<IconInfoCircle size={16} />}
-            title="Üyelik Dondurulmuş"
+            icon={<IconSnowflake size={20} />}
+            title={`${classData.name} - Ders Donduruldu`}
             color="blue"
-            variant="light"
+            variant="filled"
           >
-            Bu üyelik şu anda dondurulmuş durumdadır.
+            <Stack gap="sm">
+              <Group>
+                <Text size="sm" c="white" fw={500}>
+                  Bu ders <strong>{formatDate(activeLog.start_date)}</strong>{' '}
+                  tarihinde donduruldu.
+                </Text>
+              </Group>
+              {activeLog.end_date ? (
+                <Text size="sm" c="white">
+                  Otomatik açılış tarihi:{' '}
+                  <strong>{formatDate(activeLog.end_date)}</strong>
+                </Text>
+              ) : (
+                <Text size="sm" c="white" fs="italic">
+                  Süresiz dondurma (manuel açılış gerekli)
+                </Text>
+              )}
+              {activeLog.reason && (
+                <Text size="sm" c="white" opacity={0.9}>
+                  Sebep: {activeLog.reason}
+                </Text>
+              )}
+              <Text size="xs" c="white" opacity={0.8} mt="xs">
+                ⚠️ Dondurulmuş derslerde ödeme alınamaz ve ödeme planı
+                görüntülenemez. Dersi aktifleştirmek için aşağıdaki "Dondurma
+                Kaldır" butonunu kullanın.
+              </Text>
+            </Stack>
           </Alert>
         )}
 
@@ -660,11 +708,7 @@ export function EnrollmentDetailView({
                   </>
                 ) : (
                   <>
-                    <Text
-                      fw={700}
-                      size="md"
-                      c={isOverdue ? 'red' : 'green'}
-                    >
+                    <Text fw={700} size="md" c={isOverdue ? 'red' : 'green'}>
                       {computedEnrollment.next_payment_date
                         ? formatDate(computedEnrollment.next_payment_date)
                         : '-'}
@@ -708,8 +752,8 @@ export function EnrollmentDetailView({
                     !classData?.active
                       ? 'Pasif derslerde ödeme alınamaz'
                       : activeLog
-                      ? 'Dondurulmuş derslerde ödeme alınamaz'
-                      : undefined
+                        ? 'Dondurulmuş derslerde ödeme alınamaz'
+                        : undefined
                   }
                 >
                   Ödeme Al
@@ -748,7 +792,11 @@ export function EnrollmentDetailView({
                     size="md"
                     onClick={() => handleUnfreezeLog(activeLog.id)}
                     disabled={!classData?.active}
-                    title={!classData?.active ? 'Pasif derslerde işlem yapılamaz' : undefined}
+                    title={
+                      !classData?.active
+                        ? 'Pasif derslerde işlem yapılamaz'
+                        : undefined
+                    }
                   >
                     Dondurma Kaldır
                   </Button>
@@ -759,7 +807,11 @@ export function EnrollmentDetailView({
                     size="md"
                     onClick={() => handleFreezeClick(computedEnrollment)}
                     disabled={!classData?.active}
-                    title={!classData?.active ? 'Pasif derslerde dondurma yapılamaz' : undefined}
+                    title={
+                      !classData?.active
+                        ? 'Pasif derslerde dondurma yapılamaz'
+                        : undefined
+                    }
                   >
                     Dondur
                   </Button>

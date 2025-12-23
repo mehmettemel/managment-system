@@ -118,7 +118,6 @@ export function DanceTypesTable({ data }: { data: DanceType[] }) {
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Ad</Table.Th>
-            <Table.Th>Slug</Table.Th>
             <Table.Th w={100}>İşlemler</Table.Th>
           </Table.Tr>
         </Table.Thead>
@@ -126,7 +125,6 @@ export function DanceTypesTable({ data }: { data: DanceType[] }) {
           {data.map((type) => (
             <Table.Tr key={type.id}>
               <Table.Td>{type.name}</Table.Td>
-              <Table.Td c="dimmed">{type.slug}</Table.Td>
               <Table.Td>
                 <Group gap={4}>
                   <ActionIcon

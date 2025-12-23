@@ -16,7 +16,9 @@ export type Updates<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Update'];
 
 // Specific table types
-export type Instructor = Tables<'instructors'>;
+export type Instructor = Tables<'instructors'> & {
+  instructor_rates?: Tables<'instructor_rates'>[];
+};
 export type Class = Tables<'classes'>;
 export type Member = Tables<'members'>;
 export type MemberClass = Tables<'member_classes'>;
@@ -56,15 +58,42 @@ export type ExpenseUpdate = Updates<'expenses'>;
 
 // Extended types with relations
 export type MemberWithClasses = Member & {
+  first_name: string;
+  last_name: string;
+  phone?: string | null;
+  status: 'active' | 'frozen' | 'archived';
   member_classes: (MemberClass & {
-    classes: Class | null;
+    classes:
+      | (Class & {
+          name: string;
+          active: boolean;
+        })
+      | null;
     created_at: string | null;
   })[];
-  frozen_logs?: FrozenLog[];
+  frozen_logs?: (FrozenLog & {
+    id: number;
+    member_class_id: number;
+    start_date: string;
+    end_date: string | null;
+    reason: string | null;
+  })[];
 };
 
 export type ClassWithInstructor = Class & {
-  instructors: Instructor | null;
+  name: string;
+  active: boolean;
+  price_monthly: number;
+  day_of_week?: string | null;
+  start_time?: string | null;
+  duration_minutes?: number | null;
+  instructors:
+    | (Instructor & {
+        first_name: string;
+        last_name: string;
+        instructor_rates?: InstructorRate[];
+      })
+    | null;
 };
 
 export type MemberWithPayments = Member & {
@@ -80,6 +109,11 @@ export type InstructorPayoutWithDetails = InstructorPayout & {
 
 // Expense with member info
 export interface ExpenseWithMember extends Expense {
+  amount: number;
+  category: string;
+  description: string | null;
+  date: string;
+  receipt_number: string | null;
   members?: {
     id: number;
     first_name: string;
@@ -96,7 +130,14 @@ export interface MemberClassWithDetails {
   active: boolean;
   payment_interval: number | null;
   custom_price: number | null;
-  classes: Class;
+  classes: Class & {
+    name: string;
+    price_monthly: number;
+    active: boolean;
+    day_of_week?: string | null;
+    start_time?: string | null;
+    duration_minutes?: number | null;
+  };
   created_at: string | null;
   first_payment_date: string | null;
   last_payment_date?: string | null; // Calculated from payments table
@@ -104,17 +145,12 @@ export interface MemberClassWithDetails {
 
 // Payment with class info
 export interface PaymentWithClass extends Payment {
-  id?: number;
-  classes?: Class | null;
+  classes?:
+    | (Class & {
+        name: string;
+      })
+    | null;
   member_classes?: { active: boolean } | null;
-  member_class_id?: number | null;
-  class_id?: number | null;
-  period_start?: string | null;
-  period_end?: string | null;
-  amount?: number;
-  payment_date?: string;
-  payment_method?: string;
-  description?: string;
 }
 
 // Member Class Registration Data
@@ -228,12 +264,6 @@ export type MemberStatus = 'active' | 'frozen' | 'archived';
 export type PaymentMethod = 'Nakit' | 'Kredi Kartı' | 'Havale' | 'Diğer';
 
 export type PaymentType = 'monthly' | 'custom' | 'refund';
-
-// Extended Payment Interface override (optional if DB types not updated yet)
-// We rely on Tables<'payments'> usually, but for strong typing in app:
-export interface PaymentWithDetails extends Payment {
-  payment_type?: PaymentType;
-}
 
 // Days of week
 export type DayOfWeek =

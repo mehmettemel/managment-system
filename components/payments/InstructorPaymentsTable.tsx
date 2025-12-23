@@ -202,9 +202,9 @@ export function InstructorPaymentsTable({
       ),
     },
     {
-      key: 'note',
+      key: 'notes',
       label: 'Not',
-      render: (row) => row.note || '-',
+      render: (row) => row.notes || '-',
     },
   ];
 

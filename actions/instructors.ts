@@ -35,7 +35,7 @@ export async function getInstructors(): Promise<ApiListResponse<Instructor>> {
 
     const { data, error } = await supabase
       .from('instructors')
-      .select('*')
+      .select('*, instructor_rates(*)')
       .eq('active', true)
       .order('first_name');
 

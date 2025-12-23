@@ -40,7 +40,7 @@ interface DataTableProps<T> {
   data: T[];
   columns: DataTableColumn<T>[];
   onRowClick?: (item: T) => void;
-  onSelectionChange?: (selectedItems: T[]) => void;
+  onSelectionChange?: (selectedItems: T[] | any[]) => void;
   enableSelection?: boolean;
   // New: Support for controlled selection with IDs
   selectable?: boolean;
@@ -87,7 +87,9 @@ export function DataTable<T extends Record<string, any>>({
   const [internalSortOrder, setInternalSortOrder] = useState<'asc' | 'desc'>(
     'asc'
   );
-  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<any>>(new Set());
+  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<any>>(
+    new Set()
+  );
   const [internalPage, setInternalPage] = useState(1);
 
   // Use controlled or internal selection

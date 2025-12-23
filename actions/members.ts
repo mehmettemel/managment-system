@@ -531,7 +531,7 @@ export async function addMemberToClasses(
     }
 
     // Check if all classes are active
-    const classIds = classRegistrations.map(reg => reg.class_id);
+    const classIds = classRegistrations.map((reg) => reg.class_id);
     const { data: classes, error: classError } = await supabase
       .from('classes')
       .select('id, name, active')
@@ -541,9 +541,9 @@ export async function addMemberToClasses(
       return errorResponse('Dersler kontrol edilirken hata oluştu');
     }
 
-    const inactiveClasses = classes?.filter(c => !c.active) || [];
+    const inactiveClasses = classes?.filter((c) => !c.active) || [];
     if (inactiveClasses.length > 0) {
-      const inactiveNames = inactiveClasses.map(c => c.name).join(', ');
+      const inactiveNames = inactiveClasses.map((c) => c.name).join(', ');
       return errorResponse(`Pasif derslere kayıt yapılamaz: ${inactiveNames}`);
     }
 
@@ -788,7 +788,9 @@ export async function terminateEnrollment(
     // Get enrollment with class info for validation
     const { data: enrollment } = await supabase
       .from('member_classes')
-      .select('member_id, class_id, classes(id, name, active)')
+      .select(
+        'member_id, class_id, classes(id, name, active), members(first_name, last_name)'
+      )
       .eq('id', id)
       .single();
 
@@ -799,8 +801,15 @@ export async function terminateEnrollment(
     // Check if class is active
     const classData = enrollment.classes as any;
     if (!classData || !classData.active) {
-      return errorResponse('Pasif veya arşivlenmiş bir dersten öğrenci çıkarılamaz');
+      return errorResponse(
+        'Pasif veya arşivlenmiş bir dersten öğrenci çıkarılamaz'
+      );
     }
+
+    // Helper to get member name
+    const memberName = (enrollment as any).members
+      ? `${(enrollment as any).members.first_name} ${(enrollment as any).members.last_name}`
+      : `Üye: ${enrollment.member_id}`;
 
     // 1. Deactivate enrollment
     const { error: updateError } = await supabase
@@ -808,8 +817,6 @@ export async function terminateEnrollment(
       .update({ active: false }) // We might want to store termination date too? Schema check?
       // Schema doesn't have 'end_date' on member_classes properly defined or used generally?
       // Frozen has end_date. Member classes might not.
-      // User said "active = false, end_date = NOW()". check schema.
-      // Schema view earlier showed: id, member_id, class_id, next_payment_date...
       // I should add `end_date` col to `member_classes` if not exists?
       // Or just rely on active=false.
       // Let's assume active=false is enough for now, or check schema later.
@@ -864,13 +871,21 @@ export async function terminateEnrollment(
       await supabase.from('expenses').insert({
         amount: refundAmount,
         category: 'Para İadesi',
-        description: `Ders İptali - Para İadesi (${enrollment.member_id ? `Üye: ${enrollment.member_id}` : 'Üye'})`,
+        description: `Ders İptali - Para İadesi (${memberName})`,
         date: termDateStr,
         member_id: enrollment.member_id,
         member_class_id: id,
       });
     } else if (financialAction === 'debt' && debtAmount && debtAmount > 0) {
-      // Record Debt - Logged effectively
+      // Record Debt as Expense (Bad Debt / Loss)
+      await supabase.from('expenses').insert({
+        amount: debtAmount,
+        category: 'Diğer', // Or specific category if added
+        description: `Ders Ayrılış - Tahsil Edilemeyen Borç (${memberName})`,
+        date: termDateStr,
+        member_id: enrollment.member_id,
+        member_class_id: id,
+      });
     }
 
     // 3. Log History
@@ -897,6 +912,7 @@ export async function terminateEnrollment(
 
     revalidatePath(`/members/${enrollment.member_id}`);
     revalidatePath('/members');
+    revalidatePath('/finance');
     return successResponse(true);
   } catch (error) {
     logError('terminateEnrollment', error);

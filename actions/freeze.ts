@@ -28,8 +28,10 @@ import {
 import { getServerNow } from '@/utils/server-date-helper';
 import { addMemberLog } from './members';
 import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 
+dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 
 /**
@@ -447,26 +449,27 @@ export async function syncMemberStatuses(): Promise<
       // Check logs
       // Check logs
       if (member.frozen_logs && member.frozen_logs.length > 0) {
-        // Is there any log where start <= today AND (end is null OR end > today)
+        // Is there any log where start <= today <= end
         shouldBeFrozen = member.frozen_logs.some((log) => {
           const start = dayjs(log.start_date);
           const end = log.end_date ? dayjs(log.end_date) : null;
 
           console.log(
-            `[Sync] Member ${member.id} Log: ${log.start_date} - ${log.end_date || 'Ingdif'}. Today: ${today.format('YYYY-MM-DD')}`
+            `[Sync] Member ${member.id} Log: ${log.start_date} - ${log.end_date || 'Indefinite'}. Today: ${today.format('YYYY-MM-DD')}`
           );
 
-          // If start is in future, it doesn't count yet
-          if (start.isAfter(today, 'day')) {
-            console.log(`[Sync] Member ${member.id}: Start date is future.`);
+          // Check if today is within the freeze period
+          const afterStart = today.isSameOrAfter(start, 'day');
+          const beforeEnd = end ? today.isSameOrBefore(end, 'day') : true;
+
+          if (!afterStart) {
+            console.log(`[Sync] Member ${member.id}: Start date is in future.`);
             return false;
           }
 
-          // If it started, did it end?
-          // If ends TODAY, we treat as ended (active).
-          if (end && end.isSameOrBefore(today, 'day')) {
+          if (!beforeEnd) {
             console.log(
-              `[Sync] Member ${member.id}: Ended on or before today.`
+              `[Sync] Member ${member.id}: Ended before or on ${end?.format('YYYY-MM-DD')}.`
             );
             return false;
           }

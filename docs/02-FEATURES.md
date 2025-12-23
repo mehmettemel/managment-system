@@ -4,6 +4,78 @@ Bu belge, **Management System** projesinin tüm özelliklerini ve nasıl çalı�
 
 ---
 
+## 🔐 Kimlik Doğrulama (Authentication)
+
+Sistem, basit ve güvenli bir cookie-based authentication mekanizması kullanır.
+
+### Giriş Sistemi (Login System)
+
+**Dosya:** `app/login/page.tsx`, `components/auth/LoginForm.tsx`
+
+**Özellikler:**
+
+- **Modern UI**: Framer Motion animasyonları ile görsel olarak zengin login deneyimi
+- **Server-Side Validation**: Tüm kimlik doğrulama işlemleri server-side'da yapılır
+- **Güvenli Session Management**: HTTPOnly cookie ile güvenli oturum yönetimi
+- **Otomatik Yönlendirme**: Giriş yapan kullanıcılar otomatik olarak dashboard'a yönlendirilir
+
+**Teknik Detaylar:**
+
+```typescript
+// Session Management (lib/session.ts)
+- createSession(email): Yeni oturum oluşturur
+- getSession(): Mevcut oturumu döner
+- deleteSession(): Oturumu sonlandırır
+- isAuthenticated(): Kullanıcının giriş yapıp yapmadığını kontrol eder
+```
+
+**Middleware Koruması:**
+
+```typescript
+// middleware.ts
+- Tüm protected route'lar otomatik olarak korunur
+- Giriş yapmamış kullanıcılar /login'e yönlendirilir
+- Public routes: /login
+```
+
+**Environment Variables:**
+
+```env
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your-secure-password
+```
+
+⚠️ **GÜVENLİK NOTU:**
+- Admin credentials **asla** `NEXT_PUBLIC_*` prefix'i ile başlamamalı
+- Production ortamında güçlü şifre kullanın (min 12 karakter)
+- Şifreler server-side'da kontrol edilir, browser'a expose edilmez
+
+**Kullanıcı Akışı:**
+
+1. Kullanıcı sisteme giriş yapmak için `/login` sayfasına gider
+2. Email ve şifre girişi yapılır
+3. Server-side validation gerçekleşir
+4. Başarılı giriş sonrası HTTPOnly cookie oluşturulur
+5. Dashboard'a (`/`) yönlendirilir
+6. Middleware her istekte session'ı kontrol eder
+
+### Çıkış İşlemi (Logout)
+
+**Dosya:** `actions/auth.ts`
+
+```typescript
+// Navbar'da logout butonu
+await logout(); // Session cookie'sini siler ve /login'e yönlendirir
+```
+
+**Session Süresi:**
+
+- Default: 7 gün
+- Otomatik yenileme: Yok (kullanıcı 7 gün sonra tekrar giriş yapmalı)
+- Session silme: Logout butonu veya cookie süresi dolunca
+
+---
+
 ## 👥 Üye Yönetimi (Member Management)
 
 ### Kayıt Bazlı Mimari (Enrollment-Based Architecture)
