@@ -31,6 +31,7 @@ import {
 } from '@tabler/icons-react';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { GlobalSearch } from '@/components/shared/GlobalSearch';
+import { LiveClock } from '@/components/shared/LiveClock';
 import { usePathname, useRouter } from 'next/navigation';
 import { logout } from '@/actions/auth';
 
@@ -184,20 +185,11 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
           </Group>
 
           <Group gap="xs" wrap="wrap">
+            <ThemeToggle />
             <Box visibleFrom="xs">
               <GlobalSearch />
             </Box>
-            <ThemeToggle />
-            <UnstyledButton>
-              <Group gap="xs">
-                <IconUserCircle size={24} />
-                <Box visibleFrom="sm">
-                  <Text size="sm" fw={500}>
-                    Admin
-                  </Text>
-                </Box>
-              </Group>
-            </UnstyledButton>
+            <LiveClock />
           </Group>
         </Group>
       </MantineAppShell.Header>

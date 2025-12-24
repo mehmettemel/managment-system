@@ -50,7 +50,7 @@ export function FreezeStatusCard({
         const endDate = log.end_date ? dayjs(log.end_date) : null;
 
         const afterStart = today.isSameOrAfter(startDate, 'day');
-        const beforeEnd = endDate ? today.isSameOrBefore(endDate, 'day') : true;
+        const beforeEnd = endDate ? today.isBefore(endDate, 'day') : true;
 
         return afterStart && beforeEnd;
       });

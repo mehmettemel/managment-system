@@ -225,7 +225,7 @@ export function EnrollmentDetailView({
 
       return (
         date.isSameOrAfter(freezeStart, 'day') &&
-        date.isSameOrBefore(freezeEnd, 'day')
+        date.isBefore(freezeEnd, 'day')
       );
     });
   };
@@ -242,7 +242,7 @@ export function EnrollmentDetailView({
       const endDate = log.end_date ? dayjs(log.end_date) : null;
 
       const afterStart = today.isSameOrAfter(startDate, 'day');
-      const beforeEnd = endDate ? today.isSameOrBefore(endDate, 'day') : true;
+      const beforeEnd = endDate ? today.isBefore(endDate, 'day') : true;
 
       return afterStart && beforeEnd;
     });
@@ -355,7 +355,8 @@ export function EnrollmentDetailView({
       showError(result.error);
     } else {
       showSuccess('Ders aktifleştirildi');
-      fetchData();
+      await fetchData();
+      router.refresh(); // Refresh server-side data including effectiveDate
     }
     setActionLoading(false);
   };
@@ -497,7 +498,7 @@ export function EnrollmentDetailView({
 
     // Check if today is within the freeze period
     const afterStart = today.isSameOrAfter(startDate, 'day');
-    const beforeEnd = endDate ? today.isSameOrBefore(endDate, 'day') : true;
+    const beforeEnd = endDate ? today.isBefore(endDate, 'day') : true;
 
     return afterStart && beforeEnd;
   });

@@ -163,7 +163,8 @@ export function MemberDetailView({
       showError(result.error);
     } else {
       showSuccess('Üyelik aktifleştirildi');
-      fetchData();
+      await fetchData();
+      router.refresh(); // Refresh server-side data including effectiveDate
     }
     setActionLoading(false);
   };
@@ -303,7 +304,7 @@ export function MemberDetailView({
 
                       const afterStart = today.isSameOrAfter(startDate, 'day');
                       const beforeEnd = endDate
-                        ? today.isSameOrBefore(endDate, 'day')
+                        ? today.isBefore(endDate, 'day')
                         : true;
 
                       return afterStart && beforeEnd;
