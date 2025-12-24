@@ -3,12 +3,17 @@
 import { Card, Text, Group, Stack, RingProgress, Center } from '@mantine/core';
 import { useState, useEffect } from 'react';
 import { getPaymentStatusStats } from '@/actions/dashboard';
+import { useMediaQuery } from '@mantine/hooks';
 
 export function PaymentStatusChart() {
   const [data, setData] = useState<
     { name: string; value: number; color: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
+
+  const matchesMd = useMediaQuery('(min-width: 62em)');
+  const matchesSm = useMediaQuery('(min-width: 48em)');
+  const size = matchesMd ? 160 : matchesSm ? 140 : 120;
 
   useEffect(() => {
     getPaymentStatusStats().then((res) => {
@@ -34,7 +39,7 @@ export function PaymentStatusChart() {
       <Group align="center" justify="center" gap="xl" wrap="wrap">
         <div style={{ position: 'relative' }}>
           <RingProgress
-            size={{ base: 120, sm: 140, md: 160 }}
+            size={size}
             thickness={20}
             roundCaps
             sections={sections}

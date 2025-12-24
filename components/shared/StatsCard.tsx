@@ -5,6 +5,7 @@
 
 import { Paper, Group, Text, ThemeIcon, Stack } from '@mantine/core';
 import { IconTrendingUp, IconTrendingDown } from '@tabler/icons-react';
+import { useMediaQuery } from '@mantine/hooks';
 
 interface StatsCardProps {
   title: string;
@@ -27,6 +28,8 @@ export function StatsCard({
   loading = false,
 }: StatsCardProps) {
   const isPositiveTrend = trend && trend.value > 0;
+  const isSm = useMediaQuery('(min-width: 48em)'); // mantine sm
+  const iconSize = isSm ? 50 : 40;
 
   return (
     <Paper withBorder p="md" radius="md" h="100%">
@@ -68,7 +71,7 @@ export function StatsCard({
             )}
           </div>
         </Stack>
-        <ThemeIcon color={color} variant="light" size={{ base: 40, sm: 50 }} radius="md">
+        <ThemeIcon color={color} variant="light" size={iconSize} radius="md">
           {icon}
         </ThemeIcon>
       </Group>
