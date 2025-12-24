@@ -7,7 +7,22 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "eslint",
-    "format": "prettier --write ."
+    "lint:fix": "eslint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:all": "vitest run && playwright test",
+    "validate": "npm run type-check && npm run lint && npm run format:check",
+    "verify": "npm run validate && npm run test:unit && npm run test:integration && npm run build",
+    "pre-deploy": "npm run verify"
   },
   "dependencies": {
     "@mantine/charts": "^8.3.10",
@@ -30,17 +45,28 @@
     "recharts": "^3.5.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.1.2",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
     "eslint": "^9",
     "eslint-config-next": "16.0.8",
+    "happy-dom": "^20.0.11",
+    "jsdom": "^27.3.0",
+    "msw": "^2.12.4",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
     "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.5.14",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.16"
   }
 }

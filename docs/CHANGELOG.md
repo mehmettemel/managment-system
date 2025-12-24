@@ -2,6 +2,128 @@
 
 Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 
+## [1.4.0] - 2024-12-25
+
+### 🚀 Pre-Deployment Verification System
+
+- ✅ **Otomatik Deployment Kontrolleri**
+  - `npm run verify`: Tüm kontrolleri tek komutta çalıştır
+  - `npm run pre-deploy`: Production öncesi tam verification
+  - `./scripts/pre-deploy.sh`: Detaylı raporlama ile verification script
+  - Kontroller: TypeScript, ESLint, Prettier, Tests, Build
+
+- ✅ **Yeni NPM Scripts**
+  - `type-check`: TypeScript type checking
+  - `lint:fix`: ESLint auto-fix
+  - `format:check`: Prettier format validation
+  - `validate`: Type-check + Lint + Format
+  - `verify`: Validate + Tests + Build
+  - `pre-deploy`: Alias for verify
+
+- ✅ **CI/CD Pipeline (GitHub Actions)**
+  - `.github/workflows/ci.yml`: Otomatik test ve build
+  - Code quality checks (TypeScript, ESLint, Prettier)
+  - Unit & Integration tests
+  - E2E tests (Playwright)
+  - Build verification
+  - Coverage reporting
+  - Automatic deployment verification
+
+- ✅ **Deployment Dokümantasyonu Güncellendi**
+  - Pre-deployment verification bölümü eklendi
+  - CI/CD pipeline açıklamaları
+  - GitHub Actions setup guide
+  - Production checklist genişletildi
+
+### 🧪 Testing Infrastructure
+
+- ✅ **Kapsamlı Test Altyapısı Kuruldu**
+  - **Vitest** integration (unit + integration tests)
+  - **Playwright** E2E testing setup
+  - **React Testing Library** component testing
+  - **MSW** API mocking support
+  - 60+ test (37 unit, 23 integration, 4 E2E specs)
+
+- ✅ **Unit Tests** (`tests/unit/`)
+  - `formatters.test.ts`: Para, telefon, ödeme yöntemi formatlama (11 test)
+  - `date-helpers.test.ts`: Tarih hesaplamaları, ödeme dönemleri (26 test)
+
+- ✅ **Integration Tests** (`tests/integration/`)
+  - `member-workflow.test.tsx`: Üye kaydı, düzenleme, filtreleme (5 test)
+  - `payment-workflow.test.tsx`: Ödeme toplama, geri alma, takvim (8 test)
+  - `freeze-workflow.test.tsx`: Dondurma/dondurma kaldırma (10 test)
+
+- ✅ **E2E Tests** (`tests/e2e/`)
+  - `member-registration.spec.ts`: Tam üye kayıt journey
+  - `payment-collection.spec.ts`: Ödeme toplama akışları
+  - `freeze-unfreeze.spec.ts`: Dondurma workflow
+  - `instructor-payment.spec.ts`: Eğitmen hakediş yönetimi
+
+- ✅ **Test Senaryoları** (Help sayfasına göre)
+  - Senaryo 1: Yeni Üye Kaydı → FULL ✅
+  - Senaryo 2: Aylık Aidat Toplama → FULL ✅
+  - Senaryo 3: Üyelik Dondurma → FULL ✅
+  - Senaryo 4: Eğitmen Hakediş → FULL ✅
+  - Senaryo 5: Gelir Takibi → PARTIAL ⚠️
+  - Senaryo 6: Sınıf Yönetimi → PARTIAL ⚠️
+  - Senaryo 7: Geçmişe Dönük Düzenleme → FULL ✅
+
+- ✅ **Test Scripts**
+  - `npm test`: Watch mode
+  - `npm run test:unit`: Sadece unit testler
+  - `npm run test:integration`: Sadece integration testler
+  - `npm run test:e2e`: E2E testler
+  - `npm run test:ui`: Vitest UI
+  - `npm run test:e2e:ui`: Playwright UI
+  - `npm run test:coverage`: Code coverage
+
+- ✅ **Dokümantasyon**
+  - `docs/07-TESTING.md`: Kapsamlı test dokümantasyonu
+  - `tests/README.md`: Hızlı başlangıç rehberi
+  - `TEST_SUMMARY.md`: Test özeti ve kapsam raporu
+
+### 🐛 Bug Fixes
+
+- ✅ **Freeze/Unfreeze UI State**: Ders aktifleştirildikten sonra freeze box hala görünüyordu
+  - `router.refresh()` eklendi unfreeze fonksiyonlarına
+  - `EnrollmentDetailView.tsx:359` - handleUnfreezeLog
+  - `MemberDetailView.tsx:167` - handleUnfreezeAll
+  - Server-side effectiveDate artık güncelleniyor
+
+### 🎨 UI/UX Improvements
+
+- ✅ **Live Clock Widget**: Header'a canlı saat eklendi
+  - Gerçek zamanlı tarih ve saat gösterimi
+  - Türkçe tarih formatı
+  - Responsive (sm breakpoint'ten itibaren görünür)
+  - `components/shared/LiveClock.tsx`
+
+- ✅ **Full Responsive Design**
+  - Tüm sayfalar mobil uyumlu hale getirildi
+  - GlobalSearch, DataTable, Charts responsive
+  - ScrollArea eklendi tüm tablolara
+  - Expenses ve instructor payments sayfaları düzeltildi
+
+- ✅ **Theme Toggle Fixed**
+  - Login sayfası dark mode (forced)
+  - App içinde light/dark toggle çalışıyor
+  - Nested MantineProvider ile çözüldü
+
+### 📚 Documentation
+
+- ✅ **Help Page Rewrite**: Başlangıç rehberi tamamen yenilendi
+  - 8 ana bölüm (Dashboard, Üye Yönetimi, Ödeme, Dondurma, vb.)
+  - 4 quick access card
+  - 7 sıkça sorulan soru
+  - Sıfırdan başlayanlar için detaylı anlatım
+
+- ✅ **Test Documentation**: `docs/07-TESTING.md`
+  - Test yazma rehberi
+  - Senaryo bazlı örnekler
+  - CI/CD integration guide
+  - Debugging tips
+  - Coverage targets
+
 ## [1.3.0] - 2025-12-15
 
 ### 🚀 Major Features

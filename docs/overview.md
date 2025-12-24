@@ -21,6 +21,8 @@ Bu sistemi kullanarak şunları kolayca yapabilirsiniz:
 
 ## 🗺️ Nasıl Başlamalıyım?
 
+### Kullanıcılar İçin
+
 Eğer projeye yeni katıldıysanız, aşağıdaki sırayı takip etmenizi öneririz:
 
 1. **[📘 Detaylı Kullanım Kılavuzu](./user-guide.md):** (Tavsiye Edilen) Adım adım resimli anlatım gibi detaylı rehber.
@@ -28,12 +30,19 @@ Eğer projeye yeni katıldıysanız, aşağıdaki sırayı takip etmenizi öneri
 3. **[Kurulum Rehberi](./01-GETTING-STARTED.md):** Projeyi kendi bilgisayarınızda nasıl çalıştıracağınızı anlatır.
 4. **[Özellikler Kılavuzu](./02-FEATURES.md):** Sistemin tüm özelliklerinin detaylı açıklaması.
 
-## 🏗️ Teknik Yapı (Geliştiriciler İçin)
+### Geliştiriciler İçin
 
 Eğer kodu geliştirecek bir yazılımcıysanız:
+
+1. **[Kurulum](./01-GETTING-STARTED.md):** Development environment setup
+2. **[Mimari](./02-ARCHITECTURE.md):** Teknik yapı ve kod organizasyonu
+3. **[Testing](./07-TESTING.md):** Test yazma ve çalıştırma rehberi
+4. **[Development](./03-DEVELOPMENT.md):** Geliştirme süreçleri
+
+## 🏗️ Teknik Yapı
 
 - **Frontend:** Next.js 16 (App Router), Mantine UI
 - **Backend:** Supabase (PostgreSQL, Auth), Server Actions
 - **Dil:** TypeScript
-
-Teknik detaylar için **[Mimari Dokümantasyonu](./02-ARCHITECTURE.md)** sayfasına bakabilirsiniz.
+- **Testing:** Vitest, Playwright, React Testing Library
+- **Coverage:** 60+ tests (37 unit, 23 integration, 4 E2E specs)

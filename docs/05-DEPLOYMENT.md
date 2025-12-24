@@ -4,21 +4,123 @@ Bu belge, projenizi production ortamına almak için gereken tüm adımları det
 
 ---
 
-## 📋 Production Öncesi Kontrol Listesi
+## 🎯 Hızlı Başlangıç
 
-Projeyi canlıya almadan önce aşağıdaki kontrolleri yapın:
+### Pre-Deployment Verification (Tek Komut)
 
-### 1. ✅ Kod Kalitesi
+Canlıya çıkmadan önce tüm kontrolleri tek komutla yapın:
+
 ```bash
-# TypeScript hatalarını kontrol et
-npm run build
+# Otomatik verification script (Önerilen)
+./scripts/pre-deploy.sh
 
-# Lint kontrolü
+# veya npm script ile
+npm run pre-deploy
+
+# veya manuel olarak
+npm run verify
+```
+
+**Bu komut sırasıyla şunları kontrol eder:**
+1. ✅ Node.js version (20.x)
+2. ✅ TypeScript type-check
+3. ✅ ESLint (kod kalitesi)
+4. ✅ Prettier (kod formatı)
+5. ✅ Unit tests
+6. ✅ Integration tests
+7. ✅ Next.js build
+
+---
+
+## 📋 Production Öncesi Detaylı Kontrol Listesi
+
+### 1. ✅ Otomatik Kod Kontrolü
+
+```bash
+# Tüm kontrolleri tek komutla (Önerilen)
+npm run verify
+
+# Veya adım adım:
+
+# TypeScript type check
+npm run type-check
+
+# ESLint kontrolü
 npm run lint
 
-# Formatter kontrolü
+# Prettier format kontrolü
+npm run format:check
+
+# Unit testler
+npm run test:unit
+
+# Integration testler
+npm run test:integration
+
+# Build
+npm run build
+```
+
+**Hızlı Fix Komutları:**
+```bash
+# Lint hatalarını otomatik düzelt
+npm run lint:fix
+
+# Format hatalarını otomatik düzelt
 npm run format
 ```
+
+---
+
+## 🤖 CI/CD Pipeline (GitHub Actions)
+
+Proje otomatik test ve build sistemi ile gelir. Her push ve PR'da otomatik kontroller çalışır.
+
+### GitHub Actions Workflow
+
+`.github/workflows/ci.yml` dosyası otomatik olarak şunları yapar:
+
+**1. Code Quality Check:**
+- TypeScript type-check
+- ESLint
+- Prettier format check
+
+**2. Tests:**
+- Unit tests
+- Integration tests
+- E2E tests (Playwright)
+- Coverage report
+
+**3. Build:**
+- Next.js production build
+- Build artifacts upload
+
+**4. Pre-deployment Verification:**
+- Tüm checkler geçerse deployment ready
+
+### GitHub Actions Kullanımı
+
+```bash
+# 1. Kodu push et
+git add .
+git commit -m "feat: new feature"
+git push origin main
+
+# 2. GitHub Actions otomatik başlar
+# 3. GitHub > Actions sekmesinden takip et
+# 4. Tüm checkler yeşil ✅ ise deployment yapabilirsiniz
+```
+
+### Secrets Ayarları (GitHub)
+
+GitHub repo > Settings > Secrets and variables > Actions:
+
+| Secret Name | Description |
+|-------------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Production Supabase URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production Supabase Anon Key |
+
+---
 
 ### 2. ✅ Environment Variables Kontrolü
 
@@ -374,14 +476,25 @@ Vercel'de:
 
 Deploy öncesi son kontrol:
 
-- [ ] `npm run build` başarılı
+### Kod Kalitesi
+- [ ] `npm run verify` başarılı ✅
+- [ ] `npm run type-check` hatasız
 - [ ] `npm run lint` hatasız
+- [ ] `npm run format:check` başarılı
+- [ ] `npm run test:unit` geçti
+- [ ] `npm run test:integration` geçti
+- [ ] `npm run build` başarılı
+- [ ] GitHub Actions tüm checkler yeşil ✅
+
+### Database & Environment
 - [ ] `.env.local.example` güncel
 - [ ] Supabase production project hazır
 - [ ] Tüm migrations uygulandı
 - [ ] RLS politikaları aktif
 - [ ] Vercel environment variables ayarlandı
 - [ ] ADMIN_EMAIL ve ADMIN_PASSWORD güçlü
+
+### Infrastructure
 - [ ] Custom domain yapılandırıldı (varsa)
 - [ ] SSL sertifikası aktif
 - [ ] Health check testleri geçti
@@ -389,3 +502,11 @@ Deploy öncesi son kontrol:
 - [ ] Monitoring araçları kuruldu
 
 ✅ Tüm maddeler tamamlandığında production'a hazırsınız!
+
+---
+
+## 📖 İlgili Dokümantasyon
+
+- **[Testing Guide](./07-TESTING.md)** - Test yazma ve çalıştırma
+- **[Development Guide](./03-DEVELOPMENT.md)** - Geliştirme süreçleri
+- **[Architecture](./02-ARCHITECTURE.md)** - Teknik mimari

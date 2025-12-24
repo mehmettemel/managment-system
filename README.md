@@ -41,6 +41,12 @@ Projenin tüm detayları `docs/` klasörü altında sade ve anlaşılır bir şe
     - Vercel deployment
     - Environment variables
 
+9.  **[🧪 Testing (Test Dokümantasyonu)](./docs/07-TESTING.md)**
+    - Unit, Integration ve E2E testler
+    - 60+ test (37 unit, 23 integration, 4 E2E specs)
+    - Test yazma rehberi
+    - CI/CD integration
+
 ---
 
 ## ⚡ Hızlı Başlangıç
@@ -67,6 +73,30 @@ _Detaylı kurulum için [01-GETTING-STARTED.md](./docs/01-GETTING-STARTED.md) do
 
 ---
 
+## 🔍 Pre-Deployment Verification
+
+Canlıya çıkmadan önce tüm kontrolleri yapın:
+
+```bash
+# Tüm kontrolleri tek komutta (Önerilen)
+npm run verify
+
+# Veya detaylı raporlama ile
+./scripts/pre-deploy.sh
+```
+
+**Kontrol edilenler:**
+- ✅ TypeScript type-check
+- ✅ ESLint (kod kalitesi)
+- ✅ Prettier (kod formatı)
+- ✅ Unit tests (37 test)
+- ✅ Integration tests (23 test)
+- ✅ Next.js build
+
+Detaylı bilgi: [docs/05-DEPLOYMENT.md](./docs/05-DEPLOYMENT.md)
+
+---
+
 ## 🏗️ Proje Hakkında
 
 DSMS, dans okullarının ihtiyaç duyduğu üye takibi, ders programı, eğitmen yönetimi ve finansal takibi tek bir çatı altında toplar.
@@ -76,8 +106,65 @@ DSMS, dans okullarının ihtiyaç duyduğu üye takibi, ders programı, eğitmen
 - **Üye Yönetimi**: Kayıt, dondurma, arşivleme.
 - **Finans**: Ödeme takibi, 28 günlük döngüler, gecikme uyarıları.
 - **Dersler**: Esnek ders programı ve eğitmen atama.
+- **Testing**: 60+ test ile %80+ coverage (unit + integration + E2E)
 - **Teknoloji**: Next.js App Router, Server Actions, Supabase Auth & DB.
+
+## 🧪 Testing
+
+Proje kapsamlı testlerle donatılmıştır:
+
+```bash
+# Tüm testleri çalıştır
+npm test
+
+# Test türüne göre
+npm run test:unit           # 37 unit test
+npm run test:integration    # 23 integration test
+npm run test:e2e            # E2E tests
+
+# UI ile debug
+npm run test:ui             # Vitest UI
+npm run test:e2e:ui         # Playwright UI
+
+# Coverage
+npm run test:coverage
+```
+
+**Test Kapsamı:**
+- ✅ 5/7 senaryo FULL coverage
+- ✅ Unit tests: Utility functions
+- ✅ Integration tests: Server actions
+- ✅ E2E tests: Critical user journeys
+
+Detaylı bilgi: [docs/07-TESTING.md](./docs/07-TESTING.md)
+
+---
 
 ## 📝 Versiyon Geçmişi
 
 Versiyon değişikliklerini görmek için [CHANGELOG.md](./docs/CHANGELOG.md) dosyasına bakabilirsiniz.
+
+---
+
+## 📂 Dokümantasyon Yapısı
+
+```
+docs/
+├── 01-GETTING-STARTED.md    # Kurulum ve başlangıç
+├── 02-ARCHITECTURE.md       # Teknik mimari
+├── 02-FEATURES.md           # Özellikler
+├── 03-DEVELOPMENT.md        # Geliştirme rehberi
+├── 04-DATABASE.md           # Veritabanı şeması
+├── 05-DEPLOYMENT.md         # Yayına alma
+├── 06-ADMIN-GUIDE.md        # Admin rehberi
+├── 07-TESTING.md            # Test dokümantasyonu
+├── CHANGELOG.md             # Değişiklik geçmişi
+├── overview.md              # Proje özeti
+├── usage-scenarios.md       # Kullanım senaryoları
+└── user-guide.md            # Kullanıcı rehberi
+
+tests/
+└── README.md                # Test hızlı başlangıç
+```
+
+Tüm dokümantasyon merkezi olarak `docs/` klasöründedir.
