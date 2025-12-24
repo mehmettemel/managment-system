@@ -183,8 +183,10 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
             </Group>
           </Group>
 
-          <Group>
-            <GlobalSearch />
+          <Group gap="xs" wrap="wrap">
+            <Box visibleFrom="xs">
+              <GlobalSearch />
+            </Box>
             <ThemeToggle />
             <UnstyledButton>
               <Group gap="xs">

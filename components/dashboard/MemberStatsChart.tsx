@@ -29,7 +29,7 @@ export function MemberStatsChart() {
       </Text>
 
       <BarChart
-        h={300}
+        h={{ base: 250, sm: 300, lg: 400 }}
         data={data}
         dataKey="month"
         series={[{ name: 'Members', color: 'blue.6', label: 'Üye Sayısı' }]}

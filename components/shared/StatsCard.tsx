@@ -30,7 +30,7 @@ export function StatsCard({
 
   return (
     <Paper withBorder p="md" radius="md" h="100%">
-      <Group justify="space-between" align="flex-start">
+      <Group justify="space-between" align="flex-start" wrap="nowrap">
         <Stack gap={4} style={{ flex: 1 }}>
           <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
             {title}
@@ -68,7 +68,7 @@ export function StatsCard({
             )}
           </div>
         </Stack>
-        <ThemeIcon color={color} variant="light" size={50} radius="md">
+        <ThemeIcon color={color} variant="light" size={{ base: 40, sm: 50 }} radius="md">
           {icon}
         </ThemeIcon>
       </Group>

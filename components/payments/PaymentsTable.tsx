@@ -171,7 +171,7 @@ export function PaymentsTable() {
     <Stack gap="md">
       {/* Filters */}
       <Paper withBorder p="md" radius="md">
-        <Group align="flex-end">
+        <Group align="flex-end" wrap="wrap">
           <MultiSelect
             label="Üye Filtresi"
             placeholder="Üye seçiniz"

@@ -33,12 +33,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <ColorSchemeScript defaultColorScheme="dark" />
+        <ColorSchemeScript />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <MantineProvider theme={theme} forceColorScheme="dark">
+        <MantineProvider theme={theme}>
           <Notifications position="top-right" />
           <ModalsProvider>{children}</ModalsProvider>
         </MantineProvider>

@@ -264,8 +264,8 @@ export function DataTable<T extends Record<string, any>>({
       <Stack gap={0}>
         {/* Search Bar */}
         <Box p="md" className="border-b border-gray-200 dark:border-zinc-800">
-          <Group justify="space-between">
-            <Group gap="xs">
+          <Group justify="space-between" wrap="wrap">
+            <Group gap="xs" wrap="wrap">
               <TextInput
                 placeholder="Ara..."
                 leftSection={<IconSearch size={16} />}
@@ -274,7 +274,7 @@ export function DataTable<T extends Record<string, any>>({
                   setSearchQuery(e.target.value);
                   handlePageChange(1);
                 }}
-                style={{ width: 300 }}
+                w={{ base: '100%', xs: 200, sm: 250, md: 300 }}
               />
               {filters}
             </Group>

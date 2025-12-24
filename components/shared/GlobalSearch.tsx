@@ -79,7 +79,7 @@ export function GlobalSearch() {
       }}
       filter={({ options }) => options} // Server side filtering
       limit={10}
-      w={300}
+      w={{ base: '100%', xs: 200, sm: 250, md: 300 }}
       comboboxProps={{ transitionProps: { transition: 'pop', duration: 200 } }}
     />
   );

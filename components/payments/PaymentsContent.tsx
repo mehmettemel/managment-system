@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Table, Badge, Card, ActionIcon } from '@mantine/core';
+import { Button, Table, Badge, Card, ActionIcon, ScrollArea } from '@mantine/core';
 import { IconTrash } from '@tabler/icons-react';
 import { Payment } from '@/types';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -48,53 +48,55 @@ export function PaymentsContent({ initialPayments }: PaymentsContentProps) {
         />
       ) : (
         <Card withBorder radius="md">
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Tarih</Table.Th>
-                <Table.Th>Tutar</Table.Th>
-                <Table.Th>Ders</Table.Th>
-                <Table.Th>Yöntem</Table.Th>
-                <Table.Th>Dönem</Table.Th>
-                <Table.Th>Açıklama</Table.Th>
-                <Table.Th style={{ width: 80 }} />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {payments.map((payment) => (
-                <Table.Tr key={payment.id}>
-                  <Table.Td>
-                    {dayjs(payment.payment_date).format('DD.MM.YYYY')}
-                  </Table.Td>
-                  <Table.Td fw={700} c="green">
-                    {formatCurrency(Number(payment.amount))}
-                  </Table.Td>
-                  <Table.Td>{(payment as any).classes?.name || '-'}</Table.Td>
-                  <Table.Td>
-                    <Badge variant="dot">
-                      {formatPaymentMethod(payment.payment_method)}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    {payment.period_start &&
-                      dayjs(payment.period_start).format('MMM YYYY')}
-                  </Table.Td>
-                  <Table.Td className="text-sm text-gray-500 dark:text-gray-400">
-                    {payment.description}
-                  </Table.Td>
-                  <Table.Td>
-                    <ActionIcon
-                      variant="subtle"
-                      color="red"
-                      onClick={() => handleDelete(payment.id)}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Table.Td>
+          <ScrollArea>
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Tarih</Table.Th>
+                  <Table.Th>Tutar</Table.Th>
+                  <Table.Th>Ders</Table.Th>
+                  <Table.Th>Yöntem</Table.Th>
+                  <Table.Th>Dönem</Table.Th>
+                  <Table.Th>Açıklama</Table.Th>
+                  <Table.Th style={{ width: 80 }} />
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+              </Table.Thead>
+              <Table.Tbody>
+                {payments.map((payment) => (
+                  <Table.Tr key={payment.id}>
+                    <Table.Td>
+                      {dayjs(payment.payment_date).format('DD.MM.YYYY')}
+                    </Table.Td>
+                    <Table.Td fw={700} c="green">
+                      {formatCurrency(Number(payment.amount))}
+                    </Table.Td>
+                    <Table.Td>{(payment as any).classes?.name || '-'}</Table.Td>
+                    <Table.Td>
+                      <Badge variant="dot">
+                        {formatPaymentMethod(payment.payment_method)}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      {payment.period_start &&
+                        dayjs(payment.period_start).format('MMM YYYY')}
+                    </Table.Td>
+                    <Table.Td className="text-sm text-gray-500 dark:text-gray-400">
+                      {payment.description}
+                    </Table.Td>
+                    <Table.Td>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        onClick={() => handleDelete(payment.id)}
+                      >
+                        <IconTrash size={16} />
+                      </ActionIcon>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
         </Card>
       )}
     </>

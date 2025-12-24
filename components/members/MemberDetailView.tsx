@@ -176,7 +176,7 @@ export function MemberDetailView({
 
   if (loading) {
     return (
-      <Center h={400}>
+      <Center h={{ base: 300, md: 400 }}>
         <Loader size="lg" />
       </Center>
     );
@@ -184,7 +184,7 @@ export function MemberDetailView({
 
   if (!member) {
     return (
-      <Center h={400}>
+      <Center h={{ base: 300, md: 400 }}>
         <Text>Üye bulunamadı.</Text>
       </Center>
     );

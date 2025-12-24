@@ -11,6 +11,7 @@ import {
   MultiSelect,
   Select,
   Stack,
+  ScrollArea,
 } from '@mantine/core';
 import {
   processPayout,
@@ -260,50 +261,52 @@ export function InstructorPaymentsTable({
               Şu an ödemesi gelen eğitmen bulunmamaktadır.
             </Text>
           ) : (
-            <Table highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Eğitmen</Table.Th>
-                  <Table.Th>Bekleyen Hakediş Sayısı</Table.Th>
-                  <Table.Th>Toplam Tutar</Table.Th>
-                  <Table.Th></Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {data.map((item) => (
-                  <Table.Tr key={item.instructor.id}>
-                    <Table.Td fw={500}>
-                      {item.instructor.first_name} {item.instructor.last_name}
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="light" size="lg">
-                        {item.entryCount} İşlem
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td fw={700} fz="lg" c="green">
-                      {formatCurrency(item.totalAmount)}
-                    </Table.Td>
-                    <Table.Td>
-                      <Button
-                        color="green"
-                        leftSection={<IconCash size={16} />}
-                        onClick={() => handlePay(item)}
-                        loading={loadingMap[item.instructor.id]}
-                      >
-                        Ödeme Yap
-                      </Button>
-                    </Table.Td>
+            <ScrollArea>
+              <Table highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Eğitmen</Table.Th>
+                    <Table.Th>Bekleyen Hakediş Sayısı</Table.Th>
+                    <Table.Th>Toplam Tutar</Table.Th>
+                    <Table.Th></Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+                </Table.Thead>
+                <Table.Tbody>
+                  {data.map((item) => (
+                    <Table.Tr key={item.instructor.id}>
+                      <Table.Td fw={500}>
+                        {item.instructor.first_name} {item.instructor.last_name}
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge variant="light" size="lg">
+                          {item.entryCount} İşlem
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td fw={700} fz="lg" c="green">
+                        {formatCurrency(item.totalAmount)}
+                      </Table.Td>
+                      <Table.Td>
+                        <Button
+                          color="green"
+                          leftSection={<IconCash size={16} />}
+                          onClick={() => handlePay(item)}
+                          loading={loadingMap[item.instructor.id]}
+                        >
+                          Ödeme Yap
+                        </Button>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
           )}
         </Tabs.Panel>
 
         <Tabs.Panel value="details" p="md">
           <Stack gap="md">
-            <Group justify="space-between" align="flex-start">
-              <Group>
+            <Group justify="space-between" align="flex-start" wrap="wrap">
+              <Group wrap="wrap">
                 <Select
                   placeholder="Tüm Eğitmenler"
                   data={[
@@ -316,7 +319,7 @@ export function InstructorPaymentsTable({
                   }
                   clearable
                   searchable
-                  style={{ width: 250 }}
+                  w={{ base: '100%', sm: 200, md: 250 }}
                 />
                 <Select
                   placeholder="Durum"
@@ -329,11 +332,11 @@ export function InstructorPaymentsTable({
                   onChange={(val) =>
                     setLedgerStatusFilter((val as any) || 'all')
                   }
-                  style={{ width: 150 }}
+                  w={{ base: '100%', sm: 120, md: 150 }}
                 />
               </Group>
               {ledgerData.length > 0 && (
-                <Group gap="xl">
+                <Group gap="xl" wrap="wrap">
                   <div>
                     <Text size="xs" c="dimmed">
                       Toplam Kayıt
@@ -365,70 +368,72 @@ export function InstructorPaymentsTable({
                 Komisyon kaydı bulunamadı.
               </Text>
             ) : (
-              <Table highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Eğitmen</Table.Th>
-                    <Table.Th>Öğrenci</Table.Th>
-                    <Table.Th>Ders</Table.Th>
-                    <Table.Th>Ödeme Tutarı</Table.Th>
-                    <Table.Th>Komisyon</Table.Th>
-                    <Table.Th>Ödeme Tarihi</Table.Th>
-                    <Table.Th>Vade Tarihi</Table.Th>
-                    <Table.Th>Durum</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {ledgerData.map((entry) => {
-                    const payment = entry.payments as any;
-                    const member = payment?.members;
-                    const classData = payment?.classes;
-                    const instructor = entry.instructors;
+              <ScrollArea>
+                <Table highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Eğitmen</Table.Th>
+                      <Table.Th>Öğrenci</Table.Th>
+                      <Table.Th>Ders</Table.Th>
+                      <Table.Th>Ödeme Tutarı</Table.Th>
+                      <Table.Th>Komisyon</Table.Th>
+                      <Table.Th>Ödeme Tarihi</Table.Th>
+                      <Table.Th>Vade Tarihi</Table.Th>
+                      <Table.Th>Durum</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {ledgerData.map((entry) => {
+                      const payment = entry.payments as any;
+                      const member = payment?.members;
+                      const classData = payment?.classes;
+                      const instructor = entry.instructors;
 
-                    return (
-                      <Table.Tr key={entry.id}>
-                        <Table.Td>
-                          {instructor
-                            ? `${instructor.first_name} ${instructor.last_name}`
-                            : '-'}
-                        </Table.Td>
-                        <Table.Td>
-                          {member
-                            ? `${member.first_name} ${member.last_name}`
-                            : '-'}
-                        </Table.Td>
-                        <Table.Td>{classData?.name || '-'}</Table.Td>
-                        <Table.Td>
-                          <Text fw={500}>
-                            {payment?.amount
-                              ? formatCurrency(payment.amount)
+                      return (
+                        <Table.Tr key={entry.id}>
+                          <Table.Td>
+                            {instructor
+                              ? `${instructor.first_name} ${instructor.last_name}`
                               : '-'}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Text fw={700} c="blue">
-                            {formatCurrency(entry.amount)}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          {payment?.payment_date
-                            ? formatDate(payment.payment_date)
-                            : '-'}
-                        </Table.Td>
-                        <Table.Td>{formatDate(entry.due_date)}</Table.Td>
-                        <Table.Td>
-                          <Badge
-                            color={getStatusBadgeColor(entry.status)}
-                            variant="light"
-                          >
-                            {getStatusLabel(entry.status)}
-                          </Badge>
-                        </Table.Td>
-                      </Table.Tr>
-                    );
-                  })}
-                </Table.Tbody>
-              </Table>
+                          </Table.Td>
+                          <Table.Td>
+                            {member
+                              ? `${member.first_name} ${member.last_name}`
+                              : '-'}
+                          </Table.Td>
+                          <Table.Td>{classData?.name || '-'}</Table.Td>
+                          <Table.Td>
+                            <Text fw={500}>
+                              {payment?.amount
+                                ? formatCurrency(payment.amount)
+                                : '-'}
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text fw={700} c="blue">
+                              {formatCurrency(entry.amount)}
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>
+                            {payment?.payment_date
+                              ? formatDate(payment.payment_date)
+                              : '-'}
+                          </Table.Td>
+                          <Table.Td>{formatDate(entry.due_date)}</Table.Td>
+                          <Table.Td>
+                            <Badge
+                              color={getStatusBadgeColor(entry.status)}
+                              variant="light"
+                            >
+                              {getStatusLabel(entry.status)}
+                            </Badge>
+                          </Table.Td>
+                        </Table.Tr>
+                      );
+                    })}
+                  </Table.Tbody>
+                </Table>
+              </ScrollArea>
             )}
           </Stack>
         </Tabs.Panel>
@@ -442,7 +447,7 @@ export function InstructorPaymentsTable({
               onChange={setSelectedInstructors}
               clearable
               searchable
-              style={{ width: 300 }}
+              w={{ base: '100%', sm: 250, md: 300 }}
             />
           </Group>
           <DataTable

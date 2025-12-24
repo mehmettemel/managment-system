@@ -31,10 +31,10 @@ export function PaymentStatusChart() {
         Ödeme Durumu Dağılımı
       </Text>
 
-      <Group align="center" justify="center" gap="xl">
+      <Group align="center" justify="center" gap="xl" wrap="wrap">
         <div style={{ position: 'relative' }}>
           <RingProgress
-            size={160}
+            size={{ base: 120, sm: 140, md: 160 }}
             thickness={20}
             roundCaps
             sections={sections}

@@ -30,7 +30,7 @@ export function RevenueChart() {
       </Text>
 
       <AreaChart
-        h={300}
+        h={{ base: 250, sm: 300, lg: 400 }}
         data={data}
         dataKey="date"
         series={[

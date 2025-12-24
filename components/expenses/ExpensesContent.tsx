@@ -346,8 +346,8 @@ export function ExpensesContent() {
     <>
       <Stack gap="md">
         {/* Actions Bar */}
-        <Group justify="space-between">
-          <Group>
+        <Group justify="space-between" wrap="wrap">
+          <Group wrap="wrap">
             <Button
               leftSection={<IconPlus size={16} />}
               onClick={handleAdd}
@@ -378,7 +378,7 @@ export function ExpensesContent() {
 
         {/* Filters */}
         <Paper withBorder p="md" radius="md">
-          <Group align="flex-end">
+          <Group align="flex-end" wrap="wrap">
             <Select
               label="Kategori"
               placeholder="Tümü"
@@ -386,7 +386,7 @@ export function ExpensesContent() {
               value={selectedCategory}
               onChange={setSelectedCategory}
               clearable
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 200 }}
             />
             <DateInput
               label="Başlangıç Tarihi"
@@ -394,7 +394,7 @@ export function ExpensesContent() {
               value={startDate}
               onChange={setStartDate as any}
               clearable
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 200 }}
             />
             <DateInput
               label="Bitiş Tarihi"
@@ -402,7 +402,7 @@ export function ExpensesContent() {
               value={endDate}
               onChange={setEndDate as any}
               clearable
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 200 }}
             />
             <TextInput
               label="Ara"
@@ -410,7 +410,7 @@ export function ExpensesContent() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.currentTarget.value)}
               leftSection={<IconSearch size={16} />}
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 200 }}
             />
           </Group>
         </Paper>
