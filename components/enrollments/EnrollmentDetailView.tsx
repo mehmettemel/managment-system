@@ -19,6 +19,7 @@ import {
   Divider,
   SimpleGrid,
   Modal,
+  Tooltip,
 } from '@mantine/core';
 import {
   IconArrowLeft,
@@ -684,7 +685,7 @@ export function EnrollmentDetailView({
 
               <div>
                 <Text size="xs" c="dimmed" fw={700} tt="uppercase" mb={4}>
-                  Son Ödeme
+                  Son İşlem Tarihi
                 </Text>
                 <Group gap={6}>
                   <IconHistory size={18} style={{ opacity: 0.6 }} />
@@ -695,9 +696,22 @@ export function EnrollmentDetailView({
               </div>
 
               <div>
-                <Text size="xs" c="dimmed" fw={700} tt="uppercase" mb={4}>
-                  Sonraki Ödeme
-                </Text>
+                <Group gap={4} mb={4} align="center">
+                  <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                    Sıradaki Ödeme Tarihi
+                  </Text>
+                  <Tooltip
+                    label="Mevcut ödemelerinizin kapsadığı süre bittikten sonraki ilk ödeme tarihi."
+                    withArrow
+                    multiline
+                    w={220}
+                  >
+                    <IconInfoCircle
+                      size={14}
+                      style={{ opacity: 0.5, cursor: 'help' }}
+                    />
+                  </Tooltip>
+                </Group>
                 {activeLog ? (
                   <>
                     <Text fw={700} size="md" c="blue">
