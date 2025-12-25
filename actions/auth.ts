@@ -115,14 +115,14 @@ export async function login(
 /**
  * Logout and clear session
  */
-export async function logout() {
+export async function logout(): Promise<ApiResponse<boolean>> {
   try {
     await deleteSession();
+    return successResponse(true);
   } catch (error) {
     console.error('Logout error:', error);
+    return errorResponse('Çıkış işlemi başarısız');
   }
-
-  redirect('/login');
 }
 
 /**

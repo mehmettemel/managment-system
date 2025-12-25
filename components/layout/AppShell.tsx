@@ -206,7 +206,10 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
             <NavLink
               label="Çıkış Yap"
               leftSection={<IconLogout size={20} />}
-              onClick={() => logout()}
+              onClick={async () => {
+                await logout();
+                router.push('/login');
+              }}
               variant="subtle"
               c="red"
             />

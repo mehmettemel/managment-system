@@ -18,7 +18,7 @@ CREATE INDEX IF NOT EXISTS idx_instructor_ledger_status ON instructor_ledger(sta
 CREATE INDEX IF NOT EXISTS idx_frozen_logs_member_id ON frozen_logs(member_id);
 
 -- Expenses
-CREATE INDEX IF NOT EXISTS idx_expenses_category_id ON expenses(category_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
 CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
 
 -- Classes
