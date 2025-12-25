@@ -327,7 +327,7 @@ export default function DashboardPage() {
     <Stack gap="xl">
       {/* Header */}
       <div>
-        <Title order={1}>Dashboard</Title>
+        <Title order={1}>Anasayfa</Title>
         <Text c="dimmed">Dans okulu yönetim paneline hoş geldiniz</Text>
       </div>
 

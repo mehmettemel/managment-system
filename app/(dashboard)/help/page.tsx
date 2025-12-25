@@ -63,10 +63,9 @@ export default function HelpPage() {
         color="blue"
         mb="xl"
       >
-        Bu kılavuz, sistemdeki tüm özellikleri ve kullanım şekillerini
-        adım adım anlatmaktadır. Sıfırdan başlayan biri için her şey
-        açıklanmıştır. Herhangi bir konuda detaylı bilgi için ilgili bölümü
-        açabilirsiniz.
+        Bu kılavuz, sistemdeki tüm özellikleri ve kullanım şekillerini adım adım
+        anlatmaktadır. Sıfırdan başlayan biri için her şey açıklanmıştır.
+        Herhangi bir konuda detaylı bilgi için ilgili bölümü açabilirsiniz.
       </Alert>
 
       {/* Quick Start Cards */}
@@ -87,7 +86,13 @@ export default function HelpPage() {
         </Card>
 
         <Card withBorder padding="lg" radius="md" style={{ cursor: 'pointer' }}>
-          <ThemeIcon size="xl" radius="md" variant="light" color="green" mb="md">
+          <ThemeIcon
+            size="xl"
+            radius="md"
+            variant="light"
+            color="green"
+            mb="md"
+          >
             <IconCreditCard size={24} />
           </ThemeIcon>
           <Text fw={700} size="md" mb="xs">
@@ -111,7 +116,13 @@ export default function HelpPage() {
         </Card>
 
         <Card withBorder padding="lg" radius="md" style={{ cursor: 'pointer' }}>
-          <ThemeIcon size="xl" radius="md" variant="light" color="orange" mb="md">
+          <ThemeIcon
+            size="xl"
+            radius="md"
+            variant="light"
+            color="orange"
+            mb="md"
+          >
             <IconChalkboard size={24} />
           </ThemeIcon>
           <Text fw={700} size="md" mb="xs">
@@ -137,11 +148,13 @@ export default function HelpPage() {
         {/* DASHBOARD */}
         <Accordion.Item value="dashboard">
           <Accordion.Control
-            icon={<IconChartBar size={20} color="var(--mantine-color-blue-6)" />}
+            icon={
+              <IconChartBar size={20} color="var(--mantine-color-blue-6)" />
+            }
           >
             <Group>
               <Text fw={600} size="md">
-                Dashboard (Ana Sayfa)
+                Anasayfa
               </Text>
               <Badge size="sm" variant="light">
                 Başlangıç
@@ -151,12 +164,11 @@ export default function HelpPage() {
           <Accordion.Panel>
             <Stack gap="md">
               <Text>
-                Dashboard, sistemin ana sayfasıdır ve okulunuzun genel durumunu
-                görmenizi sağlar. Giriş yaptığınızda ilk gördüğünüz sayfa
-                budur.
+                Anasayfa, sistemin ana sayfasıdır ve okulunuzun genel durumunu
+                görmenizi sağlar. Giriş yaptığınızda ilk gördüğünüz sayfa budur.
               </Text>
 
-              <Divider label="Dashboard'da Neler Var?" />
+              <Divider label="Anasayfa'da Neler Var?" />
 
               <Box>
                 <Text fw={600} mb="xs">
@@ -187,20 +199,22 @@ export default function HelpPage() {
                 </Text>
                 <List size="sm" spacing="xs">
                   <List.Item>
-                    <b>Gelir Analizi:</b> Son 6 aylık gelir-gider karşılaştırması
+                    <b>Gelir Analizi:</b> Son 6 aylık gelir-gider
+                    karşılaştırması
                   </List.Item>
                   <List.Item>
                     <b>Ders Dağılımı:</b> Her derste kaç aktif üye olduğunu
                     gösterir
                   </List.Item>
                   <List.Item>
-                    <b>Ödeme Durumu:</b> Aktif üyelerin ödeme durumlarının dağılımı
+                    <b>Ödeme Durumu:</b> Aktif üyelerin ödeme durumlarının
+                    dağılımı
                   </List.Item>
                 </List>
               </Box>
 
               <Alert icon={<IconInfoCircle />} color="blue" variant="light">
-                Dashboard sadece görüntüleme içindir. İşlem yapmak için sol
+                Anasayfa sadece görüntüleme içindir. İşlem yapmak için sol
                 menüdeki ilgili sayfalara gitmeniz gerekir.
               </Alert>
             </Stack>
@@ -283,8 +297,8 @@ export default function HelpPage() {
                     Detay sayfasında <b>"Ders Ekle"</b> butonuna basın
                   </List.Item>
                   <List.Item>
-                    Açılan pencerede kaydetmek istediğiniz dersleri seçin (birden
-                    fazla seçebilirsiniz)
+                    Açılan pencerede kaydetmek istediğiniz dersleri seçin
+                    (birden fazla seçebilirsiniz)
                   </List.Item>
                   <List.Item>
                     Her ders için:
@@ -294,8 +308,8 @@ export default function HelpPage() {
                         getirir. İsterseniz değiştirebilirsiniz (özel fiyat)
                       </List.Item>
                       <List.Item>
-                        <b>Süre:</b> Kaç aylık taahhütle kayıt yapılacağını seçin
-                        (1, 3, 6, 12 ay)
+                        <b>Süre:</b> Kaç aylık taahhütle kayıt yapılacağını
+                        seçin (1, 3, 6, 12 ay)
                       </List.Item>
                     </List>
                   </List.Item>
@@ -309,8 +323,8 @@ export default function HelpPage() {
                   variant="light"
                   mt="sm"
                 >
-                  <b>Önemli:</b> Ders kaydı yapıldığı andan itibaren ödeme takvimi
-                  otomatik oluşur ve üyenin borcu işlemeye başlar!
+                  <b>Önemli:</b> Ders kaydı yapıldığı andan itibaren ödeme
+                  takvimi otomatik oluşur ve üyenin borcu işlemeye başlar!
                 </Alert>
               </Box>
 
@@ -324,8 +338,9 @@ export default function HelpPage() {
                 </Group>
                 <List size="sm" spacing="xs">
                   <List.Item>
-                    <b>Arama Çubuğu (Header):</b> En üstte sağdaki büyüteç ikonuna
-                    tıklayarak üye adı veya telefon ile arama yapabilirsiniz
+                    <b>Arama Çubuğu (Header):</b> En üstte sağdaki büyüteç
+                    ikonuna tıklayarak üye adı veya telefon ile arama
+                    yapabilirsiniz
                   </List.Item>
                   <List.Item>
                     <b>Tab'lar:</b> Üyeler sayfasında filtreleme yapabilirsiniz:
@@ -345,8 +360,8 @@ export default function HelpPage() {
                     </List>
                   </List.Item>
                   <List.Item>
-                    <b>Sıralama:</b> Kolon başlıklarına tıklayarak alfabetik veya
-                    tarihe göre sıralama yapabilirsiniz
+                    <b>Sıralama:</b> Kolon başlıklarına tıklayarak alfabetik
+                    veya tarihe göre sıralama yapabilirsiniz
                   </List.Item>
                 </List>
               </Box>
@@ -385,10 +400,12 @@ export default function HelpPage() {
                 </Text>
                 <List size="sm" spacing="xs">
                   <List.Item>
-                    <b>Kırmızı Ünlem (!):</b> Üye listesinde ismin yanında görünür
+                    <b>Kırmızı Ünlem (!):</b> Üye listesinde ismin yanında
+                    görünür
                   </List.Item>
                   <List.Item>
-                    <b>Detay Sayfası:</b> Üye detayında kırmızı uyarı kartı gösterir
+                    <b>Detay Sayfası:</b> Üye detayında kırmızı uyarı kartı
+                    gösterir
                   </List.Item>
                   <List.Item>
                     <b>Ders Kartları:</b> Her gecikmiş ders için "X Ay Gecikmiş"
@@ -453,9 +470,14 @@ export default function HelpPage() {
                     <b>"Ödeme Al"</b> butonuna basın
                   </List.Item>
                 </List>
-                <Alert icon={<IconInfoCircle />} color="blue" variant="light" mt="sm">
-                  <b>Çoklu Ay Ödemesi:</b> Üye 3 ay peşin ödemek isterse, listeden
-                  3 ayı seçip tek işlemde tahsil edebilirsiniz!
+                <Alert
+                  icon={<IconInfoCircle />}
+                  color="blue"
+                  variant="light"
+                  mt="sm"
+                >
+                  <b>Çoklu Ay Ödemesi:</b> Üye 3 ay peşin ödemek isterse,
+                  listeden 3 ayı seçip tek işlemde tahsil edebilirsiniz!
                 </Alert>
               </Box>
 
@@ -485,8 +507,8 @@ export default function HelpPage() {
                     <b>Gecikme:</b> Tarih geçince "Gecikmiş" olarak işaretlenir
                   </List.Item>
                   <List.Item>
-                    <b>Dondurma:</b> Üye dondurulursa, dondurma süresindeki aylar
-                    atlanır
+                    <b>Dondurma:</b> Üye dondurulursa, dondurma süresindeki
+                    aylar atlanır
                   </List.Item>
                 </List>
               </Box>
@@ -529,7 +551,9 @@ export default function HelpPage() {
                   <List.Item>
                     <b>Finans &gt; Gelirler</b> sayfasına gidin
                   </List.Item>
-                  <List.Item>İlgili ödemeyi bulun (filtre kullanabilirsiniz)</List.Item>
+                  <List.Item>
+                    İlgili ödemeyi bulun (filtre kullanabilirsiniz)
+                  </List.Item>
                   <List.Item>
                     Satırın sağındaki <b>Çöp Kutusu</b> ikonuna tıklayın
                   </List.Item>
@@ -541,8 +565,8 @@ export default function HelpPage() {
                   variant="light"
                   mt="sm"
                 >
-                  Ödeme silindiğinde, eğitmen komisyonu da otomatik geri alınır ve
-                  üyenin ödeme takvimi güncellenir!
+                  Ödeme silindiğinde, eğitmen komisyonu da otomatik geri alınır
+                  ve üyenin ödeme takvimi güncellenir!
                 </Alert>
               </Box>
             </Stack>
@@ -552,7 +576,9 @@ export default function HelpPage() {
         {/* DONDURMA İŞLEMLERİ */}
         <Accordion.Item value="freeze">
           <Accordion.Control
-            icon={<IconSnowflake size={20} color="var(--mantine-color-cyan-6)" />}
+            icon={
+              <IconSnowflake size={20} color="var(--mantine-color-cyan-6)" />
+            }
           >
             <Group>
               <Text fw={600} size="md">
@@ -566,10 +592,10 @@ export default function HelpPage() {
           <Accordion.Panel>
             <Stack gap="lg">
               <Text>
-                Dondurma, bir üyenin geçici olarak ara vermesi durumunda kullanılır.
-                Tatil, hastalık veya kişisel nedenlerle üye derslere gelemiyor
-                olabilir. Bu durumda üyeliği silmek yerine <b>dondurma</b>{' '}
-                yaparsınız.
+                Dondurma, bir üyenin geçici olarak ara vermesi durumunda
+                kullanılır. Tatil, hastalık veya kişisel nedenlerle üye derslere
+                gelemiyor olabilir. Bu durumda üyeliği silmek yerine{' '}
+                <b>dondurma</b> yaparsınız.
               </Text>
 
               <Box>
@@ -578,9 +604,7 @@ export default function HelpPage() {
                   <Text fw={700}>Üye Dondurma İşlemi</Text>
                 </Group>
                 <List type="ordered" size="sm" spacing="xs">
-                  <List.Item>
-                    Üye detay sayfasına gidin
-                  </List.Item>
+                  <List.Item>Üye detay sayfasına gidin</List.Item>
                   <List.Item>
                     Sağ üstteki <b>üç nokta (...)</b> menüsüne tıklayın
                   </List.Item>
@@ -622,13 +646,13 @@ export default function HelpPage() {
                 </Group>
                 <List size="sm" spacing="xs">
                   <List.Item>
-                    Dondurma yapıldığında, dondurma süresindeki aylar <b>ödeme
-                    takviminden atlanır</b>
+                    Dondurma yapıldığında, dondurma süresindeki aylar{' '}
+                    <b>ödeme takviminden atlanır</b>
                   </List.Item>
                   <List.Item>
                     Örnek: Üye Ocak'ta kayıt oldu, Mart-Nisan-Mayıs dondurdu.
-                    Sistem Mart-Nisan-Mayıs için ödeme beklemez, Haziran'dan devam
-                    eder
+                    Sistem Mart-Nisan-Mayıs için ödeme beklemez, Haziran'dan
+                    devam eder
                   </List.Item>
                   <List.Item>
                     Üyenin <b>borcu donmaz</b>, sadece süre uzar
@@ -650,26 +674,25 @@ export default function HelpPage() {
                   Üye geri döndüğünde dondurma işlemini sonlandırın:
                 </Text>
                 <List type="ordered" size="sm" spacing="xs">
+                  <List.Item>Üye detay sayfasına gidin</List.Item>
                   <List.Item>
-                    Üye detay sayfasına gidin
-                  </List.Item>
-                  <List.Item>
-                    Dondurulmuş ders kartında <b>"Dondurma Aç"</b> butonuna basın
+                    Dondurulmuş ders kartında <b>"Dondurma Aç"</b> butonuna
+                    basın
                   </List.Item>
                   <List.Item>
                     Bitiş tarihi otomatik bugün olarak ayarlanır
                   </List.Item>
                   <List.Item>
-                    Ödeme takvimi güncellenir ve bir sonraki ödeme tarihi yeniden
-                    hesaplanır
+                    Ödeme takvimi güncellenir ve bir sonraki ödeme tarihi
+                    yeniden hesaplanır
                   </List.Item>
                 </List>
               </Box>
 
               <Alert icon={<IconInfoCircle />} color="blue" variant="light">
                 <b>İpucu:</b> Süresiz dondurma yaptıysanız ve üye dönüş tarihini
-                bildirdiyse, dondurma açmayı unutmayın! Aksi halde sistem sürekli
-                "dondurulmuş" olarak gösterir.
+                bildirdiyse, dondurma açmayı unutmayın! Aksi halde sistem
+                sürekli "dondurulmuş" olarak gösterir.
               </Alert>
             </Stack>
           </Accordion.Panel>
@@ -678,7 +701,9 @@ export default function HelpPage() {
         {/* DERSLER */}
         <Accordion.Item value="classes">
           <Accordion.Control
-            icon={<IconSchool size={20} color="var(--mantine-color-orange-6)" />}
+            icon={
+              <IconSchool size={20} color="var(--mantine-color-orange-6)" />
+            }
           >
             <Group>
               <Text fw={600} size="md">
@@ -712,8 +737,8 @@ export default function HelpPage() {
                         <b>Varsayılan Fiyat:</b> Bu dersin normal aylık ücreti
                       </List.Item>
                       <List.Item>
-                        <b>Eğitmen:</b> Dersi verecek eğitmeni seçin (önce eğitmen
-                        eklemeniz gerekir)
+                        <b>Eğitmen:</b> Dersi verecek eğitmeni seçin (önce
+                        eğitmen eklemeniz gerekir)
                       </List.Item>
                       <List.Item>
                         <b>Komisyon Oranı:</b> Bu ders için özel komisyon oranı
@@ -746,7 +771,9 @@ export default function HelpPage() {
                     Açılan sayfada:
                     <List withPadding size="sm" mt="xs">
                       <List.Item>Derse kayıtlı tüm üyelerin listesi</List.Item>
-                      <List.Item>Her üyenin durumu (Aktif/Dondurulmuş/Pasif)</List.Item>
+                      <List.Item>
+                        Her üyenin durumu (Aktif/Dondurulmuş/Pasif)
+                      </List.Item>
                       <List.Item>Kayıt tarihleri</List.Item>
                       <List.Item>Toplam gelir istatistiği</List.Item>
                     </List>
@@ -767,8 +794,8 @@ export default function HelpPage() {
                 </Text>
                 <List size="sm" spacing="xs">
                   <List.Item>
-                    Ders satırındaki <b>üç nokta (...)</b> menüsünden "Arşivle"yi
-                    seçin
+                    Ders satırındaki <b>üç nokta (...)</b> menüsünden
+                    "Arşivle"yi seçin
                   </List.Item>
                   <List.Item>
                     Arşivlenen ders <b>"Arşiv"</b> sekmesinde görünür
@@ -829,19 +856,24 @@ export default function HelpPage() {
                     Bir öğrenciden ödeme alındığında (örn: 1500 TL)
                   </List.Item>
                   <List.Item>
-                    Sistem, o dersin eğitmeninin komisyon oranına bakar (örn: %40)
+                    Sistem, o dersin eğitmeninin komisyon oranına bakar (örn:
+                    %40)
                   </List.Item>
+                  <List.Item>Hesaplama yapar: 1500 × 0.40 = 600 TL</List.Item>
                   <List.Item>
-                    Hesaplama yapar: 1500 × 0.40 = 600 TL
-                  </List.Item>
-                  <List.Item>
-                    Bu 600 TL otomatik olarak eğitmenin <b>"Bekleyen Hakediş"</b>
+                    Bu 600 TL otomatik olarak eğitmenin{' '}
+                    <b>"Bekleyen Hakediş"</b>
                     bakiyesine eklenir
                   </List.Item>
                 </List>
-                <Alert icon={<IconInfoCircle />} color="blue" variant="light" mt="sm">
-                  Tüm bu işlemler otomatiktir! Siz sadece öğrenciden ödeme alırsınız,
-                  sistem eğitmen payını kaydeder.
+                <Alert
+                  icon={<IconInfoCircle />}
+                  color="blue"
+                  variant="light"
+                  mt="sm"
+                >
+                  Tüm bu işlemler otomatiktir! Siz sadece öğrenciden ödeme
+                  alırsınız, sistem eğitmen payını kaydeder.
                 </Alert>
               </Box>
 
@@ -867,7 +899,9 @@ export default function HelpPage() {
                     Her eğitmen için:
                     <List withPadding size="sm" mt="xs">
                       <List.Item>Toplam bakiyesi</List.Item>
-                      <List.Item>İşlem sayısı (kaç öğrenci ödemesinden geldiği)</List.Item>
+                      <List.Item>
+                        İşlem sayısı (kaç öğrenci ödemesinden geldiği)
+                      </List.Item>
                     </List>
                   </List.Item>
                   <List.Item>
@@ -876,13 +910,20 @@ export default function HelpPage() {
                   <List.Item>
                     Açılan pencerede:
                     <List withPadding size="sm" mt="xs">
-                      <List.Item>Ödeme yöntemini seçin (Nakit/Havale)</List.Item>
+                      <List.Item>
+                        Ödeme yöntemini seçin (Nakit/Havale)
+                      </List.Item>
                       <List.Item>İsteğe bağlı not ekleyin</List.Item>
                     </List>
                   </List.Item>
                   <List.Item>Onaylayın</List.Item>
                 </List>
-                <Alert icon={<IconInfoCircle />} color="green" variant="light" mt="sm">
+                <Alert
+                  icon={<IconInfoCircle />}
+                  color="green"
+                  variant="light"
+                  mt="sm"
+                >
                   Ödeme yapıldığında, eğitmenin bakiyesi sıfırlanır ve işlem
                   geçmişine kaydedilir.
                 </Alert>
@@ -906,13 +947,17 @@ export default function HelpPage() {
                   <List.Item>
                     Bu sayfada:
                     <List withPadding size="sm" mt="xs">
-                      <List.Item>Hangi öğrenciden ne kadar komisyon alındığı</List.Item>
+                      <List.Item>
+                        Hangi öğrenciden ne kadar komisyon alındığı
+                      </List.Item>
                       <List.Item>Hangi dersten geldiği</List.Item>
                       <List.Item>Ödeme tarihi</List.Item>
                       <List.Item>Durum (Bekleyen/Ödenen)</List.Item>
                     </List>
                   </List.Item>
-                  <List.Item>Eğitmen ve duruma göre filtreleme yapabilirsiniz</List.Item>
+                  <List.Item>
+                    Eğitmen ve duruma göre filtreleme yapabilirsiniz
+                  </List.Item>
                 </List>
               </Box>
 
@@ -934,7 +979,9 @@ export default function HelpPage() {
                   <List.Item>
                     Tüm hakediş ödemelerinin listesi görünür
                   </List.Item>
-                  <List.Item>Tarih, tutar, ödeme yöntemi ve not bilgileri</List.Item>
+                  <List.Item>
+                    Tarih, tutar, ödeme yöntemi ve not bilgileri
+                  </List.Item>
                 </List>
               </Box>
             </Stack>
@@ -1028,16 +1075,16 @@ export default function HelpPage() {
                     <b>Dashboard:</b> Genel istatistikler ve grafikler
                   </List.Item>
                   <List.Item>
-                    <b>Gelir Tablosu:</b> Finans &gt; Gelirler'de tarih filtresiyle
-                    dönemsel gelir raporu
+                    <b>Gelir Tablosu:</b> Finans &gt; Gelirler'de tarih
+                    filtresiyle dönemsel gelir raporu
                   </List.Item>
                   <List.Item>
                     <b>Gider Tablosu:</b> Finans &gt; Giderler'de kategori bazlı
                     harcama analizi
                   </List.Item>
                   <List.Item>
-                    <b>Dışa Aktarma:</b> Giderler sayfasında "Dışa Aktar" butonu ile
-                    CSV formatında rapor alabilirsiniz
+                    <b>Dışa Aktarma:</b> Giderler sayfasında "Dışa Aktar" butonu
+                    ile CSV formatında rapor alabilirsiniz
                   </List.Item>
                 </List>
               </Box>
@@ -1048,7 +1095,9 @@ export default function HelpPage() {
         {/* AYARLAR */}
         <Accordion.Item value="settings">
           <Accordion.Control
-            icon={<IconSettings size={20} color="var(--mantine-color-gray-6)" />}
+            icon={
+              <IconSettings size={20} color="var(--mantine-color-gray-6)" />
+            }
           >
             <Group>
               <Text fw={600} size="md">
@@ -1084,7 +1133,12 @@ export default function HelpPage() {
                     </List>
                   </List.Item>
                 </List>
-                <Alert icon={<IconInfoCircle />} color="blue" variant="light" mt="sm">
+                <Alert
+                  icon={<IconInfoCircle />}
+                  color="blue"
+                  variant="light"
+                  mt="sm"
+                >
                   Dans türleri ders oluştururken seçim listesinde kullanılır.
                 </Alert>
               </Box>
@@ -1098,8 +1152,8 @@ export default function HelpPage() {
                   <Text fw={700}>Görünüm Ayarları</Text>
                 </Group>
                 <Text size="sm" mb="xs">
-                  Header'daki tema değiştirme butonu ile Dark/Light mode arasında
-                  geçiş yapabilirsiniz.
+                  Header'daki tema değiştirme butonu ile Dark/Light mode
+                  arasında geçiş yapabilirsiniz.
                 </Text>
               </Box>
             </Stack>
@@ -1124,9 +1178,9 @@ export default function HelpPage() {
               </Text>
             </Group>
             <Text size="sm" c="dimmed" ml={36}>
-              Finans &gt; Gelirler sayfasına gidin, ilgili ödemeyi bulup sağındaki
-              Çöp Kutusu ikonuna basın. Ödeme silindiğinde eğitmen komisyonu ve
-              üye takvimi otomatik güncellenir.
+              Finans &gt; Gelirler sayfasına gidin, ilgili ödemeyi bulup
+              sağındaki Çöp Kutusu ikonuna basın. Ödeme silindiğinde eğitmen
+              komisyonu ve üye takvimi otomatik güncellenir.
             </Text>
           </Box>
 

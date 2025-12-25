@@ -44,7 +44,7 @@ interface NavItem {
 }
 
 const mainNavItems: NavItem[] = [
-  { label: 'Dashboard', icon: <IconHome size={20} />, href: '/' },
+  { label: 'Anasayfa', icon: <IconHome size={20} />, href: '/' },
   { label: 'Üyeler', icon: <IconUsers size={20} />, href: '/members' },
   { label: 'Finans', icon: <IconCreditCard size={20} />, href: '/finance' },
   { label: 'Dersler', icon: <IconSchool size={20} />, href: '/classes' },

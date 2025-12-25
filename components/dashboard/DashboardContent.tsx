@@ -49,7 +49,7 @@ export function DashboardContent({
     <StaggerContainer>
       <Stack gap="lg">
         <MotionDiv>
-          <Title order={2}>Dashboard</Title>
+          <Title order={2}>Anasayfa</Title>
           <Text c="dimmed">Hoş geldiniz, işte bugünkü durum özeti.</Text>
         </MotionDiv>
 
