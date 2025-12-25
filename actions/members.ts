@@ -168,19 +168,37 @@ export async function getMemberById(
 /**
  * Create a new member with class-based payment tracking
  */
+import {
+  MemberSchema,
+  UpdateMemberSchema,
+  MemberInput,
+} from '@/lib/validations/schemas';
+
+// ... existing imports
+
+/**
+ * Create a new member with class-based payment tracking
+ */
 export async function createMember(
   formData: MemberFormData
 ): Promise<ApiResponse<Member>> {
   try {
-    // Validate required fields
-    const validation = validateRequiredFields(
-      formData as unknown as Record<string, unknown>,
-      ['first_name', 'last_name']
-    );
-    if (!validation.valid) {
-      return errorResponse(
-        `Gerekli alanlar eksik: ${validation.missingFields.join(', ')}`
-      );
+    // Zod Validation
+    const validationResult = MemberSchema.safeParse({
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      email: formData.email,
+      phone: formData.phone,
+      status: 'active',
+      notes: formData.notes,
+    });
+
+    if (!validationResult.success) {
+      // Format Zod errors
+      const errorMessage = validationResult.error.issues
+        .map((e) => e.message)
+        .join(', ');
+      return errorResponse(errorMessage);
     }
 
     const supabase = await createClient();
@@ -191,8 +209,10 @@ export async function createMember(
       first_name: formData.first_name,
       last_name: formData.last_name,
       phone: formData.phone || null,
+      email: formData.email || null, // Ensure email is passed
       join_date: today,
       status: 'active',
+      notes: formData.notes || null,
     });
 
     // Create member
@@ -265,6 +285,17 @@ export async function updateMember(
   updates: MemberUpdate
 ): Promise<ApiResponse<Member>> {
   try {
+    // Zod Validation for updates
+    // We only validate fields that are present in updates
+    const validationResult = UpdateMemberSchema.safeParse(updates);
+
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.issues
+        .map((e) => e.message)
+        .join(', ');
+      return errorResponse(errorMessage);
+    }
+
     const supabase = await createClient();
 
     const sanitizedUpdates = sanitizeInput(updates as any) as MemberUpdate;

@@ -164,7 +164,9 @@ export interface ClassRegistration {
 export interface MemberFormData {
   first_name: string;
   last_name: string;
+  email?: string;
   phone?: string;
+  notes?: string;
   class_registrations?: ClassRegistration[]; // Optional - can create member without classes
   // monthly_fee removed - price is now per class
   // initial_* fields removed - payments handled separately

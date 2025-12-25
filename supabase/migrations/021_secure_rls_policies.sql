@@ -8,7 +8,7 @@ ALTER TABLE instructor_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE frozen_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dance_types ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admins ENABLE ROW LEVEL SECURITY; -- If exists
+ALTER TABLE dance_types ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing insecure policies (if any known specific ones exist, generic cleanup is hard without dynamic SQL but we can overwrite or create new restrictive ones)
 -- It's safer to drop specific expected policies if we know names, or just CREATE OR REPLACE / IF NOT EXISTS.
