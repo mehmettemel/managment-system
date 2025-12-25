@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const SESSION_COOKIE_NAME = 'admin-session';
+const SESSION_COOKIE_NAME = 'admin-session-v2';
 
 // Public routes that don't require authentication
 const publicRoutes = ['/login'];
@@ -15,7 +15,9 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check if route is public
-  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
 
   // Get session cookie
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
