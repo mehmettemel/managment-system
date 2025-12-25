@@ -31,7 +31,7 @@ test.describe('Payment Collection Journey', () => {
     await expect(page.locator('text=Dönemler')).toBeVisible();
 
     // Select first unpaid period
-    await page.click('[type="checkbox"]').first();
+    await page.locator('[type="checkbox"]').first().click();
 
     // Step 5: Select payment method
     await page.click('text=Nakit');
@@ -85,7 +85,7 @@ test.describe('Payment Collection Journey', () => {
     await expect(page.locator('[data-overdue="true"]')).toBeVisible();
 
     // Click on overdue member
-    await page.click('[data-overdue="true"]').first();
+    await page.locator('[data-overdue="true"]').first().click();
 
     // Should show overdue warning
     await expect(page.locator('text=Gecikmiş Ödeme')).toBeVisible();
@@ -100,7 +100,7 @@ test.describe('Payment Collection Journey', () => {
     await page.click('text=Gelirler');
 
     // Find payment to delete
-    await page.click('[aria-label="Delete payment"]').first();
+    await page.locator('[aria-label="Delete payment"]').first().click();
 
     // Confirm deletion
     await page.click('button:has-text("Evet")');

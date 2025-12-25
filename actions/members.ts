@@ -93,7 +93,7 @@ export async function getMembers(
 
     let query = supabase
       .from('members')
-      .select('*, member_classes(*, classes(name))')
+      .select('*, member_classes(*, frozen_logs(*), classes(name))')
       .order('created_at', { ascending: false });
 
     if (status && status !== 'all') {

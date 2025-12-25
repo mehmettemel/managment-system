@@ -27,10 +27,16 @@ test.describe('Instructor Payment Journey', () => {
     await expect(page.locator('[data-instructor-balance]')).toBeVisible();
 
     // Step 4: Verify balance amount and transaction count
-    const balance = await page.locator('[data-instructor-balance]').first().textContent();
+    const balance = await page
+      .locator('[data-instructor-balance]')
+      .first()
+      .textContent();
     expect(balance).toContain('₺'); // Should show Turkish Lira symbol
 
-    const transactionCount = await page.locator('[data-transaction-count]').first().textContent();
+    const transactionCount = await page
+      .locator('[data-transaction-count]')
+      .first()
+      .textContent();
     expect(parseInt(transactionCount || '0')).toBeGreaterThan(0);
   });
 
@@ -38,7 +44,7 @@ test.describe('Instructor Payment Journey', () => {
     await page.goto('/payments/instructors');
 
     // Click "Ödeme Yap" button for first instructor
-    await page.click('button:has-text("Ödeme Yap")').first();
+    await page.locator('button:has-text("Ödeme Yap")').first().click();
 
     // Modal should open
     await expect(page.locator('text=Eğitmen Ödemesi')).toBeVisible();
@@ -57,7 +63,10 @@ test.describe('Instructor Payment Journey', () => {
 
     // Balance should be zero now
     await page.reload();
-    const newBalance = await page.locator('[data-instructor-balance]').first().textContent();
+    const newBalance = await page
+      .locator('[data-instructor-balance]')
+      .first()
+      .textContent();
     expect(newBalance).toContain('0');
   });
 
@@ -115,7 +124,7 @@ test.describe('Instructor Payment Journey', () => {
     await page.goto('/members/1');
     await page.click('button:has-text("Ödeme Ekle")');
     await page.click('text=Aylık Aidat');
-    await page.click('[type="checkbox"]').first();
+    await page.locator('[type="checkbox"]').first().click();
     await page.click('text=Nakit');
     await page.click('button:has-text("Ödeme Al")');
 
@@ -138,19 +147,25 @@ test.describe('Instructor Payment Journey', () => {
 
     // Step 1: Note current instructor balance
     await page.goto('/payments/instructors');
-    const balanceBefore = await page.locator('[data-instructor-balance]').first().textContent();
+    const balanceBefore = await page
+      .locator('[data-instructor-balance]')
+      .first()
+      .textContent();
 
     // Step 2: Go to payments and delete a payment
     await page.goto('/finance');
     await page.click('text=Gelirler');
-    await page.click('[aria-label="Delete payment"]').first();
+    await page.locator('[aria-label="Delete payment"]').first().click();
     await page.click('button:has-text("Evet")');
 
     // Step 3: Go back to instructor payments
     await page.goto('/payments/instructors');
 
     // Step 4: Balance should be reduced
-    const balanceAfter = await page.locator('[data-instructor-balance]').first().textContent();
+    const balanceAfter = await page
+      .locator('[data-instructor-balance]')
+      .first()
+      .textContent();
 
     // Balance should be different
     expect(balanceBefore).not.toBe(balanceAfter);

@@ -6,9 +6,7 @@
  * 3. Üye Bilgilerini Düzenleme
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '../utils/test-utils';
-import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mock the server actions
 vi.mock('@/actions/members', () => ({
@@ -76,7 +74,7 @@ describe('Member Registration Workflow', () => {
         phone: '5551112233',
       };
 
-      const result = await createMember(newMember);
+      const result = await createMember(newMember as any);
 
       expect(result.error).toBeNull();
       expect(result.data).toMatchObject({
@@ -92,7 +90,10 @@ describe('Member Registration Workflow', () => {
       const { createMember } = await import('@/actions/members');
 
       // Test eksik bilgi ile kayıt
-      createMember.mockResolvedValueOnce({
+      const mockedCreateMember = createMember as unknown as ReturnType<
+        typeof vi.fn
+      >;
+      mockedCreateMember.mockResolvedValueOnce({
         data: null,
         error: 'Ad, soyad ve telefon gerekli',
       });
@@ -109,7 +110,10 @@ describe('Member Registration Workflow', () => {
       const { getMembers } = await import('@/actions/members');
 
       // Aktif üyeleri getir
-      getMembers.mockResolvedValueOnce({
+      const mockedGetMembers = getMembers as unknown as ReturnType<
+        typeof vi.fn
+      >;
+      mockedGetMembers.mockResolvedValueOnce({
         data: [
           {
             id: 1,
@@ -131,7 +135,10 @@ describe('Member Registration Workflow', () => {
       const { getMembers } = await import('@/actions/members');
 
       // Dondurulmuş üyeleri getir
-      getMembers.mockResolvedValueOnce({
+      const mockedGetMembers = getMembers as unknown as ReturnType<
+        typeof vi.fn
+      >;
+      mockedGetMembers.mockResolvedValueOnce({
         data: [
           {
             id: 2,

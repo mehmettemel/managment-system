@@ -25,7 +25,7 @@ test.describe('Freeze/Unfreeze Journey', () => {
     await page.click('text=Dondur');
 
     // Step 3: Select classes to freeze (if multiple enrollments)
-    await page.click('[type="checkbox"]').first();
+    await page.locator('[type="checkbox"]').first().click();
 
     // Step 4: Set freeze dates
     await page.fill('input[name="start_date"]', '2024-03-01');
@@ -53,7 +53,7 @@ test.describe('Freeze/Unfreeze Journey', () => {
     await page.click('text=Dondur');
 
     // Select class
-    await page.click('[type="checkbox"]').first();
+    await page.locator('[type="checkbox"]').first().click();
 
     // Set start date only (no end date)
     await page.fill('input[name="start_date"]', '2024-03-01');
@@ -94,19 +94,23 @@ test.describe('Freeze/Unfreeze Journey', () => {
     await page.goto('/members/1');
 
     // Check next payment date
-    const nextPaymentBefore = await page.locator('[data-next-payment]').textContent();
+    const nextPaymentBefore = await page
+      .locator('[data-next-payment]')
+      .textContent();
 
     // Freeze for 30 days
     await page.click('[aria-label="More options"]');
     await page.click('text=Dondur');
-    await page.click('[type="checkbox"]').first();
+    await page.locator('[type="checkbox"]').first().click();
     await page.fill('input[name="start_date"]', '2024-03-01');
     await page.fill('input[name="end_date"]', '2024-03-30');
     await page.click('button:has-text("Dondur")');
 
     // After freeze - next payment should be pushed by 30 days
     await page.reload();
-    const nextPaymentAfter = await page.locator('[data-next-payment]').textContent();
+    const nextPaymentAfter = await page
+      .locator('[data-next-payment]')
+      .textContent();
 
     // Verify dates are different (payment date pushed forward)
     expect(nextPaymentBefore).not.toBe(nextPaymentAfter);
@@ -122,7 +126,7 @@ test.describe('Freeze/Unfreeze Journey', () => {
     await expect(page.locator('[data-status="frozen"]')).toBeVisible();
 
     // Click on frozen member
-    await page.click('[data-status="frozen"]').first();
+    await page.locator('[data-status="frozen"]').first().click();
 
     // Should see freeze details
     await expect(page.locator('text=Ders Donduruldu')).toBeVisible();
@@ -138,7 +142,9 @@ test.describe('Freeze/Unfreeze Journey', () => {
     await page.click('button:has-text("İptal Et")');
 
     // Verify success
-    await expect(page.locator('text=Dondurma planı iptal edildi')).toBeVisible();
+    await expect(
+      page.locator('text=Dondurma planı iptal edildi')
+    ).toBeVisible();
 
     // Planned freeze alert should disappear
     await expect(page.locator('text=Planlanmış Dondurma')).not.toBeVisible();

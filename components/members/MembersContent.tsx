@@ -20,6 +20,7 @@ import {
   IconCreditCard,
   IconRotateClockwise,
   IconAlertCircle,
+  IconSnowflake,
 } from '@tabler/icons-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -231,6 +232,20 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
           return nextPayment.isBefore(today);
         });
 
+        // Check if any active enrollment is currently FROZEN
+        const frozenClasses = member.member_classes
+          ?.filter((mc: any) => {
+            if (!mc.active) return false;
+            // Check if there is an open frozen log (no end_date) or ends in future
+            return mc.frozen_logs?.some((log: any) => {
+              if (!log.end_date) return true; // Indefinite
+              return dayjs(log.end_date).isAfter(dayjs(effectiveDate));
+            });
+          })
+          .map((mc: any) => mc.classes?.name);
+
+        const isFrozen = frozenClasses && frozenClasses.length > 0;
+
         return (
           <Group gap="xs">
             <Text fw={500}>
@@ -239,6 +254,14 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
             {hasOverdue && (
               <Tooltip label="Gecikmiş Ödeme" withArrow>
                 <IconAlertCircle size={18} color="var(--mantine-color-red-6)" />
+              </Tooltip>
+            )}
+            {isFrozen && (
+              <Tooltip
+                label={`Dondurulmuş Dersler: ${frozenClasses.join(', ')}`}
+                withArrow
+              >
+                <IconSnowflake size={18} color="var(--mantine-color-blue-4)" />
               </Tooltip>
             )}
           </Group>
@@ -423,6 +446,7 @@ export default function MembersContent({ effectiveDate }: MembersContentProps) {
               onChange={handleTabChange}
               data={[
                 { label: 'Aktif', value: 'active' },
+                { label: 'Dondurulmuş', value: 'frozen' },
                 { label: 'Arşiv', value: 'archived' },
                 { label: 'Tümü', value: 'all' },
               ]}

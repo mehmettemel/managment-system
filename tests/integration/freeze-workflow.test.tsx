@@ -122,7 +122,10 @@ describe('Freeze/Unfreeze Workflow', () => {
       await unfreezeLog(1);
 
       // Üyenin freeze log'unu kontrol et
-      getMemberById.mockResolvedValueOnce({
+      const mockedGetMemberById = getMemberById as unknown as ReturnType<
+        typeof vi.fn
+      >;
+      mockedGetMemberById.mockResolvedValueOnce({
         data: {
           id: 1,
           status: 'active', // Artık aktif
@@ -191,7 +194,10 @@ describe('Freeze/Unfreeze Workflow', () => {
     it('should show frozen status on member list', async () => {
       const { getMemberById } = await import('@/actions/members');
 
-      getMemberById.mockResolvedValueOnce({
+      const mockedGetMemberById = getMemberById as unknown as ReturnType<
+        typeof vi.fn
+      >;
+      mockedGetMemberById.mockResolvedValueOnce({
         data: {
           id: 1,
           first_name: 'Ahmet',
@@ -217,7 +223,10 @@ describe('Freeze/Unfreeze Workflow', () => {
     it('should display freeze reason if provided', async () => {
       const { getMemberById } = await import('@/actions/members');
 
-      getMemberById.mockResolvedValueOnce({
+      const mockedGetMemberById = getMemberById as unknown as ReturnType<
+        typeof vi.fn
+      >;
+      mockedGetMemberById.mockResolvedValueOnce({
         data: {
           id: 1,
           frozen_logs: [

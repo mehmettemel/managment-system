@@ -52,7 +52,8 @@ export function useMembers(status?: string, refreshTrigger?: number) {
         );
 
         if (enrollmentIds.length > 0) {
-          const paymentDatesRes = await getEnrollmentPaymentDates(enrollmentIds);
+          const paymentDatesRes =
+            await getEnrollmentPaymentDates(enrollmentIds);
 
           if (paymentDatesRes.data) {
             // Merge payment dates into member classes
@@ -114,9 +115,23 @@ export function useMembers(status?: string, refreshTrigger?: number) {
 
         // Apply status filter based on computed status
         if (status && status !== 'all' && status !== 'archived') {
-          membersData = membersData.filter(
-            (m: any) => m.computed_status === status
-          );
+          membersData = membersData.filter((m: any) => {
+            // Computed status logic is:
+            // - 'frozen' if ALL active enrollments are frozen
+            // - 'active' if AT LEAST ONE active enrollment is NOT frozen
+
+            // If the user selects 'frozen', they want members who are FULLY frozen
+            if (status === 'frozen') {
+              return m.computed_status === 'frozen';
+            }
+
+            // If the user selects 'active', they want members who are active OR partially active
+            if (status === 'active') {
+              return m.computed_status === 'active';
+            }
+
+            return m.computed_status === status;
+          });
         }
 
         setMembers(membersData);
