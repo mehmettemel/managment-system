@@ -184,7 +184,14 @@ export async function getMemberPayments(
  */
 export async function getEnrollmentPaymentDates(
   memberClassIds: number[]
-): Promise<ApiResponse<Record<number, { first_payment_date: string | null; last_payment_date: string | null }>>> {
+): Promise<
+  ApiResponse<
+    Record<
+      number,
+      { first_payment_date: string | null; last_payment_date: string | null }
+    >
+  >
+> {
   try {
     if (memberClassIds.length === 0) {
       return successResponse({});
@@ -205,7 +212,10 @@ export async function getEnrollmentPaymentDates(
     }
 
     // Build a map of member_class_id -> { first_payment_date, last_payment_date }
-    const result: Record<number, { first_payment_date: string | null; last_payment_date: string | null }> = {};
+    const result: Record<
+      number,
+      { first_payment_date: string | null; last_payment_date: string | null }
+    > = {};
 
     if (data && data.length > 0) {
       data.forEach((payment) => {
@@ -519,30 +529,21 @@ export async function processClassPayment(
         payment_type: paymentType || 'monthly',
       } as any;
 
-      const { data: payment, error: paymentError } = await supabase
-        .from('payments')
-        .insert(paymentData)
-        .select()
-        .single();
+      const { data: payment, error: paymentError } = await supabase.rpc(
+        'process_payment_with_commission',
+        {
+          p_payment_data: paymentData,
+          p_month_count: 1, // We are creating 1 payment record for 1 month here
+        }
+      );
 
       if (paymentError) {
-        logError(
-          `processClassPayment - insert payment ${pLabel}`,
-          paymentError
-        );
+        logError(`processClassPayment - atomic rpc ${pLabel}`, paymentError);
         return errorResponse(handleSupabaseError(paymentError));
       }
 
       if (payment) {
-        paymentsCreated.push(payment);
-
-        // Process instructor commission for THIS single month payment
-        await processStudentPayment(
-          payment.id,
-          payment.amount,
-          1, // 1 month paid in this record
-          classId
-        );
+        paymentsCreated.push(payment as any); // Type cast due to JSONB return
       }
     }
 
@@ -581,9 +582,7 @@ export async function processClassPayment(
 
     // Use set of paid dates for O(1) lookup (exact date comparison)
     const paidDates = new Set(
-      (allPayments || []).map((p) =>
-        dayjs(p.period_start).format('YYYY-MM-DD')
-      )
+      (allPayments || []).map((p) => dayjs(p.period_start).format('YYYY-MM-DD'))
     );
 
     // Also add the newly created payments to this set
@@ -610,7 +609,8 @@ export async function processClassPayment(
     const finalNextPaymentDate = checkDate.format('YYYY-MM-DD');
 
     // Check if this is the first payment for this enrollment
-    const isFirstPayment = !memberClass.first_payment_date && paymentsCreated.length > 0;
+    const isFirstPayment =
+      !memberClass.first_payment_date && paymentsCreated.length > 0;
 
     // Prepare update data
     const updateData: any = { next_payment_date: finalNextPaymentDate };

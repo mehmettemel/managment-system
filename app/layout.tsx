@@ -9,6 +9,7 @@ import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { ModalsProvider } from '@mantine/modals';
 import { theme } from './theme';
+import { GlobalErrorBoundary } from '@/components/shared/GlobalErrorBoundary';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -40,7 +41,9 @@ export default function RootLayout({
       >
         <MantineProvider theme={theme}>
           <Notifications position="top-right" />
-          <ModalsProvider>{children}</ModalsProvider>
+          <ModalsProvider>
+            <GlobalErrorBoundary>{children}</GlobalErrorBoundary>
+          </ModalsProvider>
         </MantineProvider>
       </body>
     </html>

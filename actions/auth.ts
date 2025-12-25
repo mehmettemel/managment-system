@@ -8,10 +8,42 @@ import { redirect } from 'next/navigation';
 import { createSession, deleteSession, getSession } from '@/lib/session';
 import type { ApiResponse } from '@/types';
 import { errorResponse, successResponse } from '@/utils/response-helpers';
+import bcrypt from 'bcryptjs';
+import { headers } from 'next/headers';
 
 export interface LoginCredentials {
   email: string;
   password: string;
+}
+
+// Simple in-memory rate limiter
+// Note: This resets on server restart/redeploy. For persistent rate limiting, use Redis.
+const rateLimitMap = new Map<string, { count: number; lastAttempt: number }>();
+const BLOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_ATTEMPTS = 5;
+
+async function checkRateLimit(identifier: string): Promise<boolean> {
+  const now = Date.now();
+  const record = rateLimitMap.get(identifier);
+
+  if (!record) {
+    rateLimitMap.set(identifier, { count: 1, lastAttempt: now });
+    return true;
+  }
+
+  // Reset if block expired
+  if (now - record.lastAttempt > BLOCK_DURATION_MS) {
+    rateLimitMap.set(identifier, { count: 1, lastAttempt: now });
+    return true;
+  }
+
+  if (record.count >= MAX_ATTEMPTS) {
+    return false;
+  }
+
+  record.count++;
+  record.lastAttempt = now;
+  return true;
 }
 
 /**
@@ -28,6 +60,17 @@ export async function login(
       return errorResponse('Email ve şifre gereklidir');
     }
 
+    // Rate Limiting
+    const headersList = await headers();
+    const ip = headersList.get('x-forwarded-for') || 'unknown';
+    const isAllowed = await checkRateLimit(ip);
+
+    if (!isAllowed) {
+      return errorResponse(
+        'Çok fazla başarısız giriş denemesi. Lütfen 15 dakika bekleyin.'
+      );
+    }
+
     // Get admin credentials from environment
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
@@ -37,8 +80,25 @@ export async function login(
       return errorResponse('Sunucu yapılandırma hatası');
     }
 
-    // Check credentials
-    if (email !== adminEmail || password !== adminPassword) {
+    // Check email
+    if (email !== adminEmail) {
+      return errorResponse('Geçersiz email veya şifre');
+    }
+
+    // Check password (Supports both Hash and Plaintext for backward compatibility validation)
+    // IMPORTANT: Production SHOULD use BCrypt hash
+    let isPasswordValid = false;
+
+    if (adminPassword.startsWith('$2a$') || adminPassword.startsWith('$2b$')) {
+      // It looks like a bcrypt hash
+      isPasswordValid = await bcrypt.compare(password, adminPassword);
+    } else {
+      // Fallback to plaintext comparison (Legacy)
+      // TODO: Force hash in future
+      isPasswordValid = password === adminPassword;
+    }
+
+    if (!isPasswordValid) {
       return errorResponse('Geçersiz email veya şifre');
     }
 
@@ -71,7 +131,7 @@ export async function logout() {
 export async function getCurrentUser() {
   const session = await getSession();
 
-  if (!session) {
+  if (!session || !session.isAuthenticated) {
     return null;
   }
 

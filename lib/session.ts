@@ -1,13 +1,11 @@
 /**
  * Session Management Utilities
- * Simple cookie-based session management for admin authentication
+ * Secure, encrypted cookie-based session management using iron-session
  */
 
+import { getIronSession, SessionOptions } from 'iron-session';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-
-const SESSION_COOKIE_NAME = 'admin-session';
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export interface SessionData {
   email: string;
@@ -15,60 +13,45 @@ export interface SessionData {
   createdAt: number;
 }
 
+const SESSION_SECRET =
+  process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long'; // Fallback for dev only
+
+export const sessionOptions: SessionOptions = {
+  password: SESSION_SECRET,
+  cookieName: 'admin-session-v2', // Changed name to avoid conflicts with old plain cookie
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+  },
+  ttl: 60 * 60 * 24 * 7, // 7 days (in seconds for iron-session v8+)
+};
+
+/**
+ * Get the Iron Session object
+ */
+export async function getSession() {
+  const cookieStore = await cookies();
+  return getIronSession<SessionData>(cookieStore, sessionOptions);
+}
+
 /**
  * Create a new session
  */
 export async function createSession(email: string) {
-  const cookieStore = await cookies();
-
-  const sessionData: SessionData = {
-    email,
-    isAuthenticated: true,
-    createdAt: Date.now(),
-  };
-
-  // Store session data as JSON string
-  cookieStore.set(SESSION_COOKIE_NAME, JSON.stringify(sessionData), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SESSION_MAX_AGE,
-    path: '/',
-  });
-}
-
-/**
- * Get current session
- */
-export async function getSession(): Promise<SessionData | null> {
-  try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-    if (!sessionCookie?.value) {
-      return null;
-    }
-
-    const sessionData: SessionData = JSON.parse(sessionCookie.value);
-
-    // Validate session
-    if (!sessionData.isAuthenticated || !sessionData.email) {
-      return null;
-    }
-
-    return sessionData;
-  } catch (error) {
-    console.error('Error reading session:', error);
-    return null;
-  }
+  const session = await getSession();
+  session.email = email;
+  session.isAuthenticated = true;
+  session.createdAt = Date.now();
+  await session.save();
 }
 
 /**
  * Delete current session
  */
 export async function deleteSession() {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  const session = await getSession();
+  session.destroy();
 }
 
 /**
@@ -76,7 +59,7 @@ export async function deleteSession() {
  */
 export async function isAuthenticated(): Promise<boolean> {
   const session = await getSession();
-  return session?.isAuthenticated === true;
+  return session.isAuthenticated === true;
 }
 
 /**
