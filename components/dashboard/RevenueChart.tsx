@@ -9,17 +9,21 @@ import { AreaChart } from '@mantine/charts';
 import { Card, Title, Text } from '@mantine/core';
 import { formatCurrency } from '@/utils/formatters';
 
-// Mock Data
-const data = [
-  { date: 'Tem', Revenue: 12000, Expenses: 4000 },
-  { date: 'Ağu', Revenue: 18000, Expenses: 5500 },
-  { date: 'Eyl', Revenue: 22000, Expenses: 7000 },
-  { date: 'Eki', Revenue: 25000, Expenses: 8500 },
-  { date: 'Kas', Revenue: 21000, Expenses: 6000 },
-  { date: 'Ara', Revenue: 28000, Expenses: 9000 },
-];
+// No Mock Data
+import { getRevenueStats } from '@/actions/dashboard';
+import { useState, useEffect } from 'react';
 
 export function RevenueChart() {
+  const [data, setData] = useState<
+    { date: string; Revenue: number; Expenses: number }[]
+  >([]);
+
+  useEffect(() => {
+    getRevenueStats().then((res) => {
+      if (res.data) setData(res.data);
+    });
+  }, []);
+
   return (
     <Card withBorder radius="md" p="xl">
       <Title order={3} mb="sm">

@@ -141,3 +141,78 @@ export async function getMemberGrowthStats(): Promise<
     return errorResponse(handleSupabaseError(error));
   }
 }
+/**
+ * Get Revenue vs Expenses Stats (Last 6 Months)
+ */
+export async function getRevenueStats(): Promise<
+  ApiResponse<{ date: string; Revenue: number; Expenses: number }[]>
+> {
+  try {
+    const supabase = await createClient();
+    const today = await getServerNow();
+    const startDate = today.subtract(5, 'month').startOf('month');
+    const startDateStr = startDate.format('YYYY-MM-DD');
+
+    // Fetch Payments (Revenue)
+    const { data: payments, error: pError } = await supabase
+      .from('payments')
+      .select('amount, payment_date')
+      .gte('payment_date', startDateStr);
+
+    if (pError) throw pError;
+
+    // Fetch Expenses
+    const { data: expenses, error: eError } = await supabase
+      .from('expenses')
+      .select('amount, date')
+      .gte('date', startDateStr);
+
+    if (eError) throw eError;
+
+    // Initialize 6 months
+    const stats: Record<
+      string,
+      { label: string; Revenue: number; Expenses: number }
+    > = {};
+
+    for (let i = 0; i < 6; i++) {
+      const d = startDate.clone().add(i, 'month');
+      const key = d.format('YYYY-MM');
+      stats[key] = {
+        label: d.format('MMM'), // Short month name
+        Revenue: 0,
+        Expenses: 0,
+      };
+    }
+
+    // Aggregate Revenue
+    payments?.forEach((p) => {
+      const key = dayjs(p.payment_date).format('YYYY-MM');
+      if (stats[key]) {
+        stats[key].Revenue += Number(p.amount);
+      }
+    });
+
+    // Aggregate Expenses
+    expenses?.forEach((e) => {
+      const key = dayjs(e.date).format('YYYY-MM');
+      if (stats[key]) {
+        stats[key].Expenses += Number(e.amount);
+      }
+    });
+
+    // Sort and return array
+    const result = Object.entries(stats)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([key, val]) => ({
+        date: val.label,
+        Revenue: val.Revenue,
+        Expenses: val.Expenses,
+      }));
+
+    return successResponse(result);
+  } catch (error) {
+    logError('getRevenueStats', error);
+    return errorResponse('Gelir verisi alınamadı');
+  }
+}
